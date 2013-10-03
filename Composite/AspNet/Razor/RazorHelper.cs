@@ -31,84 +31,98 @@ namespace Composite.AspNet.Razor
         /// <param name="functionContextContainer">The function context container</param>
         /// <returns></returns>
         public static object ExecuteRazorPage(
-            string virtualPath, 
-            Action<WebPageBase> setParameters, 
-            Type resultType, 
-            FunctionContextContainer functionContextContainer) 
+            string virtualPath,
+            Action<WebPageBase> setParameters,
+            Type resultType,
+            FunctionContextContainer functionContextContainer)
         {
-   			HttpContextBase httpContext;
-			object requestLock = null;
 
-            var webPage = WebPageBase.CreateInstanceFromVirtualPath(virtualPath);
-			var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+            string output;
 
-			if (HttpContext.Current == null)
-			{
-				httpContext = NoHttpRazorContext.GetDotNetSpecificVersion();
-			}
-			else
-			{
-				var currentContext = HttpContext.Current;
-
-				httpContext = new HttpContextWrapper(currentContext);
-
-                requestLock = GetRazorExecutionLock(currentContext);
-			}
-
-			var pageContext = new WebPageContext(httpContext, webPage, startPage);
-            if (functionContextContainer != null)
+            WebPageBase webPage = null;
+            try
             {
-                pageContext.PageData.Add(PageContext_FunctionContextContainer, functionContextContainer);
+                webPage = WebPageBase.CreateInstanceFromVirtualPath(virtualPath);
+                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+
+                object requestLock = null;
+                HttpContextBase httpContext;
+
+                HttpContext currentContext = HttpContext.Current;
+                if (currentContext == null)
+                {
+                    httpContext = NoHttpRazorContext.GetDotNetSpecificVersion();
+                }
+                else
+                {
+                    httpContext = new HttpContextWrapper(currentContext);
+
+                    requestLock = GetRazorExecutionLock(currentContext);
+                }
+
+                var pageContext = new WebPageContext(httpContext, webPage, startPage);
+                if (functionContextContainer != null)
+                {
+                    pageContext.PageData.Add(PageContext_FunctionContextContainer, functionContextContainer);
+                }
+
+                if (setParameters != null)
+                {
+                    setParameters(webPage);
+                }
+
+                var sb = new StringBuilder();
+                using (var writer = new StringWriter(sb))
+                {
+                    bool lockTaken = false;
+                    try
+                    {
+                        if (requestLock != null)
+                        {
+                            Monitor.Enter(requestLock, ref lockTaken);
+                        }
+
+                        webPage.ExecutePageHierarchy(pageContext, writer);
+                    }
+                    finally
+                    {
+                        if (lockTaken)
+                        {
+                            Monitor.Exit(requestLock);
+                        }
+                    }
+                }
+
+                output = sb.ToString().Trim();
+            }
+            finally
+            {
+                if (webPage is IDisposable)
+                {
+                    (webPage as IDisposable).Dispose();
+                }
             }
 
-            if(setParameters != null)
+
+            if (resultType == typeof(XhtmlDocument))
             {
-                setParameters(webPage);
-            }
+                if (output == "") return new XhtmlDocument();
 
-			var sb = new StringBuilder();
-			using (var writer = new StringWriter(sb))
-			{
-				bool lockTaken = false;
-				try
-				{
-					if (requestLock != null)
-					{
-						Monitor.Enter(requestLock, ref lockTaken);
-					}
-
-					webPage.ExecutePageHierarchy(pageContext, writer);
-				}
-				finally
-				{
-					if (lockTaken)
-					{
-						Monitor.Exit(requestLock);
-					}
-				}
-			}
-
-			string output = sb.ToString().Trim();
-
-			if (resultType == typeof(XhtmlDocument))
-			{
-			    if (output == "") return new XhtmlDocument();
-
-				try
+                try
                 {
                     return OutputToXhtmlDocument(output);
-				}
-				catch (XmlException ex)
-				{
-				    string[] codeLines = output.Split(new [] { Environment.NewLine, "\n" }, StringSplitOptions.None);
+                }
+                catch (XmlException ex)
+                {
+                    string[] codeLines = output.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
 
-				    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, codeLines, ex.LineNumber);
+                    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, codeLines, ex.LineNumber);
 
-				    throw;
-				}
-			}
+                    throw;
+                }
+            }
 
-			return ValueTypeConverter.Convert(output, resultType);
+            return ValueTypeConverter.Convert(output, resultType);
         }
 
         private static object GetRazorExecutionLock(HttpContext currentContext)
@@ -181,13 +195,13 @@ namespace Composite.AspNet.Razor
         /// <param name="functionContextContainer">The function context container.</param>
         /// <returns></returns>
         public static ResultType ExecuteRazorPage<ResultType>(
-            string virtualPath, 
-            Action<WebPageBase> setParameters, 
-            FunctionContextContainer functionContextContainer = null) where ResultType: class
+            string virtualPath,
+            Action<WebPageBase> setParameters,
+            FunctionContextContainer functionContextContainer = null) where ResultType : class
         {
-            return (ResultType) ExecuteRazorPage(virtualPath, setParameters, typeof(ResultType), functionContextContainer);
+            return (ResultType)ExecuteRazorPage(virtualPath, setParameters, typeof(ResultType), functionContextContainer);
         }
     }
 
-    
+
 }

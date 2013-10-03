@@ -33,7 +33,7 @@ namespace Composite.Core.WebClient
         public static bool LogApplicationLevelErrors { get; set; }
 
 
-        
+
 
         /// <exclude />
         public static void Application_Start(object sender, EventArgs e)
@@ -61,7 +61,7 @@ namespace Composite.Core.WebClient
                 throw new InvalidOperationException("Windows limitation problem detected! You have installed the website at a place where the total path length of the file with the longest filename exceeds the maximum allowed in Windows. See http://msdn.microsoft.com/en-us/library/aa365247%28VS.85%29.aspx#paths");
             }
 
-            
+
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
 
 
@@ -74,7 +74,7 @@ namespace Composite.Core.WebClient
                 _systemIsInitialized = true;
             }
         }
-        
+
 
 
         /// <exclude />
@@ -101,7 +101,7 @@ namespace Composite.Core.WebClient
                         LogShutDownReason();
                     }
                     GlobalEventSystemFacade.ShutDownTheSystem();
-                    
+
                     TempDirectoryFacade.OnApplicationEnd();
 
                     Log.LogVerbose("Global.asax", string.Format("--- Web Application End, {0} Id = {1}---",
@@ -110,13 +110,10 @@ namespace Composite.Core.WebClient
                 }
                 catch (Exception ex)
                 {
-                    if (RuntimeInformation.IsDebugBuild)
-                    {
-                        Log.LogCritical("Global.asax", ex);
-                    }
+                    Log.LogCritical("Global.asax", ex);
 
                     throw;
-                }               
+                }
             }
         }
 
@@ -247,12 +244,12 @@ namespace Composite.Core.WebClient
                         // Adding the relative path from RawUrl as a part of cache key to make ASP.NET cache respect casing of urls
                         pageCacheKey += new UrlBuilder(rawUrl).RelativeFilePath;
 
-                        if(context.Request.IsSecureConnection)
+                        if (context.Request.IsSecureConnection)
                         {
                             pageCacheKey += "https";
                         }
 
-                        if(!string.IsNullOrEmpty(pageUrl.PathInfo))
+                        if (!string.IsNullOrEmpty(pageUrl.PathInfo))
                         {
                             pageCacheKey += pageUrl.PathInfo;
                         }

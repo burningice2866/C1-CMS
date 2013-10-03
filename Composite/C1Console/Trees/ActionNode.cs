@@ -13,9 +13,9 @@ namespace Composite.C1Console.Trees
     /// <summary>    
     /// </summary>
     /// <exclude />
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
-	public abstract class ActionNode
-	{
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+    public abstract class ActionNode
+    {
         private static string TreeIdSerializedKeyName = "_TreeId_";
         private static string ActionNodeIdSerializedKeyName = "_ActionNodeId_";
 
@@ -75,7 +75,7 @@ namespace Composite.C1Console.Trees
         /// <summary>
         /// Use this method to do initializing and validation
         /// </summary>
-        internal void Initialize() 
+        internal void Initialize()
         {
             this.LabelDynamicValuesHelper = new DynamicValuesHelper(this.Label);
             this.LabelDynamicValuesHelper.Initialize(this);
@@ -91,7 +91,13 @@ namespace Composite.C1Console.Trees
         /// <exclude />
         public void AddAction(Action<ElementAction> actionAdder, EntityToken entityToken, TreeNodeDynamicContext dynamicContext)
         {
-            var replaceContext = new DynamicValuesHelperReplaceContext(entityToken, dynamicContext.Piggybag);
+            var piggybag = dynamicContext.Piggybag;
+            if (!entityToken.Equals(dynamicContext.CurrentEntityToken))
+            {
+                piggybag = piggybag.PreparePiggybag(dynamicContext.CurrentTreeNode, dynamicContext.CurrentEntityToken);
+            }
+
+            var replaceContext = new DynamicValuesHelperReplaceContext(entityToken, piggybag);
 
             OnAddAction(actionAdder, entityToken, dynamicContext, replaceContext);
         }
@@ -160,5 +166,5 @@ namespace Composite.C1Console.Trees
         {
             this.OwnerNode.Tree.BuildResult.AddValidationError(ValidationError.Create(this.XPath, stringName, args));
         }
-	}
+    }
 }

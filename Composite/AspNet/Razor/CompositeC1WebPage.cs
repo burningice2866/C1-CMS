@@ -12,44 +12,52 @@ namespace Composite.AspNet.Razor
     /// <summary>
     /// Defines a composite C1 razor control
     /// </summary>
-	public abstract class CompositeC1WebPage : WebPage, IDisposable
-	{
-		private bool _disposed;
-		private DataConnection _data;
+    public abstract class CompositeC1WebPage : WebPage, IDisposable
+    {
+        private bool _disposed;
+        private readonly DataConnection _data;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CompositeC1WebPage"/> class.
+        /// </summary>
+        protected CompositeC1WebPage()
+        {
+            _data = new DataConnection();
+        }
 
         /// <summary>
         /// Gets a <see cref="DataConnection"/> object.
         /// </summary>
-		public DataConnection Data
-		{
-			get { return _data ?? (_data = new DataConnection()); }
-		}
+        public DataConnection Data
+        {
+            get { return _data; }
+        }
 
         /// <summary>
         /// Gets a <see cref="SitemapNavigator"/> object.
         /// </summary>
-		public SitemapNavigator Sitemap
-		{
-			get { return Data.SitemapNavigator; }
-		}
+        public SitemapNavigator Sitemap
+        {
+            get { return Data.SitemapNavigator; }
+        }
 
 
         /// <summary>
         /// Gets the home page node.
         /// </summary>
-		public PageNode HomePageNode
-		{
-			get { return Sitemap.CurrentHomePageNode; }
-		}
+        public PageNode HomePageNode
+        {
+            get { return Sitemap.CurrentHomePageNode; }
+        }
 
 
         /// <summary>
         /// Gets the current page node.
         /// </summary>
-		public PageNode CurrentPageNode
-		{
-			get { return Sitemap.CurrentPageNode; }
-		}
+        public PageNode CurrentPageNode
+        {
+            get { return Sitemap.CurrentPageNode; }
+        }
 
 
         /// <summary>
@@ -96,37 +104,37 @@ namespace Composite.AspNet.Razor
         }
 
 
-		/// <summary>
-		/// Executes a C1 Function.
-		/// </summary>
-		/// <param name="name">Function name.</param>
-		/// <returns></returns>
-		public IHtmlString Function(string name)
-		{
-			return Function(name, null);
-		}
+        /// <summary>
+        /// Executes a C1 Function.
+        /// </summary>
+        /// <param name="name">Function name.</param>
+        /// <returns></returns>
+        public IHtmlString Function(string name)
+        {
+            return Function(name, null);
+        }
 
-		/// <summary>
-		/// Executes a C1 Function.
-		/// </summary>
-		/// <param name="name">Function name.</param>
-		/// <param name="parameters">The parameters.</param>
-		/// <returns></returns>
-		public IHtmlString Function(string name, object parameters)
-		{
+        /// <summary>
+        /// Executes a C1 Function.
+        /// </summary>
+        /// <param name="name">Function name.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <returns></returns>
+        public IHtmlString Function(string name, object parameters)
+        {
             return Function(name, Functions.ObjectToDictionary(parameters));
-		}
+        }
 
-		/// <summary>
-		/// Executes a C1 Function.
-		/// </summary>
-		/// <param name="name">Function name.</param>
-		/// <param name="parameters">The parameters.</param>
-		/// <returns></returns>
-		public IHtmlString Function(string name, IDictionary<string, object> parameters)
-		{
+        /// <summary>
+        /// Executes a C1 Function.
+        /// </summary>
+        /// <param name="name">Function name.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <returns></returns>
+        public IHtmlString Function(string name, IDictionary<string, object> parameters)
+        {
             return Html.C1().Function(name, parameters, GetFunctionContext());
-		}
+        }
 
 
         private FunctionContextContainer GetFunctionContext()
@@ -140,31 +148,31 @@ namespace Composite.AspNet.Razor
         }
 
         /// <exclude />
-		public void Dispose()
-		{
-			Dispose(true);
+        public void Dispose()
+        {
+            Dispose(true);
 
-			GC.SuppressFinalize(this);
-		}
-
-        /// <exclude />
-		protected virtual void Dispose(bool disposing)
-		{
-			if (!_disposed)
-			{
-				if (disposing)
-				{
-					_data.Dispose();
-				}
-
-				_disposed = true;
-			}
-		}
+            GC.SuppressFinalize(this);
+        }
 
         /// <exclude />
-		~CompositeC1WebPage()
-		{
-			Dispose(false);
-		}
-	}
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _data.Dispose();
+                }
+
+                _disposed = true;
+            }
+        }
+
+        /// <exclude />
+        ~CompositeC1WebPage()
+        {
+            Dispose(false);
+        }
+    }
 }

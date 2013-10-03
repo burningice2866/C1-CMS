@@ -11,6 +11,7 @@ using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
 using Composite.Core.PageTemplates;
 using Composite.Core.WebClient.Renderings.Page;
+using Composite.Functions;
 
 namespace Composite.Plugins.PageTemplates.Razor
 {
@@ -54,37 +55,53 @@ namespace Composite.Plugins.PageTemplates.Razor
                 Verify.ThrowInvalidOperationException("Missing template '{0}'".FormatWith(templateId));
             }
 
-            var webPage = WebPageBase.CreateInstanceFromVirtualPath(renderingInfo.ControlVirtualPath) as AspNet.Razor.RazorPageTemplate;
-            Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'", typeof(AspNet.Razor.RazorPageTemplate).FullName);
+            string output;
+            FunctionContextContainer functionContextContainer;
 
-            webPage.Configure();
-
-            var functionContextContainer = PageRenderer.GetPageRenderFunctionContextContainer();
-            
-            using (Profiler.Measure("Evaluating placeholders"))
+            RazorPageTemplate webPage = null;
+            try
             {
-                TemplateDefinitionHelper.BindPlaceholders(webPage, _job, renderingInfo.PlaceholderProperties, functionContextContainer);
+                webPage = WebPageBase.CreateInstanceFromVirtualPath(renderingInfo.ControlVirtualPath) as AspNet.Razor.RazorPageTemplate;
+                Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'",
+                                 typeof(AspNet.Razor.RazorPageTemplate).FullName);
+
+                webPage.Configure();
+
+                functionContextContainer = PageRenderer.GetPageRenderFunctionContextContainer();
+
+                using (Profiler.Measure("Evaluating placeholders"))
+                {
+                    TemplateDefinitionHelper.BindPlaceholders(webPage, _job, renderingInfo.PlaceholderProperties,
+                                                              functionContextContainer);
+                }
+
+                // Executing razor code
+                var httpContext = new HttpContextWrapper(HttpContext.Current);
+                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+                var pageContext = new WebPageContext(httpContext, webPage, startPage);
+                pageContext.PageData.Add(RazorHelper.PageContext_FunctionContextContainer, functionContextContainer);
+
+                var sb = new StringBuilder();
+                using (var writer = new StringWriter(sb))
+                {
+                    using (Profiler.Measure("Executing Razor page template"))
+                    {
+                        webPage.ExecutePageHierarchy(pageContext, writer);
+                    }
+                }
+
+                output = sb.ToString();
+            }
+            finally
+            {
+                if (webPage != null)
+                {
+                    webPage.Dispose();
+                }
             }
 
-            // Executing razor code
-            var httpContext = new HttpContextWrapper(HttpContext.Current);
-            var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
-            var pageContext = new WebPageContext(httpContext, webPage, startPage);
-            pageContext.PageData.Add(RazorHelper.PageContext_FunctionContextContainer, functionContextContainer);
-
-            var sb = new StringBuilder();
-			using (var writer = new StringWriter(sb))
-			{
-                using(Profiler.Measure("Executing Razor page template"))
-                {
-                    webPage.ExecutePageHierarchy(pageContext, writer);
-                }
-			}
-
-            string output = sb.ToString();
-
             XDocument resultDocument = XDocument.Parse(output);
-            
+
             var controlMapper = (IXElementToControlMapper)functionContextContainer.XEmbedableMapper;
             Control control = PageRenderer.Render(resultDocument, functionContextContainer, controlMapper, _job.Page);
 

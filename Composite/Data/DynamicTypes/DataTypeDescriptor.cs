@@ -153,13 +153,16 @@ namespace Composite.Data.DynamicTypes
         /// <summary>The fields (aka properties or columns) of the type.</summary>
         public DataFieldDescriptorCollection Fields { get; set; }
 
+        /// <summary>
+        /// Key fields. Note that the order of the fields is important.
+        /// </summary>
         internal IEnumerable<DataFieldDescriptor> KeyFields
         {
             get
             {
                 return this.KeyPropertyNames.Select(fieldName => this.Fields.Single(field => field.Name == fieldName));
             }
-        } 
+        }
 
 
         /// <summary>The short name of the type, without namespace and assembly info</summary>
@@ -584,13 +587,13 @@ namespace Composite.Data.DynamicTypes
             element.Add(new XElement("DataAssociations",
                                      DataAssociations.Select(da => da.ToXml())));
 
-            element.Add(new XElement("DataScopes", 
+            element.Add(new XElement("DataScopes",
                                      DataScopes.Select(dsi => new XElement("DataScopeIdentifier", new XAttribute("name", dsi)))));
 
             element.Add(new XElement("KeyPropertyNames",
                                      KeyPropertyNames.Select(name => new XElement("KeyPropertyName", new XAttribute("name", name)))));
 
-            element.Add(new XElement("SuperInterfaces", 
+            element.Add(new XElement("SuperInterfaces",
                                      SuperInterfaces.Select(su => new XElement("SuperInterface", new XAttribute("type", TypeManager.SerializeType(su))))));
 
 
