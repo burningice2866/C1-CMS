@@ -74,6 +74,8 @@ namespace Composite.Plugins.PageTemplates.MasterPages.Controls.Functions
 
                 NormalizeAspNetForms(xhmlDocument);
 
+                ContentFilterFacade.FilterContent(xhmlDocument, ID);
+
                 AddNodesAsControls(xhmlDocument.Body.Nodes(), this, controlMapper);
 
                 if (Page.Header != null)
