@@ -7,6 +7,7 @@ using System.Web;
 using System.Web.WebPages;
 using System.Xml;
 using System.Xml.Linq;
+using Composite.Core.Application;
 using Composite.Core.Types;
 using Composite.Core.Xml;
 using Composite.Functions;
@@ -42,9 +43,6 @@ namespace Composite.AspNet.Razor
             WebPageBase webPage = null;
             try
             {
-                webPage = WebPageBase.CreateInstanceFromVirtualPath(virtualPath);
-                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
-
                 object requestLock = null;
                 HttpContextBase httpContext;
 
@@ -59,6 +57,13 @@ namespace Composite.AspNet.Razor
 
                     requestLock = GetRazorExecutionLock(currentContext);
                 }
+
+                var dir = Path.GetDirectoryName(virtualPath);
+                var function = Path.GetFileNameWithoutExtension(virtualPath);
+                var cshtmlFile = SpecialModesFileResolver.ResolveFileInInDirectory(dir, function, ".cshtml", httpContext.Request.Browser.IsMobileDevice, httpContext.Request.QueryString);
+
+                webPage = WebPageBase.CreateInstanceFromVirtualPath(cshtmlFile);
+                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
 
                 var pageContext = new WebPageContext(httpContext, webPage, startPage);
                 if (functionContextContainer != null)

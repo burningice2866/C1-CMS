@@ -52,7 +52,7 @@ namespace Composite.Core.PageTemplates
             {
                 foreach (var property in type.GetProperties())
                 {
-                    if(property.ReflectedType != property.DeclaringType) continue;
+                    if (property.ReflectedType != property.DeclaringType) continue;
 
                     var placeholderAttributes = property.GetCustomAttributes(typeof(PlaceholderAttribute), true);
                     if (placeholderAttributes.Length == 0) continue;
@@ -71,7 +71,7 @@ namespace Composite.Core.PageTemplates
 
                     placeholderProperties.Add(placeholderId, property);
                     placeholders.Add(new PlaceholderDescriptor { Id = placeholderId, Title = placeholderLabel });
-                    
+
 
                     if (placeholderAttribute.IsDefault)
                     {
@@ -103,7 +103,7 @@ namespace Composite.Core.PageTemplates
         /// <param name="pageContentToRender">The page rendering job.</param>
         /// <param name="placeholderProperties">The placeholder properties.</param>
         /// <param name="functionContextContainer">The function context container, if not null, nested functions fill be evaluated.</param>
-        public static void BindPlaceholders(IPageTemplate template, 
+        public static void BindPlaceholders(object template,
                                      PageContentToRender pageContentToRender,
                                      IDictionary<string, PropertyInfo> placeholderProperties,
                                      FunctionContextContainer functionContextContainer)
@@ -131,7 +131,7 @@ namespace Composite.Core.PageTemplates
                 }
 
                 PageRenderer.ResolveRelativePaths(placeholderXhtml);
-                    
+
                 PropertyInfo property = placeholderProperties[placeholderId];
 
                 if (!property.ReflectedType.IsAssignableFrom(template.GetType()))

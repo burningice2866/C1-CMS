@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Web;
 using System.Xml.Linq;
+using Composite.AspNet;
 using Composite.C1Console.Security;
 using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
+using Composite.Core.PageTemplates;
 using Composite.Core.Routing;
 using Composite.Core.Routing.Pages;
 using Composite.Core.WebClient.Renderings.Page;
 using Composite.Data;
 using Composite.Data.Types;
 using Composite.Plugins.Routing.Pages;
-using Composite.Core.PageTemplates;
 
 namespace Composite.Core.WebClient.Renderings
 {
@@ -19,8 +20,8 @@ namespace Composite.Core.WebClient.Renderings
     /// Rendering context
     /// </summary>
     /// <exclude />
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
-    public sealed class RenderingContext: IDisposable
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+    public sealed class RenderingContext : IDisposable
     {
         /// <summary>
         /// Indicates whether performance profiling is enabled.
@@ -175,7 +176,7 @@ namespace Composite.Core.WebClient.Renderings
             var request = httpContext.Request;
             var response = httpContext.Response;
 
-           ProfilingEnabled = request.Url.OriginalString.Contains("c1mode=perf");
+            ProfilingEnabled = request.Url.OriginalString.Contains("c1mode=perf");
             if (ProfilingEnabled)
             {
                 if (!UserValidationFacade.IsLoggedIn())
@@ -199,7 +200,7 @@ namespace Composite.Core.WebClient.Renderings
             }
             else
             {
-                PageUrlData pageUrl = C1PageRoute.PageUrlData ??  PageUrls.UrlProvider.ParseInternalUrl(request.Url.OriginalString);
+                PageUrlData pageUrl = C1PageRoute.PageUrlData ?? PageUrls.UrlProvider.ParseInternalUrl(request.Url.OriginalString);
                 Page = pageUrl.GetPage();
 
                 _cachedUrl = request.Url.PathAndQuery;
@@ -228,7 +229,27 @@ namespace Composite.Core.WebClient.Renderings
             Verify.IsNotNull(httpContext.Handler, "HttpHandler isn't defined");
 
             var aspnetPage = (System.Web.UI.Page)httpContext.Handler;
-            
+            var qs = request.QueryString;
+
+            if (qs.AllKeys.Length > 0 && qs.Keys[0] == null)
+            {
+                if (qs[0] == "mobile")
+                {
+                    httpContext.SetOverriddenBrowser(BrowserOverride.Mobile);
+                }
+
+                if (qs[0] == "desktop")
+                {
+                    httpContext.SetOverriddenBrowser(BrowserOverride.Desktop);
+                }
+            }
+
+            var overWrittenBrowser = httpContext.GetOverriddenBrowser();
+            if (overWrittenBrowser != null)
+            {
+                aspnetPage.Request.Browser = httpContext.GetOverriddenBrowser();
+            }
+
             var pageRenderer = PageTemplateFacade.BuildPageRenderer(Page.TemplateId);
             pageRenderer.AttachToPage(aspnetPage, pageRenderingJob);
         }
@@ -273,7 +294,7 @@ namespace Composite.Core.WebClient.Renderings
                 httpContext.Response.StatusCode = 404;
             }
         }
-        
+
         private static string GetLoginRedirectUrl(string url)
         {
             return UrlUtils.PublicRootPath + "/Composite/Login.aspx?ReturnUrl=" +
