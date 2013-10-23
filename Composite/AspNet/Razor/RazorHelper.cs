@@ -53,16 +53,15 @@ namespace Composite.AspNet.Razor
                 }
                 else
                 {
-                    httpContext = new HttpContextWrapper(currentContext);
+                    var dir = Path.GetDirectoryName(virtualPath);
+                    var function = Path.GetFileNameWithoutExtension(virtualPath);
 
+                    httpContext = new HttpContextWrapper(currentContext);
                     requestLock = GetRazorExecutionLock(currentContext);
+                    virtualPath = SpecialModesFileResolver.ResolveFileInInDirectory(dir, function, ".cshtml", httpContext.Request.Browser.IsMobileDevice, httpContext.Request.QueryString);
                 }
 
-                var dir = Path.GetDirectoryName(virtualPath);
-                var function = Path.GetFileNameWithoutExtension(virtualPath);
-                var cshtmlFile = SpecialModesFileResolver.ResolveFileInInDirectory(dir, function, ".cshtml", httpContext.Request.Browser.IsMobileDevice, httpContext.Request.QueryString);
-
-                webPage = WebPageBase.CreateInstanceFromVirtualPath(cshtmlFile);
+                webPage = WebPageBase.CreateInstanceFromVirtualPath(virtualPath);
                 var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
 
                 var pageContext = new WebPageContext(httpContext, webPage, startPage);
