@@ -26,6 +26,11 @@ EditorBinding.ACTION_ATTACHED = null;
 EditorBinding.URL_DIALOG_MOZ_CONFIGURE = "${root}/content/dialogs/wysiwygeditor/mozsecuritynote/mozsecuritynote.aspx";
 
 /**
+ *
+ */
+EditorBinding.URL_UPDATERENDERING = "${root}/content/dialogs/functions/editFunctionCall.aspx?type={0}";
+
+/**
  * The number of the beast.
  * @type {int}
  */
@@ -40,6 +45,34 @@ EditorBinding.LINE_BREAK_ENTITY_HACK = "C1.LINE.BREAK.ENTITY.HACK";
 
 
 // EDITITOR COMPONENT STUFF ..............................................
+EditorBinding.invokeFunctionEditorDialog = function (markup, handler, type )
+{
+    type = type?type:'';
+    var settings = FunctionService.GetCustomEditorSettingsByMarkup(markup);
+
+    var def = ViewDefinitions["Composite.Management.PostBackDialog"];
+    if (!settings) {
+        def.width = 880; //760;
+        def.height = 520;
+    } else {
+        var dim = top.WindowManager.getWindowDimensions();
+        def.width = settings.Width ? (settings.Width > dim.w ? dim.w : settings.Width) : undefined;
+        def.height = settings.Height ? (settings.Height > dim.h ? dim.h : settings.Height) : undefined;
+        if (settings.Url)
+            settings.Url = settings.Url.indexOf("?") > -1 ? settings.Url + "&consoleId=" + Application.CONSOLE_ID : settings.Url + "?consoleId=" + Application.CONSOLE_ID;
+    }
+
+    def.label = "${string:Composite.Web.FormControl.FunctionCallsDesigner:DialogTitle}";
+    def.image = "${icon:parameter_overloaded}";
+    def.handler = handler;
+    def.argument = {
+    	url: settings ? settings.Url : EditorBinding.URL_UPDATERENDERING.replace('{0}', type),
+        list: new List([{ name: "functionmarkup", value: markup }])
+    }
+    StageBinding.presentViewDefinition(def);
+}
+
+
 
 /**
  * Considered private to the EditorBinding.
@@ -517,7 +550,7 @@ EditorBinding.prototype.handleEvent = function (e) {
 		* that mousedown on a contenteditable document should not invoke focus. 
 		*/ 
 		case DOMEvents.MOUSEMOVE:
-			if (Client.isExplorer) {
+			if (Client.isExplorer || Client.isExplorer11) {
 				if (Application.isBlurred) {
 					if (!this._isActivated) {
 						this.getContentWindow().focus();
@@ -684,36 +717,28 @@ EditorBinding.prototype.hasSelection = function () {
 	var result = false;
 	try {
 
-		if (!Client.isExplorer) {
-			var selection = this.getEditorWindow().getSelection();
-			if (selection != null) {
-				result = selection.toString().length > 0;
-				if (!result) {
-					var range = selection.getRangeAt(0);
-					var frag = range.cloneContents();
-					var element = this.getEditorDocument().createElement("element");
-					while (frag.hasChildNodes()) {
-						element.appendChild(frag.firstChild);
-					}
-					var img = element.getElementsByTagName("img").item(0);
-					if (img != null) {
+		var selection = this.getEditorWindow().getSelection();
+		if (selection != null) {
+			result = selection.toString().length > 0;
+			if (!result) {
+				var range = selection.getRangeAt(0);
+				var frag = range.cloneContents();
+				var element = this.getEditorDocument().createElement("element");
+				while (frag.hasChildNodes()) {
+					element.appendChild(frag.firstChild);
+				}
+				var img = element.getElementsByTagName("img").item(0);
+				if (img != null) {
 
-						/*
-						* Major hack. Should not be performed here, but the  
-						* class check will at least prevent the Link button 
-						* from being enabled when a Function is selected.
-						*/
-						if (!VisualEditorBinding.isReservedElement(img)) {
-							result = true;
-						}
+					/*
+					* Major hack. Should not be performed here, but the  
+					* class check will at least prevent the Link button 
+					* from being enabled when a Function is selected.
+					*/
+					if (!VisualEditorBinding.isReservedElement(img)) {
+						result = true;
 					}
 				}
-			}
-		} else {
-			var range = this.getEditorDocument().selection.createRange();
-			result = (range && range.text) && range.text.length > 0;
-			if (range.commonParentElement && VisualEditorBinding.isImageElement(range.commonParentElement())) {
-				result = true;
 			}
 		}
 

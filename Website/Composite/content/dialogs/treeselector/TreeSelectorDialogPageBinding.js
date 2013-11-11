@@ -66,6 +66,12 @@ function TreeSelectorDialogPageBinding () {
 	this._selectionResult = null;
 	
 	/**
+	 *  The (optional) action groups.
+	 * @type {tring}}
+	 */
+	this._actionGroup = null;
+	
+	/**
 	 * Search token.
 	 * @type {string}
 	 *
@@ -109,6 +115,8 @@ TreeSelectorDialogPageBinding.prototype.setPageArgument = function (arg) {
 	this._selectionProperty = arg.selectionProperty;
 	this._selectionValue = arg.selectionValue;
 	this._selectionResult = arg.selectionResult;
+	this._actionGroup = arg.actionGroup;
+
 	if (arg.selectedToken) {
 		this._selectedToken = arg.selectedToken;
 	}
@@ -183,6 +191,7 @@ TreeSelectorDialogPageBinding.prototype.onBeforePageInitialize = function () {
 	this._treeBinding.setSelectable ( true );
 	this._treeBinding.setSelectionProperty ( this._selectionProperty );
 	this._treeBinding.setSelectionValue(this._selectionValue);
+	this._treeBinding.setActionGroup(this._actionGroup);
 
 	//Remove default double click action
 	this._treeBinding.removeActionListener(TreeNodeBinding.ACTION_COMMAND); 
@@ -226,31 +235,32 @@ TreeSelectorDialogPageBinding.prototype._injectTreeNodes = function (list) {
 		/*
 		* Build treenodes.
 		*/
-		var nodes = System.getNamedRootsBySearchToken(key, search);
+		var roots = System.getNamedRootsBySearchToken(key, search);
 
 		var count = 0;
 		var expandNodes = new List([]);
+		var self = this;
 
-		while (nodes.hasNext()) {
+		while (roots.hasNext()) {
 
-			var node = SystemTreeNodeBinding.newInstance(
-				nodes.getNext(),
+			var treenode = SystemTreeNodeBinding.newInstance(
+				roots.getNext(),
 				this.bindingDocument
 			)
-			node.autoExpand = true;
-			this._treeBinding.add(node);
-			node.attach();
+			treenode.autoExpand = true;
+			this._treeBinding.add(treenode);
+			treenode.attach();
 
 			// Auto expand tree folders in selection dialogs, when only one folder can be expanded.
 			// Expand last opened nodes
 			count++;
-			if (!nodes.hasNext() && count == 1 || LocalStore.openedNodes.has(node)) {
-				expandNodes.add(node);
+			if (!roots.hasNext() && count == 1 || LocalStore.openedNodes.has(treenode.node)) {
+				expandNodes.add(treenode);
 			}
 
 			// Fill list of parents, used for handle refreshed tree
-			var self = this;
-			var parents = TreeService.GetAllParents(node.node.getEntityToken());
+			
+			var parents = TreeService.GetAllParents(treenode.node.getEntityToken());
 			new List(parents).each(
 				function (parent) {
 					self._parents.add(parent);
@@ -352,9 +362,16 @@ TreeSelectorDialogPageBinding.prototype._updateDisplayAndResult = function () {
 	var prop 		= this._selectionResult;
 	
 	selections.each ( function ( binding ) {
-		result.add ( 
-			binding.getProperty ( prop )
-		);
+		if (prop == "EntityToken" && binding.node) {
+
+			result.add(
+				binding.node.getEntityToken()
+			);
+		} else {
+			result.add(
+				binding.getProperty(prop)
+			);
+		}
 		value += binding.getLabel ();
 		if ( selections.hasNext ()) {
 			value += "; ";

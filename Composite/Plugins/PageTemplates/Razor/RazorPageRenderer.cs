@@ -63,7 +63,7 @@ namespace Composite.Plugins.PageTemplates.Razor
             {
                 webPage = WebPageBase.CreateInstanceFromVirtualPath(renderingInfo.ControlVirtualPath) as AspNet.Razor.RazorPageTemplate;
                 Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'",
-                                 typeof(AspNet.Razor.RazorPageTemplate).FullName);
+                                 typeof (AspNet.Razor.RazorPageTemplate).FullName);
 
                 webPage.Configure();
 
@@ -77,7 +77,7 @@ namespace Composite.Plugins.PageTemplates.Razor
 
                 // Executing razor code
                 var httpContext = new HttpContextWrapper(HttpContext.Current);
-                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] {"cshtml"});
                 var pageContext = new WebPageContext(httpContext, webPage, startPage);
                 pageContext.PageData.Add(RazorHelper.PageContext_FunctionContextContainer, functionContextContainer);
 
@@ -101,7 +101,7 @@ namespace Composite.Plugins.PageTemplates.Razor
             }
 
             XDocument resultDocument = XDocument.Parse(output);
-
+            
             var controlMapper = (IXElementToControlMapper)functionContextContainer.XEmbedableMapper;
             Control control = PageRenderer.Render(resultDocument, functionContextContainer, controlMapper, _job.Page);
 

@@ -148,7 +148,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
 
             IPage selectedPage;
-            if (this.BindingExist("SelectedPage") == false)
+            if (!this.BindingExist("SelectedPage"))
             {
                 selectedPage = this.GetDataItemFromEntityToken<IPage>();
                 selectedPage.PublicationStatus = GenericPublishProcessController.Draft;
@@ -162,7 +162,9 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             if (!this.BindingExist("UrlTitleIsRequired"))
             {
                 bool isRootPage = PageManager.GetParentId(selectedPage.Id) == Guid.Empty;
-                this.Bindings.Add("UrlTitleIsRequired", !isRootPage);
+
+                this.Bindings["UrlTitleIsRequired"] = !isRootPage;
+                this.Bindings["IsRootPage"] = isRootPage;
             }
 
             IFormMarkupProvider markupProvider = new FormDefinitionFileMarkupProvider(@"\Administrative\EditPage.xml");
@@ -197,7 +199,9 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 DataTypeDescriptor dataTypeDescriptor = DynamicTypeManager.GetDataTypeDescriptor(metaDatTypeId);
                 Verify.IsNotNull(dataTypeDescriptor, "Failed to get meta data type by id '{0}'. If data type was purposely removed, in order to fix this exception you should remove IPageMetaDataDefinition records that reference this data type.", metaDatTypeId);
 
-                Type metaDataType = TypeManager.GetType(dataTypeDescriptor.TypeManagerTypeName);
+                Type metaDataType = TypeManager.TryGetType(dataTypeDescriptor.TypeManagerTypeName);
+                Verify.IsNotNull(metaDataType, "Failed to get meta data type '{0}', id: {1}. If it has been removed, references from '{2}' have to be removed as well",
+                                                dataTypeDescriptor.TypeManagerTypeName, metaDatTypeId, typeof(IPageMetaDataDefinition).Name);
 
                 DataTypeDescriptorFormsHelper helper = CreateDataTypeDescriptorFormsHelper(pageMetaDataDefinition, dataTypeDescriptor);
 

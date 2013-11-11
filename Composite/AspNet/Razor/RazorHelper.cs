@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Web;
 using System.Web.WebPages;
 using System.Xml;
@@ -20,8 +19,6 @@ namespace Composite.AspNet.Razor
     public static class RazorHelper
     {
         internal static readonly string PageContext_FunctionContextContainer = "C1.FunctionContextContainer";
-        private static readonly string ExecutionLock_ItemsKey = "__razor_execute_lock__";
-        private static readonly object _lock = new object();
 
         /// <summary>
         /// Executes the razor page.
@@ -37,67 +34,21 @@ namespace Composite.AspNet.Razor
             Type resultType,
             FunctionContextContainer functionContextContainer)
         {
-
-            string output;
-
             WebPageBase webPage = null;
             try
             {
-                object requestLock = null;
-                HttpContextBase httpContext;
-
                 HttpContext currentContext = HttpContext.Current;
-                if (currentContext == null)
-                {
-                    httpContext = NoHttpRazorContext.GetDotNetSpecificVersion();
-                }
-                else
+                if (currentContext != null)
                 {
                     var dir = Path.GetDirectoryName(virtualPath);
                     var function = Path.GetFileNameWithoutExtension(virtualPath);
 
-                    httpContext = new HttpContextWrapper(currentContext);
-                    requestLock = GetRazorExecutionLock(currentContext);
-                    virtualPath = SpecialModesFileResolver.ResolveFileInInDirectory(dir, function, ".cshtml", httpContext.Request.Browser.IsMobileDevice, httpContext.Request.QueryString);
+                    virtualPath = SpecialModesFileResolver.ResolveFileInInDirectory(dir, function, ".cshtml", currentContext.Request.Browser.IsMobileDevice, currentContext.Request.QueryString);
                 }
 
                 webPage = WebPageBase.CreateInstanceFromVirtualPath(virtualPath);
-                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
 
-                var pageContext = new WebPageContext(httpContext, webPage, startPage);
-                if (functionContextContainer != null)
-                {
-                    pageContext.PageData.Add(PageContext_FunctionContextContainer, functionContextContainer);
-                }
-
-                if (setParameters != null)
-                {
-                    setParameters(webPage);
-                }
-
-                var sb = new StringBuilder();
-                using (var writer = new StringWriter(sb))
-                {
-                    bool lockTaken = false;
-                    try
-                    {
-                        if (requestLock != null)
-                        {
-                            Monitor.Enter(requestLock, ref lockTaken);
-                        }
-
-                        webPage.ExecutePageHierarchy(pageContext, writer);
-                    }
-                    finally
-                    {
-                        if (lockTaken)
-                        {
-                            Monitor.Exit(requestLock);
-                        }
-                    }
-                }
-
-                output = sb.ToString().Trim();
+                return ExecuteRazorPage(webPage, setParameters, resultType, functionContextContainer);
             }
             finally
             {
@@ -106,6 +57,54 @@ namespace Composite.AspNet.Razor
                     (webPage as IDisposable).Dispose();
                 }
             }
+        }
+
+        /// <summary>
+        /// Executes the razor page.
+        /// </summary>
+        /// <param name="webPage">The web page.</param>
+        /// <param name="setParameters">Delegate to set the parameters.</param>
+        /// <param name="resultType">The type of the result.</param>
+        /// <param name="functionContextContainer">The function context container</param>
+        /// <returns></returns>
+        public static object ExecuteRazorPage(
+            WebPageBase webPage,
+            Action<WebPageBase> setParameters,
+            Type resultType,
+            FunctionContextContainer functionContextContainer)
+        {
+            var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+
+            HttpContextBase httpContext;
+
+            HttpContext currentContext = HttpContext.Current;
+            if (currentContext == null)
+            {
+                httpContext = NoHttpRazorContext.GetDotNetSpecificVersion();
+            }
+            else
+            {
+                httpContext = new CustomHttpContextWrapper(currentContext);
+            }
+
+            var pageContext = new WebPageContext(httpContext, webPage, startPage);
+            if (functionContextContainer != null)
+            {
+                pageContext.PageData.Add(PageContext_FunctionContextContainer, functionContextContainer);
+            }
+
+            if (setParameters != null)
+            {
+                setParameters(webPage);
+            }
+
+            var sb = new StringBuilder();
+            using (var writer = new StringWriter(sb))
+            {
+                webPage.ExecutePageHierarchy(pageContext, writer);
+            }
+
+            string output = sb.ToString().Trim();
 
 
             if (resultType == typeof(XhtmlDocument))
@@ -129,28 +128,6 @@ namespace Composite.AspNet.Razor
             return ValueTypeConverter.Convert(output, resultType);
         }
 
-        private static object GetRazorExecutionLock(HttpContext currentContext)
-        {
-            object requestLock = currentContext.Items[ExecutionLock_ItemsKey];
-
-            if (requestLock == null)
-            {
-                lock (_lock)
-                {
-                    requestLock = currentContext.Items[ExecutionLock_ItemsKey];
-
-                    if (requestLock == null)
-                    {
-                        requestLock = new object();
-                        lock (currentContext.Items.SyncRoot)
-                        {
-                            currentContext.Items[ExecutionLock_ItemsKey] = requestLock;
-                        }
-                    }
-                }
-            }
-            return requestLock;
-        }
 
         private static XhtmlDocument OutputToXhtmlDocument(string output)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using Composite.Core.Configuration;
 using Composite.Core.Extensions;
@@ -30,7 +31,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                     string typeFullName = (dataTypeDescriptor.Namespace ?? string.Empty) + "." + dataTypeDescriptor.Name;
                 
                     throw new InvalidOperationException(
-                        string.Format("Configuration already contains an interface with data type ID '{0}', type name '{1}'",
+                        string.Format("Configuration file '{0}' already contains an interface with data type ID '{1}', type name '{2}'",
+                                      configuration.ConfigurationFilePath,
                                       interfaceConfig.DataTypeId,
                                       typeFullName));
                 }
@@ -85,12 +87,13 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
 
                 Guid dataTypeId = changeDescriptor.OriginalType.DataTypeId;
 
-                Verify.IsTrue(configuration.Section.Interfaces.ContainsInterfaceType(changeDescriptor.OriginalType),
-                        "Configuration does not contain the original interface named '{0}'".FormatWith(dataTypeId));
+                var existingElement = configuration.Section.Interfaces.Get(changeDescriptor.OriginalType);
+
+                Verify.IsNotNull(existingElement, "Configuration does not contain the original interface with id '{0}'", dataTypeId);
 
                 configuration.Section.Interfaces.Remove(changeDescriptor.OriginalType);
 
-                InterfaceConfigurationElement newInterfaceConfig = BuildInterfaceConfigurationElement(changeDescriptor.AlteredType);
+                InterfaceConfigurationElement newInterfaceConfig = BuildInterfaceConfigurationElement(changeDescriptor.AlteredType, existingElement);
 
                 configuration.Section.Interfaces.Add(newInterfaceConfig);
 
@@ -116,7 +119,9 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
         }
 
 
-        private static InterfaceConfigurationElement BuildInterfaceConfigurationElement(DataTypeDescriptor dataTypeDescriptor)
+        private static InterfaceConfigurationElement BuildInterfaceConfigurationElement(
+            DataTypeDescriptor dataTypeDescriptor, 
+            InterfaceConfigurationElement existingElement = null)
         {
             var tableConfig = new InterfaceConfigurationElement();            
 
@@ -142,7 +147,23 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             {
                 foreach (var culture in SqlDataProviderStoreManipulator.GetCultures(dataTypeDescriptor))
                 {
-                    string tableName = DynamicTypesCommon.GenerateTableName(dataTypeDescriptor, dataScope, culture);
+                    string tableName = null;
+
+                    if (existingElement != null)
+                    {
+                        foreach (StoreConfigurationElement table  in existingElement.ConfigurationStores)
+                        {
+                            if (table.DataScope == dataScope.Name && table.CultureName == culture.Name)
+                            {
+                                tableName = table.TableName;
+                                break;
+                            }
+                        }
+                        
+                    }
+
+                    tableName = tableName ?? DynamicTypesCommon.GenerateTableName(dataTypeDescriptor, dataScope, culture);
+
                     tableConfig.ConfigurationStores.Add(new StoreConfigurationElement
                                                             {TableName = tableName, DataScope = dataScope.Name, CultureName = culture.Name});
                 }
@@ -157,11 +178,14 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
 
         private sealed class SqlDataProviderConfiguration
         {
+            readonly string _configurationFilePath;
             readonly C1Configuration _configuration;
 
             public SqlDataProviderConfiguration(string providerName)
             {
-                _configuration = new C1Configuration(System.IO.Path.Combine(PathUtil.Resolve(GlobalSettingsFacade.ConfigurationDirectory), string.Format("{0}.config", providerName)));
+                _configurationFilePath = Path.Combine(PathUtil.Resolve(GlobalSettingsFacade.ConfigurationDirectory), 
+                                                      string.Format("{0}.config", providerName));
+                _configuration = new C1Configuration(_configurationFilePath);
 
                 Section = _configuration.GetSection(SqlDataProviderConfigurationSection.SectionName) as SqlDataProviderConfigurationSection;
 
@@ -180,6 +204,11 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                 private set;
             }
 
+
+            public string ConfigurationFilePath
+            {
+                get { return _configurationFilePath; }
+            }
 
 
             public void Save()

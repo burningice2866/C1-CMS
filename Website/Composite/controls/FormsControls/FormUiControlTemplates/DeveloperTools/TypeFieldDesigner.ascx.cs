@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -82,7 +83,7 @@ namespace CompositeTypeFieldDesigner
                 btnWidgetFunctionMarkup.Attributes["label"] = CurrentlySelectedWidgetText;
                 btnWidgetFunctionMarkup.Attributes["url"] = "${root}/content/dialogs/functions/editFunctionCall.aspx?functiontype=widget&zip_type="
                     + UrlUtils.ZipContent(TypeManager.SerializeType(CurrentlySelectedWidgetReturnType))
-                    + "&dialoglabel=" + HttpUtility.UrlEncodeUnicode(GetString("WidgetDialogLabel")) + "&multimode=false&functionmarkup=";
+                    + "&dialoglabel=" + HttpUtility.UrlEncode(GetString("WidgetDialogLabel"), Encoding.UTF8) + "&multimode=false&functionmarkup=";
 
                 btnValidationRulesFunctionMarkup.Attributes["label"] =
                     GetString(btnValidationRulesFunctionMarkup.Value.IsNullOrEmpty()
@@ -91,7 +92,7 @@ namespace CompositeTypeFieldDesigner
                 // TODO: some of the query parameters may not be used at the moment
                 btnValidationRulesFunctionMarkup.Attributes["url"] = "${root}/content/dialogs/functions/editFunctionCall.aspx?zip_type="
                      + UrlUtils.ZipContent(TypeManager.SerializeType(this.CurrentlySelectedTypeValidatorType))
-                     + "&dialoglabel=" + HttpUtility.UrlEncodeUnicode(GetString("ValidationRulesDialogLabel"))
+                     + "&dialoglabel=" + HttpUtility.UrlEncode(GetString("ValidationRulesDialogLabel"), Encoding.UTF8)
                      + "&multimode=true&addnewicon=Composite.Icons,validationrules-add&addnewicondisabled=Composite.Icons,validationrules-add-disabled"
                      + "&functionicon=Composite.Icons,validationrule&containericon=Composite.Icons,validationrules&functionmarkup=";
 
@@ -99,7 +100,7 @@ namespace CompositeTypeFieldDesigner
                 btnDefaultValueFunctionMarkup.Attributes["url"] =
                     "${root}/content/dialogs/functions/editFunctionCall.aspx?zip_type="
                     + UrlUtils.ZipContent(TypeManager.SerializeType(this.CurrentlySelectedDefaultValueFunctionReturnType))
-                    + "&dialoglabel=" + HttpUtility.UrlEncodeUnicode(GetString("DefaultValueDialogLabel"))
+                    + "&dialoglabel=" + HttpUtility.UrlEncode(GetString("DefaultValueDialogLabel"), Encoding.UTF8)
                     + "&multimode=false&functionmarkup=";
             }
 
@@ -252,9 +253,10 @@ namespace CompositeTypeFieldDesigner
                     TypeDetailsLabel.Text = GetString("DecimalNumberFormat");
                     TypeDetailsSelector.AutoPostBack = false; // this is a fix to plug bug in update manager (client)
                     TypeDetailsSelector.Items.Add(new ListItem(GetString("1DecimalPlace"), "1"));
-                    TypeDetailsSelector.Items.Add(new ListItem(GetString("2DecimalPlace"), "2"));
-                    TypeDetailsSelector.Items.Add(new ListItem(GetString("3DecimalPlace"), "3"));
-                    TypeDetailsSelector.Items.Add(new ListItem(GetString("4DecimalPlace"), "4"));
+                    for (int i = 1; i < 16; i++)
+                    {
+                        TypeDetailsSelector.Items.Add(new ListItem(GetString("nDecimalPlaces").FormatWith(i), i.ToString()));
+                    }
                     TypeDetailsSelector.SelectedValue = "2";
                     break;
                 case "Reference":
@@ -582,7 +584,7 @@ namespace CompositeTypeFieldDesigner
                         selected.Selected = true;
                     }
                 }
-                if (selectedField.InstanceType == typeof(decimal))
+                if (selectedField.InstanceType == typeof(decimal) || selectedField.InstanceType == typeof(decimal?))
                 {
                     ListItem selected = this.TypeDetailsSelector.Items.FindByValue(selectedField.StoreType.NumericScale.ToString());
                     if (selected == null)
@@ -898,7 +900,7 @@ namespace CompositeTypeFieldDesigner
                         return StoreFieldType.Integer;
                     case "System.Decimal":
                         int decimalPlaces = Int32.Parse(this.TypeDetailsSelector.SelectedValue);
-                        return StoreFieldType.Decimal(10, decimalPlaces);
+                        return StoreFieldType.Decimal(28, decimalPlaces);
                     case "System.DateTime":
                         return StoreFieldType.DateTime;
                     case "System.Boolean":

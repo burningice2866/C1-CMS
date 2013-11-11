@@ -48,13 +48,13 @@ namespace Composite.Core.Serialization.CodeGeneration
         internal static string CreateSerializerClassFullName(Type propertyClassType)
         {
             return NamespaceName + "." + CreateSerializerClassName(propertyClassType.FullName);
-        }
+        }        
 
 
 
         internal static CodeTypeDeclaration CreateCodeTypeDeclaration(Type propertyClassType)
         {
-            var properties = GetSerializeableProperties(propertyClassType).Select(p => new Tuple<string, Type>(p.Name, p.PropertyType)).ToList();
+            var properties = GetSerializeableProperties(propertyClassType).Select(p => new Tuple<string,Type>(p.Name, p.PropertyType)).ToList();
 
             return CreateCodeTypeDeclaration(propertyClassType.FullName, properties);
         }
@@ -303,7 +303,7 @@ namespace Composite.Core.Serialization.CodeGeneration
             isUseable = isUseable && TypeUseableForSerialization(property.PropertyType);
 
             return isUseable;
-        }
+        }              
 
 
 

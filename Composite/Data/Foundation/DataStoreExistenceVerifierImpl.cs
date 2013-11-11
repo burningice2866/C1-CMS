@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Composite.Core;
 using Composite.Data.DynamicTypes;
 using Composite.Data.Foundation.PluginFacades;
 using Composite.Data.Plugins.DataProvider.Runtime;
 using Composite.Data.Types;
-using Composite.Core.Logging;
-
+using Composite.Plugins.WebClient.SessionStateProviders.DefaultSessionStateProvider;
 
 
 namespace Composite.Data.Foundation
@@ -17,6 +17,7 @@ namespace Composite.Data.Foundation
         private static readonly List<Type> _interfaceTypes = new List<Type>
                 {
                     typeof(ICompositionContainer),
+                    typeof(ICustomFunctionCallEditorMapping),
                     typeof(IDataItemTreeAttachmentPoint),
                     typeof(IFlowInformation),
                     typeof(IFolderWhiteList),
@@ -49,6 +50,7 @@ namespace Composite.Data.Foundation
                     typeof(IPageUnpublishSchedule),
                     typeof(IParameter),
                     typeof(ISearchEngineOptimizationKeyword),
+                    typeof(ISessionStateEntry),
                     typeof(ISqlConnection),
                     typeof(ISqlFunctionInfo),
                     typeof(ISystemActiveLocale),
@@ -74,12 +76,7 @@ namespace Composite.Data.Foundation
 
         public IEnumerable<Type> InterfaceTypes
         {
-            get {
-                foreach (Type type in _interfaceTypes)
-                {
-                    yield return type;
-                }
-            }
+            get { return _interfaceTypes; }
         }
 
 
@@ -94,9 +91,9 @@ namespace Composite.Data.Foundation
                 {
                     try
                     {
-                        if (DataProviderRegistry.AllKnownInterfaces.Contains(type) == false)
+                        if (!DataProviderRegistry.AllKnownInterfaces.Contains(type))
                         {
-                            DataTypeDescriptor dataTypeDescriptor = DynamicTypeManager.BuildNewDataTypeDescriptor(type);
+                            var dataTypeDescriptor = DynamicTypeManager.BuildNewDataTypeDescriptor(type);
 
                             dataTypeDescriptor.Validate();
 
@@ -104,7 +101,7 @@ namespace Composite.Data.Foundation
 
                             typeDescriptors.Add(dataTypeDescriptor);
 
-                            LoggingService.LogVerbose("DataStoreExistenceVerifier", string.Format("A store for the type '{0}' has been created", type));
+                            Log.LogVerbose("DataStoreExistenceVerifier", string.Format("A store for the type '{0}' has been created", type));
                         }
                     }
                     catch (Exception ex)
@@ -115,11 +112,9 @@ namespace Composite.Data.Foundation
 
                 return typeDescriptors.Count > 0;
             }
-            else
-            {
-                LoggingService.LogError("DataStoreExistenceVerifier", string.Format("Failed to load the configuration section '{0}' from the configuration", DataProviderSettings.SectionName));
-                return false;
-            }
+            
+            Log.LogError("DataStoreExistenceVerifier", string.Format("Failed to load the configuration section '{0}' from the configuration", DataProviderSettings.SectionName));
+            return false;
         }
     }
 }

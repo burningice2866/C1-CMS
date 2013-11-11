@@ -27,13 +27,13 @@ namespace Composite.AspNet.Razor
         /// </summary>
         /// <example>
         ///public override Type FunctionReturnType
-        ///{
+	    ///{
         ///    get { return typeof(string); }
         ///}
         /// </example>
         public virtual Type FunctionReturnType
         {
-            get { return typeof(XhtmlDocument); }
+            get { return typeof (XhtmlDocument); }
         }
     }
 }

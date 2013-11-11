@@ -40,6 +40,8 @@
             case "application/x-ascx":
             case "application/x-master-page":
                 return "aspx";
+            case "text/x-sass":
+                return "sass";
             default:
                 return "text";
         }
@@ -54,4 +56,6 @@
 	value="<%= _currentStringValue %>"
 	id="<%= this.UniqueID %>"
 	name="<%= this.UniqueID %>"
-	callbackid="<%= this.UniqueID %>"/>
+	callbackid="<%= this.UniqueID %>"
+	strictsave="false"
+	/>

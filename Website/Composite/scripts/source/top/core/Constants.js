@@ -22,8 +22,9 @@ _Constants.prototype = {
 	DUMMY_LINK					: "javascript:void(false);",
 	
 	APPROOT     				: temproot,
-	CONFIGROOT                  : temproot.substring(0, temproot.length - 9) + "Frontend/Config/VisualEditor/",
-   	TEMPLATESROOT     			: temproot + "/templates",
+	WEBSITEROOT					: temproot.substring(0, temproot.length - 9),
+	CONFIGROOT					: temproot.substring(0, temproot.length - 9) + "Frontend/Config/VisualEditor/",
+	TEMPLATESROOT     			: temproot + "/templates",
 	SKINROOT     				: temproot + "/skins/system", // TODO: unhardcode this!
 	TINYROOT					: temproot + "/content/misc/editors/visualeditor/tinymce",
 
@@ -40,6 +41,7 @@ _Constants.prototype = {
 	URL_WSDL_STRINGSERVICE 		: temproot + "/services/StringResource/StringService.asmx?WSDL",
 	URL_WSDL_TREESERVICE  		: temproot + "/services/Tree/TreeServices.asmx?WSDL",
 	URL_WSDL_XHTMLTRANSFORM		: temproot + "/services/WysiwygEditor/XhtmlTransformations.asmx?WSDL",
+	URL_WSDL_FUNCTIONSERVICE	: temproot + "/services/WysiwygEditor/FunctionService.asmx?WSDL",
 	URL_WSDL_SECURITYSERVICE	: temproot + "/services/Tree/SecurityServices.asmx?WSDL",
 	URL_WSDL_READYSERVICE		: temproot + "/services/Ready/ReadyService.asmx?WSDL",
 	URL_WSDL_LOCALIZATION		: temproot + "/services/Localization/LocalizationService.asmx?WSDL",

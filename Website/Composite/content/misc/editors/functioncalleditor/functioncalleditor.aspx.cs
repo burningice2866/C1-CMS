@@ -14,7 +14,6 @@ using Composite.C1Console.Events;
 using Composite.C1Console.Forms.WebChannel;
 using Composite.Core;
 using Composite.Core.Extensions;
-using Composite.Core.Logging;
 using Composite.Core.ResourceSystem;
 using Composite.Core.Types;
 using Composite.Core.WebClient;
@@ -742,7 +741,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
         ParameterProfile parameterProfile = function.ParameterProfiles.FirstOrDefault(p => p.Name == parameterName);
 
         // Creating a widget instance
-        object defaultParameterValue = GetDefaultValue(parameterProfile);
+        object defaultParameterValue = parameterProfile.GetDefaultValue();
         var bindings = new Dictionary<string, object> { { parameterProfile.Name, defaultParameterValue } };
 
 
@@ -847,7 +846,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
             parameterNode.Remove();
         }
 
-        object defaultParameterValue = GetDefaultValue(parameterProfile);
+        object defaultParameterValue = parameterProfile.GetDefaultValue();
 
         var newConstantParam = new ConstantObjectParameterRuntimeTreeNode(parameterProfile.Name, defaultParameterValue ?? string.Empty);
         functionNode.Add(newConstantParam.Serialize());
@@ -1117,45 +1116,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
         btnConstant.Attributes["isdisabled"] = "true";
         btnConstant.Attributes["image"] = "${icon:accept}";
 
-        object parameterValue;
-
-        List<XElement> parameterElements = parameterNode.Elements(ParameterValueElementXName).ToList();
-        if (parameterElements.Any())
-        {
-            parameterValue = parameterElements.Select(element => element.Attribute("value").Value).ToList();
-        }
-        else
-        {
-            var valueAttr = parameterNode.Attribute("value");
-            if (valueAttr != null)
-            {
-                try
-                {
-                    parameterValue = ValueTypeConverter.Convert(valueAttr.Value, parameterProfile.Type);
-                }
-                catch (Exception ex)
-                {
-                    Log.LogError(LogTitle, ex);
-
-                    parameterValue = GetDefaultValue(parameterProfile);
-                }
-            }
-            else if (parameterNode.Elements().Any())
-            {
-                if (parameterProfile.Type.IsSubclassOf(typeof(XContainer)))
-                {
-                    parameterValue = ValueTypeConverter.Convert(parameterNode.Elements().First(), parameterProfile.Type);
-                }
-                else
-                {
-                    throw new NotImplementedException("Not yet implemented");
-                }
-            }
-            else
-            {
-                parameterValue = GetDefaultValue(parameterProfile);
-            }
-        }
+        object parameterValue = GetParameterValue(parameterNode, parameterProfile);
 
         // Adding a widget
         var bindings = new Dictionary<string, object> { { parameterProfile.Name, parameterValue } };
@@ -1194,6 +1155,47 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
         mlvWidget.SetActiveView(viewWidget_Constant);
 
         WidgetIsShown = true;
+    }
+
+    private object GetParameterValue(XElement parameterNode, ParameterProfile parameterProfile)
+    {
+        List<XElement> parameterElements = parameterNode.Elements(ParameterValueElementXName).ToList();
+        if (parameterElements.Any())
+        {
+            return parameterElements.Select(element => element.Attribute("value").Value).ToList();
+        }
+        
+        var valueAttr = parameterNode.Attribute("value");
+        if (valueAttr != null)
+        {
+            try
+            {
+                return ValueTypeConverter.Convert(valueAttr.Value, parameterProfile.Type);
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(LogTitle, ex);
+
+                return parameterProfile.GetDefaultValue();
+            }
+        }
+
+        if (parameterNode.Elements().Any())
+        {
+            Type paramType = parameterProfile.Type;
+                
+            if (paramType.IsSubclassOf(typeof (XContainer))
+                || (paramType.IsGenericType
+                    && paramType.GetGenericTypeDefinition() == typeof(Lazy<>)
+                    && paramType.GetGenericArguments()[0].IsSubclassOf(typeof(XContainer))))
+            {
+                return ValueTypeConverter.Convert(parameterNode.Elements().First(), parameterProfile.Type);
+            }
+            
+            throw new NotImplementedException("Not supported type of function parameter element node: '{0}'".FormatWith(paramType.FullName));
+        }
+
+        return parameterProfile.GetDefaultValue();
     }
 
     private static bool FunctionIsOnTopLevel(XElement functionNode)
@@ -1249,37 +1251,6 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
         mlvMain.SetActiveView(viewFunction);
     }
 
-    private object GetDefaultValue(ParameterProfile parameterProfile)
-    {
-        // Initializing the binding
-        object value = null;
-
-        try
-        {
-            var fallbackValueProvider = parameterProfile.FallbackValueProvider;
-
-            if (!(fallbackValueProvider is NoValueValueProvider))
-            {
-                object defaultValue = fallbackValueProvider.GetValue();
-
-                if (defaultValue != null)
-                {
-                    value = ValueTypeConverter.Convert(defaultValue, parameterProfile.Type);
-                }
-            }
-        }
-        catch (Exception) { }
-
-        if (value == null)
-        {
-            if (parameterProfile.Type == typeof(bool))
-            {
-                value = false;
-            }
-        }
-        return value;
-    }
-
     private XElement CopyWithId(XElement source)
     {
         XElement copy = new XElement(source);
@@ -1326,7 +1297,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
 
         catch (Exception e)
         {
-            LoggingService.LogError("FunctionCallEditor", e);
+            Log.LogError("FunctionCallEditor", e);
             Alert("Failed to parse the markup");
             return false;
         }

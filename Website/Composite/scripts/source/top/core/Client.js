@@ -9,8 +9,8 @@ function _Client () {
 	var agent = navigator.userAgent.toLowerCase ();
 	var platform = navigator.platform.toLowerCase ();
 
-	var isExplorer = navigator.appName == "Microsoft Internet Explorer";
-	var isMozilla = !isExplorer && typeof document.createTreeWalker != "undefined";
+	var isExplorer = navigator.appName == "Microsoft Internet Explorer"; // IE<=10 OR IE11
+	var isMozilla = !isExplorer && typeof document.createTreeWalker != "undefined" ;
 	var isPrism = isMozilla && ( agent.indexOf ( "webrunner" ) >-1 || agent.indexOf ( "prism" ) >-1 );
 	var hasTransitions = history.pushState != null;
 
@@ -20,9 +20,11 @@ function _Client () {
 	this.isExplorer = isExplorer;
 	this.isExplorer6 = this.isExplorer && ( agent.indexOf ( "msie 6.0" ) > -1 || agent.indexOf ( "msie 6.1" ) > -1 );
 	this.isExplorer8 = this.isExplorer && window.XDomainRequest != null;
+	this.isExplorer11 = !!navigator.userAgent.match(/Trident\/7\./); 
 	this.isPrism = isPrism;
 	this.isWindows = platform.indexOf ( "win" ) > -1;
 	this.isVista = this.isWindows && agent.indexOf ( "windows nt 6" ) > -1;
+	this.isiPad = navigator.userAgent.match(/iPad/i) != null;
 	
 	var version = this._getFlashVersion ();
 	this.hasFlash = ( version && version >= 9 );
@@ -31,6 +33,7 @@ function _Client () {
 	this.canvas = !!document.createElement('canvas').getContext;
 
 	this.hasSpellcheck = this.isFirefox || this.isExplorer && document.documentElement.spellcheck;
+	this.hasXSLTProcessor = this.isMozilla && !this.isExplorer11;
 
 	return this;
 }
@@ -126,7 +129,7 @@ _Client.prototype = {
 
 		var result = true;
 		var isOldFox = false;
-		if (this.isMozilla && !this.isWebKit) {
+		if (this.isMozilla && !this.isWebKit && !this.isExplorer11) {
 			isOldFox = (document.documentElement.mozMatchesSelector === undefined);
 		}
 		if (window.opera != null || isOldFox || this.isExplorer && !this.canvas) {

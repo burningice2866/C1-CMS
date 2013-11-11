@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Composite.C1Console.Actions;
 using Composite.C1Console.Elements;
@@ -28,6 +29,7 @@ using Microsoft.Practices.EnterpriseLibrary.Common.Configuration;
 using Microsoft.Practices.EnterpriseLibrary.Common.Configuration.ObjectBuilder;
 using Microsoft.Practices.ObjectBuilder;
 
+using Texts = Composite.Core.ResourceSystem.LocalizationFiles.Composite_Plugins_GeneratedDataTypesElementProvider;
 
 namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider
 {
@@ -94,8 +96,10 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
     [ConfigurationElementType(typeof(GeneratedDataTypesElementProviderData))]
     internal sealed class GeneratedDataTypesElementProvider : IHooklessElementProvider, ILocaleAwareElementProvider
     {
+        private static readonly string LogTitle = typeof (GeneratedDataTypesElementProvider).Name;
+
         private ElementProviderContext _providerContext;
-        private bool _onlyShowGlobalDatas;
+        private readonly bool _websiteItemsView;
         private DataGroupingProviderHelper _dataGroupingProviderHelper;
 
 
@@ -153,6 +157,9 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
         /// <exclude />
         public static readonly Dictionary<string, ResourceHandle> DataIconLookup;
 
+        /// <exclude />
+        public static ResourceHandle ErrorIcon { get { return GetIconHandle("error"); } }
+
         private static readonly ActionGroup PrimaryActionGroup = new ActionGroup(ActionGroupPriority.PrimaryHigh);
         private static readonly ActionGroup ViewActionGroup = new ActionGroup("View", ActionGroupPriority.PrimaryLow);
         private static readonly ActionGroup AppendedActionGroup = new ActionGroup("Develop", ActionGroupPriority.GeneralAppendMedium);
@@ -184,7 +191,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
         /// <exclude />
         public GeneratedDataTypesElementProvider(bool onlyShowGlobalDatas)
         {
-            _onlyShowGlobalDatas = onlyShowGlobalDatas;
+            _websiteItemsView = onlyShowGlobalDatas;
         }
 
 
@@ -198,18 +205,18 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 _dataGroupingProviderHelper = new DataGroupingProviderHelper(_providerContext);
                 _dataGroupingProviderHelper.FolderOpenIcon = GetIconHandle("generated-interface-open");
                 _dataGroupingProviderHelper.FolderClosedIcon = GetIconHandle("generated-interface-closed");
-                _dataGroupingProviderHelper.OnCreateLeafElement = data => { return GetElementFromData(data); };
-                _dataGroupingProviderHelper.OnCreateGhostedLeafElement = data => { return GetGhostedElementFromData(data); };
-                _dataGroupingProviderHelper.OnCreateDisabledLeafElement = data => { return GetDisabledElementFromData(data); };
-                _dataGroupingProviderHelper.OnAddActions = (element, propertyValues) => { return AddGroupFolderActions(element, propertyValues); };
+                _dataGroupingProviderHelper.OnCreateLeafElement = GetElementFromData;
+                _dataGroupingProviderHelper.OnCreateGhostedLeafElement = GetGhostedElementFromData;
+                _dataGroupingProviderHelper.OnCreateDisabledLeafElement = GetDisabledElementFromData;
+                _dataGroupingProviderHelper.OnAddActions = AddGroupFolderActions;
                 _dataGroupingProviderHelper.OnGetRootParentEntityToken = GetRootParentEntityToken;
                 _dataGroupingProviderHelper.OnOwnsType = type =>
                 {
-                    if (type.IsGenerated() == false) return false;
+                    if (!type.IsGenerated() && !type.IsStaticDataType()) return false;
                     if (PageFolderFacade.GetAllFolderTypes().Contains(type)) return false;
                     if (PageMetaDataFacade.GetAllMetaDataTypes().Contains(type)) return false;
 
-                    if (_onlyShowGlobalDatas)
+                    if (_websiteItemsView)
                     {
                         return IsTypeWhiteListed(type);
                     }
@@ -248,14 +255,14 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
             List<Element> roots = new List<Element>();
 
             Element globalDataElement;
-            if (_onlyShowGlobalDatas)
+            if (_websiteItemsView)
             {
                 globalDataElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId)))
                 {
                     VisualData = new ElementVisualizedData
                     {
-                        Label = GetText("GlobalDataFolderLabel_OnlyGlobalData"),
-                        ToolTip = GetText("GlobalDataFolderToolTip_OnlyGlobalData"),
+                        Label = Texts.GlobalDataFolderLabel_OnlyGlobalData,
+                        ToolTip = Texts.GlobalDataFolderToolTip_OnlyGlobalData,
                         HasChildren = true,
                         Icon = GeneratedDataTypesElementProvider.InterfaceClosed,
                         OpenedIcon = GeneratedDataTypesElementProvider.InterfaceOpen
@@ -268,8 +275,8 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                     {
                         VisualData = new ElementVisualizedData
                         {
-                            Label = GetText("GlobalDataFolderLabel"),
-                            ToolTip = GetText("GlobalDataFolderToolTip"),
+                            Label = Texts.GlobalDataFolderLabel,
+                            ToolTip = Texts.GlobalDataFolderToolTip,
                             HasChildren = GlobalDataTypeFacade.GetAllGlobalDataTypes().Any(),
                             Icon = GeneratedDataTypesElementProvider.RootClosed,
                             OpenedIcon = GeneratedDataTypesElementProvider.RootOpen
@@ -277,7 +284,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                     };
             }
 
-            if (_onlyShowGlobalDatas == false)
+            if (!_websiteItemsView)
             {
                 globalDataElement.AddAction(
                     new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.AddNewInterfaceTypeWorkflow"), _addNewInterfaceTypePermissionTypes) { Payload = _providerContext.ProviderName }))
@@ -322,9 +329,25 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
             roots.Add(globalDataElement);
 
 
-            if (_onlyShowGlobalDatas == false)
+            if (!_websiteItemsView)
             {
-                bool pageDataFolderHasChildren = PageFolderFacade.GetAllFolderTypes().Count() > 0;
+                bool staticDataTypesFolderHasChildren = DataFacade.GetAllKnownInterfaces().Any(t => t.IsStaticDataType());
+
+                Element staticDataTypesFolderElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.StaticGlobalDataTypeFolderId)))
+                {
+                    VisualData = new ElementVisualizedData
+                    {
+                        Label = Texts.StaticDataTypesFolderLabel,
+                        ToolTip = Texts.StaticDataTypesFolderToolTip, 
+                        HasChildren = staticDataTypesFolderHasChildren,
+                        Icon = GeneratedDataTypesElementProvider.RootClosed,
+                        OpenedIcon = GeneratedDataTypesElementProvider.RootOpen
+                    }
+                };
+
+                roots.Add(staticDataTypesFolderElement);
+
+                bool pageDataFolderHasChildren = PageFolderFacade.GetAllFolderTypes().Any();
 
                 Element pageDataFolderElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)))
                 {
@@ -360,7 +383,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 roots.Add(pageDataFolderElement);
 
 
-                bool pageMetaDataHasChildren = PageMetaDataFacade.GetAllMetaDataTypes().Count() > 0;
+                bool pageMetaDataHasChildren = PageMetaDataFacade.GetAllMetaDataTypes().Any();
 
 
                 Element pageMetaDataElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageMetaDataTypeFolderId)))
@@ -472,7 +495,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 return new List<Element>();
             }
 
-            throw new NotImplementedException();
+            throw new InvalidOperationException("This code should not be reachable");
         }
 
 
@@ -481,56 +504,82 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
         {
             if (entityToken.Id == GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId)
             {
-                return GetGlobalDataTypesElements(searchToken).OrderBy(f => f.VisualData.Label).ToList();
+                return GetGlobalDataTypesElements(searchToken, false).OrderBy(f => f.VisualData.Label).ToList();
             }
-            else if (entityToken.Id == GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)
+            if (entityToken.Id == GeneratedDataTypesElementProviderRootEntityToken.StaticGlobalDataTypeFolderId)
+            {
+                return GetGlobalDataTypesElements(searchToken, true).OrderBy(f => f.VisualData.Label).ToList();
+            }
+            if (entityToken.Id == GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)
             {
                 return GetPageFolderDataTypesElements(searchToken).OrderBy(f => f.VisualData.Label).ToList();
             }
-            else if (entityToken.Id == GeneratedDataTypesElementProviderRootEntityToken.PageMetaDataTypeFolderId)
+            if (entityToken.Id == GeneratedDataTypesElementProviderRootEntityToken.PageMetaDataTypeFolderId)
             {
                 return GetPageMetaDataTypesElements(searchToken).OrderBy(f => f.VisualData.Label).ToList();
             }
-            else
-            {
-                throw new NotImplementedException();
-            }
+
+            throw new InvalidOperationException("This code should not be reachable");
         }
 
 
 
-        private List<Element> GetGlobalDataTypesElements(SearchToken searchToken)
+        private List<Element> GetGlobalDataTypesElements(SearchToken searchToken, bool showStatic)
         {
             List<Element> elements = new List<Element>();
 
-            IEnumerable<Type> allGeneratedInterfaces = DataFacade.GetGeneratedInterfaces().OrderBy(t => t.FullName);
-            allGeneratedInterfaces = allGeneratedInterfaces.Except(PageFolderFacade.GetAllFolderTypes());
-            allGeneratedInterfaces = allGeneratedInterfaces.Except(PageMetaDataFacade.GetAllMetaDataTypes());
+            IEnumerable<Type> interfaceList;
+            
+            if (_websiteItemsView)
+            {
+                // Showing both generated and custom static interfaces
+                interfaceList = DataFacade.GetAllInterfaces().Where(i => i.IsStaticDataType() || i.IsGenerated());
+            }
+            else
+            {
+                if (showStatic)
+                {
+                    interfaceList = DataFacade.GetAllInterfaces().Where(t => t.IsStaticDataType());
+                }
+                else
+                {
+                    interfaceList = DataFacade.GetGeneratedInterfaces();
+                }
+            }
+
+            interfaceList = interfaceList.OrderBy(t => t.FullName);
+
+            interfaceList = interfaceList.Except(PageFolderFacade.GetAllFolderTypes());
+            interfaceList = interfaceList.Except(PageMetaDataFacade.GetAllMetaDataTypes());
 
             if (searchToken.IsValidKeyword())
             {
-                allGeneratedInterfaces = allGeneratedInterfaces.Where(x => x.FullName.ToLower().Contains(searchToken.Keyword.ToLower())).ToList();
+                interfaceList = interfaceList.Where(x => x.FullName.ToLower().Contains(searchToken.Keyword.ToLower())).ToList();
             }
 
 
-            Dictionary<Type, DataTypeDescriptor> interfaces = allGeneratedInterfaces.ToDictionary(f => f, f => DynamicTypeManager.GetDataTypeDescriptor(f));
+            Dictionary<Type, DataTypeDescriptor> interfaces = interfaceList.ToDictionary(f => f, DynamicTypeManager.GetDataTypeDescriptor);
 
-            IEnumerable<KeyValuePair<Type, DataTypeDescriptor>> sortedInterface = interfaces;
-            if (_onlyShowGlobalDatas)
+            IEnumerable<KeyValuePair<Type, DataTypeDescriptor>> sortedInterfaces = interfaces;
+            if (_websiteItemsView)
             {
-                sortedInterface = interfaces.OrderBy(f => f.Value.Title);
+                sortedInterfaces = interfaces.OrderBy(f => f.Value.Title);
             }
 
             List<string> whiteList = DataFacade.GetData<IGeneratedTypeWhiteList>().Select(element => element.TypeManagerTypeName).ToList();
 
-            foreach (var kvp in sortedInterface)
+            foreach (var kvp in sortedInterfaces)
             {
                 Type type = kvp.Key;
                 DataTypeDescriptor dataTypeDescriptor = kvp.Value;
 
+                DataTypeDescriptor tempDescriptor;
+
+                bool storeCreated = DynamicTypeManager.TryGetDataTypeDescriptor(type.GetImmutableTypeId(), out tempDescriptor);
+
                 string typeName = TypeManager.SerializeType(type);
 
-                if (_onlyShowGlobalDatas && !whiteList.Contains(typeName))
+                if (_websiteItemsView && !whiteList.Contains(typeName))
                 {
                     continue;
                 }
@@ -541,48 +590,61 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                     dataScopeIdentifier = DataScopeIdentifier.Administrated;
                 }
 
-                bool hasChildren;
-                using (new DataScope(dataScopeIdentifier))
-                {
-                    hasChildren = DataFacade.GetData(type).Any();
+                Exception queryDataException = null;
 
-                    if (DataLocalizationFacade.IsLocalized(type))
+                bool hasChildren = false;
+                try
+                {
+                    using (new DataScope(dataScopeIdentifier))
                     {
-                        using (new DataScope(UserSettings.ForeignLocaleCultureInfo))
+                        hasChildren = storeCreated && DataFacade.GetData(type).Any();
+
+                        if (!hasChildren && storeCreated && DataLocalizationFacade.IsLocalized(type))
                         {
-                            hasChildren |= DataFacade.GetData(type).Any();
+                            using (new DataScope(UserSettings.ForeignLocaleCultureInfo))
+                            {
+                                hasChildren |= DataFacade.GetData(type).Any();
+                            }
                         }
                     }
                 }
-
+                catch (Exception ex)
+                {
+                    Log.LogError(LogTitle, ex);
+                    queryDataException = ex;
+                }
+                
                 string label = type.FullName;
-                if (_onlyShowGlobalDatas)
+                if (_websiteItemsView)
                 {
                     label = dataTypeDescriptor.Title;
                 }
 
+                bool failedToLoad = queryDataException != null;
 
-                Element element = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderTypeEntityToken(typeName, _providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId)))
+                Element element = new Element(_providerContext.CreateElementHandle(
+                    new GeneratedDataTypesElementProviderTypeEntityToken(typeName, _providerContext.ProviderName,
+                        showStatic ? GeneratedDataTypesElementProviderRootEntityToken.StaticGlobalDataTypeFolderId : GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId)))
                 {
                     VisualData = new ElementVisualizedData
                     {
                         Label = label,
-                        ToolTip = label,
+                        ToolTip = !failedToLoad ? label : GetNestedExceptionMessage(queryDataException),
                         HasChildren = hasChildren,
-                        Icon = GeneratedDataTypesElementProvider.InterfaceClosed,
-                        OpenedIcon = GeneratedDataTypesElementProvider.InterfaceOpen
+                        Icon = !failedToLoad ? GeneratedDataTypesElementProvider.InterfaceClosed : ErrorIcon,
+                        OpenedIcon = !failedToLoad ? GeneratedDataTypesElementProvider.InterfaceOpen : ErrorIcon
                     }
                 };
 
 
-                if (_onlyShowGlobalDatas == false)
+                if (storeCreated && !_websiteItemsView)
                 {
                     AddNonShowOnlyGlobalActions(type, typeName, element);
                 }
 
-
-                element.AddAction(
-                    new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.AddNewDataWorkflow"), _addNewDataPermissionTypes) { DoIgnoreEntityTokenLocking = true }))
+                if (storeCreated)
+                {
+                    element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.AddNewDataWorkflow"), _addNewDataPermissionTypes) { DoIgnoreEntityTokenLocking = true }))
                     {
                         VisualData = new ActionVisualizedData
                         {
@@ -599,6 +661,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                             }
                         }
                     });
+                }
 
                 if (RuntimeInformation.IsDebugBuild)
                 {
@@ -620,18 +683,28 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                             }
                         }
                     });
-
                 }
 
+                // TODO: add "Create store" action
                 elements.Add(element);
-
             }
 
             return elements;
         }
 
+        private string GetNestedExceptionMessage(Exception queryDataException)
+        {
+            var ex = queryDataException;
 
+            while (ex is TargetInvocationException)
+            {
+                ex = ex.InnerException;
+            }
 
+            return ex.Message;
+        }
+
+        
         private void AddNonShowOnlyGlobalActions(Type type, string typeName, Element element)
         {
             DataTypeDescriptor dataTypeDescriptor = DynamicTypeManager.GetDataTypeDescriptor(type.GetImmutableTypeId());
@@ -700,7 +773,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 });
 
 
-            bool exists = DataFacade.GetData<IGeneratedTypeWhiteList>().Where(f => f.TypeManagerTypeName == typeName).Any();
+            bool exists = DataFacade.GetData<IGeneratedTypeWhiteList>().Any(f => f.TypeManagerTypeName == typeName);
 
 
             element.AddAction(
@@ -1161,16 +1234,25 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
 
             if (!isPageFolder)
             {
-                if (_onlyShowGlobalDatas && !IsTypeWhiteListed(type)) return null;
+                if (_websiteItemsView && !IsTypeWhiteListed(type)) return null;
 
                 return new GeneratedDataTypesElementProviderTypeEntityToken(
                     TypeManager.SerializeType(type),
                     _providerContext.ProviderName,
-                    GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId
+                    (_websiteItemsView || type.IsGenerated())
+                    ? GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId
+                    : GeneratedDataTypesElementProviderRootEntityToken.StaticGlobalDataTypeFolderId
                 );
             }
 
-            if (_onlyShowGlobalDatas) return null;
+            if (_websiteItemsView) return null;
+
+            var groupingEntityToken = entityToken as DataGroupingProviderHelperEntityToken;
+            if (groupingEntityToken != null && !groupingEntityToken.Payload.IsNullOrEmpty())
+            {
+                // Grouping entity tokens with payload aren't attached to the data type folder in the 'Data' perspective
+                return null;
+            }
 
             return new GeneratedDataTypesElementProviderTypeEntityToken(
                     TypeManager.SerializeType(type),

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Web;
 using System.Xml.Linq;
 using Composite.AspNet;
@@ -47,7 +48,7 @@ namespace Composite.Core.WebClient.Renderings
         /// <value><c>true</c> if page caching is disabled; otherwise, <c>false</c>.</value>
         public bool CachingDisabled { get; private set; }
 
-        private static readonly string ProfilerXslPath = UrlUtils.PublicRootPath + "/Composite/Transformations/page_profiler.xslt";
+        private static readonly string ProfilerXslPath = UrlUtils.AdminRootPath + "/Transformations/page_profiler.xslt";
 
         private string _previewKey;
         private IDisposable _pagePerfMeasuring;
@@ -197,6 +198,7 @@ namespace Composite.Core.WebClient.Renderings
             if (PreviewMode)
             {
                 Page = (IPage)HttpRuntime.Cache.Get(_previewKey + "_SelectedPage");
+                C1PageRoute.PageUrlData = new PageUrlData(Page);
             }
             else
             {
@@ -298,7 +300,7 @@ namespace Composite.Core.WebClient.Renderings
         private static string GetLoginRedirectUrl(string url)
         {
             return UrlUtils.PublicRootPath + "/Composite/Login.aspx?ReturnUrl=" +
-                   HttpUtility.UrlEncodeUnicode(url);
+                   HttpUtility.UrlEncode(url, Encoding.UTF8);
         }
 
         /// <exclude />

@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Data.Linq;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Composite.Core;
+using Composite.Core.Collections.Generic;
 using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
+using Composite.Core.Sql;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
@@ -23,6 +28,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         private static readonly string LogTitle = typeof(SqlDataProvider).Name;
         private readonly List<SqlDataTypeStoreTable> _createdSqlDataTypeStoreTables = new List<SqlDataTypeStoreTable>();
         private Assembly _compositeGeneratedAssembly;
+
+        private static readonly Hashtable<Type, bool> _typeLoadResults = new Hashtable<Type, bool>(); 
 
         public void CreateStore(DataTypeDescriptor dataTypeDescriptor)
         {
@@ -115,7 +122,10 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             }
         }
 
-
+        private static Exception NewConfigurationException(ConfigurationElement element, string message)
+        {
+            return new ConfigurationErrorsException(message, element.ElementInformation.Source, element.ElementInformation.LineNumber);
+        }
 
         private InitializeStoreResult InitializeStore(InterfaceConfigurationElement element, Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes, bool forceCompile = false)
         {
@@ -135,8 +145,19 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 sqlDataTypeStoreDataScopes.Add(sqlDataTypeStoreDataScope);
             }
 
-            Verify.That(element.DataTypeId.HasValue, "Missing 'dataTypeId' attribute");
-            DataTypeDescriptor dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(element.DataTypeId.Value, true);
+
+            if (!element.DataTypeId.HasValue)
+            {
+                throw NewConfigurationException(element, "Missing 'dataTypeId' attribute");
+            }
+
+            Guid dataTypeId = element.DataTypeId.Value;
+
+            var dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(dataTypeId, true);
+            if (dataTypeDescriptor == null)
+            {
+                throw NewConfigurationException(element, "Failed to get a DataTypeDescriptor by id '{0}'".FormatWith(dataTypeId));
+            }
 
             Type interfaceType = null;
 
@@ -166,7 +187,6 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 EnsureNeededTypes(dataTypeDescriptor, sqlDataTypeStoreDataScopes, allSqlDataTypeStoreDataScopes, out dataContextClassType, out sqlDataStoreTableTypes, forceCompile);
 
                 _sqlDataTypeStoresContainer.DataContextType = dataContextClassType;
-
 
 
                 Dictionary<SqlDataTypeStoreTableKey, SqlDataTypeStoreTable> sqlDataTypeStoreTables = new Dictionary<SqlDataTypeStoreTableKey, SqlDataTypeStoreTable>();
@@ -261,8 +281,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             if (!isValid)
             {
                 DataTypeValidationRegistry.AddValidationError(initializeStoreResult.InterfaceType, _dataProviderContext.ProviderName, errors.ToString());
-                Log.LogCritical("SqlDataProvider", string.Format("The data interface '{0}' will not work for the SqlDataProvider '{1}'", initializeStoreResult.InterfaceType, _dataProviderContext.ProviderName));
-                Log.LogCritical("SqlDataProvider", errors.ToString());
+                Log.LogCritical(LogTitle, string.Format("The data interface '{0}' will not work for the SqlDataProvider '{1}'", initializeStoreResult.InterfaceType, _dataProviderContext.ProviderName));
+                Log.LogCritical(LogTitle, errors.ToString());
             }
 
             return isValid;
@@ -280,7 +300,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             }
             catch (SqlException sqlException)
             {
-                Log.LogCritical("SqlDataProvider", sqlException);
+                Log.LogCritical(LogTitle, sqlException);
                 throw;
             }
             catch (Exception ex)
@@ -354,6 +374,13 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 string dataContextClassFullName = NamesCreator.MakeDataContextClassFullName(_dataProviderContext.ProviderName);
                 dataContextClassType = TryGetGeneratedType(dataContextClassFullName);
 
+                // Trying to instantiate a data context object
+                if (dataContextClassType != null && !TryLoadDataContextClass(dataContextClassType))
+                {
+                    dataContextClassType = null;
+                    forceCompile = true;
+                }
+
                 List<SqlDataTypeStoreDataScope> storeDataScopesToCompile = new List<SqlDataTypeStoreDataScope>();
                 List<SqlDataTypeStoreDataScope> storeDataScopesAlreadyCompiled = new List<SqlDataTypeStoreDataScope>();
 
@@ -366,8 +393,14 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                     if (dataContextClassType != null)
                     {
                         dataContextFieldInfo = dataContextClassType.GetFields(BindingFlags.Public | BindingFlags.Instance)
-                                               .SingleOrDefault(f => f.Name == dataContextFieldName);
+                                                                   .SingleOrDefault(f => f.Name == dataContextFieldName);
+
+                        if (dataContextFieldInfo == null)
+                        {
+                            Log.LogWarning(LogTitle, "Data context class is missing field '{0}'", dataContextFieldName);
+                        }
                     }
+
 
                     string sqlDataProviderHelperClassFullName = NamesCreator.MakeSqlDataProviderHelperClassFullName(dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
                     Type sqlDataProviderHelperClassType = TryGetGeneratedType(sqlDataProviderHelperClassFullName);
@@ -375,7 +408,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                     sqlDataStoreTableTypes.Add(new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName, storeDataScope.CultureName), new Tuple<FieldInfo, Type>(dataContextFieldInfo, sqlDataProviderHelperClassType));
 
                     bool isRecompileNeeded = CodeGenerationManager.IsRecompileNeeded(interfaceType, new[] { sqlDataProviderHelperClassType });
-                    if (isRecompileNeeded || forceCompile)
+                    if (isRecompileNeeded || forceCompile || dataContextFieldInfo == null)
                     {
                         storeDataScopesToCompile.Add(storeDataScope);
                     }
@@ -393,6 +426,52 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 }
             }
         }
+
+        private bool TryLoadDataContextClass(Type dataContextClassType)
+        {
+            if (_typeLoadResults.ContainsKey(dataContextClassType))
+            {
+                return _typeLoadResults[dataContextClassType];
+            }
+
+            bool success = true;
+
+            var connection = SqlConnectionManager.GetConnection(_connectionString);
+            
+            try
+            {
+                DataContext dataContext = (DataContext)Activator.CreateInstance(dataContextClassType, connection);
+                dataContext.Dispose();
+            }
+            catch (Exception ex)
+            {
+                var innerEx = ex;
+
+                while (innerEx is TargetInvocationException)
+                {
+                    innerEx = innerEx.InnerException;
+                }
+
+                if (!(innerEx is TypeLoadException || innerEx is FileNotFoundException))
+                {
+                    throw;
+                }
+
+                Log.LogWarning(LogTitle, "Failed to load DataContext class, creating a new one.");
+                Log.LogWarning(LogTitle, innerEx.Message);
+
+                success = false;
+            }
+
+            
+            lock (_typeLoadResults)
+            {
+                _typeLoadResults[dataContextClassType] = success;
+            }
+
+            return success;
+        }
+
 
         private void CompileMissingClasses(DataTypeDescriptor dataTypeDescriptor, Dictionary<DataTypeDescriptor, 
                                            IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes,
@@ -482,6 +561,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         {
             foreach (SqlDataTypeStoreTable dataTypeStoreTable in _createdSqlDataTypeStoreTables)
             {
+                Verify.IsNotNull(dataTypeStoreTable.DataContextQueryableFieldInfo, "Missing field info");
+
                 string fieldName = dataTypeStoreTable.DataContextQueryableFieldInfo.Name;
 
                 FieldInfo newFieldInfo = newDataContextClassType.GetFields(BindingFlags.Public | BindingFlags.Instance).SingleOrDefault(f => f.Name == fieldName);
@@ -515,9 +596,15 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                     continue;
                 }
 
-                DataTypeDescriptor dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(element.DataTypeId.Value, true);
+                Guid dataTypeId = element.DataTypeId.Value;
+                var dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(dataTypeId, true);
+                if (dataTypeDescriptor == null)
+                {
+                    Log.LogWarning(LogTitle, "Failed to get data type descriptor by id '{0}'".FormatWith(dataTypeId));
+                    continue;
+                }
 
-                List<SqlDataTypeStoreDataScope> sqlDataTypeStoreDataScopes = new List<SqlDataTypeStoreDataScope>();
+                var sqlDataTypeStoreDataScopes = new List<SqlDataTypeStoreDataScope>();
 
                 foreach (StorageInformation storageInformation in element.Stores)
                 {

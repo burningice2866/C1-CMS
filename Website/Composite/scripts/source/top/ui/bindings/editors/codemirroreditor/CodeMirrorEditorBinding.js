@@ -20,7 +20,8 @@ CodeMirrorEditorBinding.syntax = {
 	CSHARP: "cs",
 	CSHTML: "cshtml",
 	ASPX: "aspx",
-	SQL: "sql"
+	SQL: "sql",
+	SASS: "sass"
 }
 
 /**
@@ -97,6 +98,12 @@ function CodeMirrorEditorBinding() {
 	this._hasStrictValidation = false;
 
 	/**
+	*  If false then editor can save invalid document, but ask this from user.
+	* @type {boolean}
+	*/
+	this._strictSave = true;
+
+	/**
 	* This new thingy will rule all validation.
 	* TODO: Deprecate _hasStrictValidation eventually...
 	* @type {String}
@@ -165,6 +172,14 @@ CodeMirrorEditorBinding.prototype.onBindingAttach = function () {
 	var validate = this.getProperty("validate");
 	if (validate == true) {
 		this._hasStrictValidation = true;
+	}
+	
+	/*
+	* Disable strict validation?
+	*/
+	var strictsave = this.getProperty("strictsave");
+	if (strictsave === false) {
+		this._strictSave = false;
 	}
 
 	/*
@@ -243,6 +258,9 @@ CodeMirrorEditorBinding.prototype.handleBroadcast = function (broadcast, arg) {
 						case CodeMirrorEditorBinding.syntax.ASPX:
 							this._codemirrorEditor.setOption("mode", "application/x-aspx");
 							break;
+						case CodeMirrorEditorBinding.syntax.SASS:
+							this._codemirrorEditor.setOption("mode", "text/x-sass");
+							break;
 					    case CodeMirrorEditorBinding.syntax.SQL:
 					        this._codemirrorEditor.setOption("mode", "");
 					        break;
@@ -315,7 +333,7 @@ CodeMirrorEditorBinding.prototype._activateEditor = function (isActivate) {
 		/*
 		* Enable all keyboard keys.
 		*/
-		var handler = this.getContentWindow().standardEventHandler;
+		var handler = this._codemirrorWindow.standardEventHandler;
 
 		if (isActivate) {
 			handler.enableNativeKeys(true);
@@ -595,7 +613,7 @@ CodeMirrorEditorBinding.prototype.validate = function () {
 					this.setContent(newSource);
 				}
 
-				result = XMLParser.isWellFormedDocument(source, true);
+				result = XMLParser.isWellFormedDocument(source, true, !this._strictSave);
 
 				/*
 				* Strict validation?
@@ -657,6 +675,8 @@ CodeMirrorEditorBinding.prototype._isValidHTML = function (xml) {
 						}
 						body = child;
 						break;
+				    default:
+				        errors.add("NotAllowedHtmlChild");
 				}
 			}
 		}
@@ -673,16 +693,11 @@ CodeMirrorEditorBinding.prototype._isValidHTML = function (xml) {
 	*/
 	if (errors.hasEntries()) {
 		result = false;
-		//Workarround for webkit and codemirror
-		if (Client.isWebKit) {
-			alert(StringBundle.getString("Composite.Web.SourceEditor", "Invalid.HTML." + errors.getFirst()));
-		}
-		else {
-			Dialog.error(
+		Dialog.error(
 			StringBundle.getString("Composite.Web.SourceEditor", "Invalid.HTML.DialogTitle"),
 			StringBundle.getString("Composite.Web.SourceEditor", "Invalid.HTML." + errors.getFirst())
 		);
-		}
+		
 	}
 
 	return result;

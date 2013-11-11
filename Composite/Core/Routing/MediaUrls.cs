@@ -27,7 +27,7 @@ namespace Composite.Core.Routing
         private static readonly string MediaUrl_UnprocessedRenderPrefix = "~/Renderers/ShowMedia.ashx";
         private static readonly string MediaUrl_RenderPrefix = UrlUtils.PublicRootPath + "/Renderers/ShowMedia.ashx";
 
-        private static readonly string ForbiddenUrlCharacters = @"<>*%&\?#";
+        private static readonly string ForbiddenUrlCharacters = @"<>*%&\?#""";
 
 
         /// <summary>
@@ -179,7 +179,17 @@ namespace Composite.Core.Routing
                        };
         }
 
-
+        /// <summary>
+        /// Builds the URL.
+        /// </summary>
+        /// <param name="mediaFile">The media file.</param>
+        /// <param name="urlKind">Kind of the URL.</param>
+        /// <returns></returns>
+        public static string BuildUrl(IMediaFile mediaFile, UrlKind urlKind = UrlKind.Public)
+        {
+            return BuildUrl(new MediaUrlData(mediaFile), urlKind);
+        }
+        
         /// <summary>
         /// Builds the URL.
         /// </summary>
@@ -192,6 +202,8 @@ namespace Composite.Core.Routing
 
             switch (urlKind)
             {
+                case UrlKind.Internal:
+                    return BuildInternalUrl(mediaUrlData);
                 case UrlKind.Renderer:
                     return BuildRendererUrl(mediaUrlData);
                 case UrlKind.Public:
@@ -199,6 +211,22 @@ namespace Composite.Core.Routing
             }
 
             throw new NotSupportedException("Not supported url kind. urlKind == '0'".FormatWith(urlKind));
+        }
+
+        private static string BuildInternalUrl(MediaUrlData mediaUrlData)
+        {
+            string storeId = mediaUrlData.MediaStore == DefaultMediaStore 
+                             ? "" 
+                             : mediaUrlData.MediaStore + ":";
+
+            var urlBuilder = new UrlBuilder("~/media(" + storeId + mediaUrlData.MediaId + ")");
+
+            if (mediaUrlData.QueryParameters != null)
+            {
+                urlBuilder.AddQueryParameters(mediaUrlData.QueryParameters);
+            }
+
+            return urlBuilder.ToString();
         }
 
         private static string BuildRendererUrl(MediaUrlData mediaUrlData)
@@ -221,7 +249,12 @@ namespace Composite.Core.Routing
 
         private static string BuildPublicUrl(MediaUrlData mediaUrlData)
         {
-            NameValueCollection queryParams = new NameValueCollection(mediaUrlData.QueryParameters);
+            var queryParams = new NameValueCollection();
+
+            if (mediaUrlData.QueryParameters != null)
+            {
+                queryParams.Add(mediaUrlData.QueryParameters);
+            }
 
             IMediaFile file = GetFileById(mediaUrlData.MediaStore, mediaUrlData.MediaId);
             if (file == null)
@@ -266,11 +299,23 @@ namespace Composite.Core.Routing
             return url.ToString();
         }
 
+        private static string RemoveFilePathIllegalCharacters(string path)
+        {
+            path = path.Replace("\"", " ").Replace("<", " ").Replace(">", " ").Replace("|", " ");
+            for (int i = 0; i < 31; i++)
+            {
+                path = path.Replace((char) i, ' ');
+            }
+            return path;
+        }
+
         private static string RemoveForbiddenCharactersAndNormalize(string path)
         {
             // Replacing dots with underscores, so IIS will not intercept requests in some scenarios
-            
-            string extension = Path.GetExtension(path);
+
+            string legalFilePath = RemoveFilePathIllegalCharacters(path);
+            string extension = Path.GetExtension(legalFilePath);
+
             if (!MimeTypeInfo.IsIisServable(extension))
             {
                 path = path.Replace(".", "_");

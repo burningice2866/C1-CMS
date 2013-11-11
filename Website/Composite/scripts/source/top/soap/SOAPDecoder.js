@@ -72,20 +72,20 @@ SOAPDecoder.prototype.decode = function ( soapResponse ) {
 	
 		// find the "result" element and lookup the matching definition
 		var def = definitions.getNext ();
-		var elm = this.resolve ( def.name, responseElm )
+		var elm = this.resolve(def.name, responseElm);
 		
 		if ( def.type == SchemaDefinition.TYPE_XML_DOCUMENT ) {
 			result = DOMUtil.getDOMDocument ();
 			var e = elm.getElementsByTagName ( "*" ).item ( 0 );
-			if ( typeof result.importNode != Types.UNDEFINED ) { // case for Moz and IE7
+			//if ( typeof result.importNode != Types.UNDEFINED ) { // case for Moz and IE7
 				result.appendChild ( 
 					result.importNode ( e, true )
 				);
-			} else { // case for IE6
-				result.loadXML ( 
-					DOMSerializer.serialize ( e )
-				);
-			}
+			//} else { // case for IE6
+			//	result.loadXML ( 
+			//		DOMSerializer.serialize ( e )
+			//	);
+			//}
 		} else { // start recursive process, following same pattern
 			result = this._compute ( elm, def );
 		}
@@ -121,16 +121,22 @@ SOAPDecoder.prototype._compute = function ( element, definition ) {
 					);
 				}
 			} else {
-				result = {};
-				defs.reset ();
-				while ( defs.hasNext ()) {
-					var def = defs.getNext ();
-					var elm = this.resolve ( def.name, element );
-					if ( elm ) {
-						result [ def.name ] = this._compute ( elm, def );
-					} else if ( def.isRequired ) {
-						throw new Error ( "SOAPDecoder: invalid SOAP response." );
-					}
+			    
+			    if (element == null) {
+			        result = null;
+			    } else {
+				    result = {};
+				    defs.reset();
+			    
+				    while ( defs.hasNext ()) {
+					    var def = defs.getNext ();
+					    var elm = this.resolve ( def.name, element );
+					    if ( elm ) {
+						    result [ def.name ] = this._compute ( elm, def );
+					    } else if ( def.isRequired ) {
+						    throw new Error ( "SOAPDecoder: invalid SOAP response." );
+					    }
+				    }
 				}
 			}
 		}

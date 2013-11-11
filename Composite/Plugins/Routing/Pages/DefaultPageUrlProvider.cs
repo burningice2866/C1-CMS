@@ -30,9 +30,11 @@ namespace Composite.Plugins.Routing.Pages
 
         public bool IsInternalUrl(string relativeUrl)
         {
+            string decodedRelativeUrl = HttpUtility.UrlDecode(relativeUrl);
+
             return IsPageRendererRequest(new UrlBuilder(relativeUrl).FilePath)
-                || relativeUrl.StartsWith(InternalUrlPrefix, true)
-                || relativeUrl.StartsWith(InternalUrlPrefixResolved, true);
+                || decodedRelativeUrl.StartsWith(InternalUrlPrefix, true)
+                || decodedRelativeUrl.StartsWith(InternalUrlPrefixResolved, true);
         }
 
         internal static bool IsPageRendererRequest(string filePath)
@@ -58,32 +60,34 @@ namespace Composite.Plugins.Routing.Pages
 
             urlKind = UrlKind.Undefined;
 
+            string decodedPath = HttpUtility.UrlDecode(urlBuilder.FullPath);
+
             string prefix = InternalUrlPrefix;
 
-            if (!relativeUrl.StartsWith(prefix, true))
+            if (!decodedPath.StartsWith(prefix, true))
             {
                 prefix = InternalUrlPrefixResolved;
-                if (!relativeUrl.StartsWith(prefix, true))
+                if (!decodedPath.StartsWith(prefix, true))
                 {
                     return null;
                 }
             }
 
-            int closingBracketOffset = relativeUrl.IndexOf(')');
+            int closingBracketOffset = decodedPath.IndexOf(')');
             if (closingBracketOffset < 0)
             {
                 return null;
             }
 
             Guid pageId;
-            if (!Guid.TryParse(relativeUrl.Substring(prefix.Length, closingBracketOffset - prefix.Length), out pageId))
+            if (!Guid.TryParse(decodedPath.Substring(prefix.Length, closingBracketOffset - prefix.Length), out pageId))
             {
                 return null;
             }
 
-            string pathInfo = urlBuilder.FilePath.Substring(closingBracketOffset + 1);
+            string pathInfo = decodedPath.Substring(closingBracketOffset + 1);
 
-            bool isUnpublished = relativeUrl.Contains(PageUrlBuilder.UrlMarker_Unpublished);
+            bool isUnpublished = pathInfo.Contains(PageUrlBuilder.UrlMarker_Unpublished);
             if (isUnpublished)
             {
                 pathInfo = pathInfo.Replace(PageUrlBuilder.UrlMarker_Unpublished, string.Empty);
@@ -100,7 +104,7 @@ namespace Composite.Plugins.Routing.Pages
             else
             {
                 cultureInfo = LocalizationScopeManager.CurrentLocalizationScope;
-                if (cultureInfo == CultureInfo.InvariantCulture)
+                if (cultureInfo.Equals(CultureInfo.InvariantCulture))
                 {
                     cultureInfo = DataLocalizationFacade.DefaultLocalizationCulture;
                 }
@@ -148,7 +152,7 @@ namespace Composite.Plugins.Routing.Pages
             else
             {
                 cultureInfo = LocalizationScopeManager.CurrentLocalizationScope;
-                if (cultureInfo == CultureInfo.InvariantCulture)
+                if (cultureInfo.Equals(CultureInfo.InvariantCulture))
                 {
                     cultureInfo = DataLocalizationFacade.DefaultLocalizationCulture;
                 }
@@ -167,9 +171,11 @@ namespace Composite.Plugins.Routing.Pages
                 queryParameters.Add(key, queryString[key]);
             }
 
+            string pathInfo = urlBuilder.PathInfo != null ? HttpUtility.UrlDecode(urlBuilder.PathInfo) : null;
+
             return new PageUrlData(pageId, publicationScope, cultureInfo)
             {
-                PathInfo = urlBuilder.PathInfo,
+                PathInfo = pathInfo,
                 QueryParameters = queryParameters,
             };
         }
@@ -232,24 +238,10 @@ namespace Composite.Plugins.Routing.Pages
                 return ParseInternalUrl(relativeUrl, out urlKind);
             }
 
-            string requestPath;
-            Uri uri;
-
-
-            string filePathAndPathInfo = urlBuilder.FilePath + (urlBuilder.PathInfo ?? string.Empty);
+            string filePathAndPathInfo = HttpUtility.UrlDecode(urlBuilder.FullPath);
             filePathAndPathInfo = RemoveUrlMarkers(filePathAndPathInfo, urlSpace);
             
-
-            if (Uri.TryCreate(filePathAndPathInfo, UriKind.Absolute, out uri))
-            {
-                requestPath = HttpUtility.UrlDecode(uri.AbsolutePath);
-            }
-            else
-            {
-                requestPath = filePathAndPathInfo;
-            }
-
-            CultureInfo locale = GetCultureInfo(requestPath, urlSpace);
+            CultureInfo locale = GetCultureInfo(filePathAndPathInfo, urlSpace);
             if (locale == null)
             {
                 urlKind = UrlKind.Undefined;
@@ -268,6 +260,8 @@ namespace Composite.Plugins.Routing.Pages
 
             Guid pageId = Guid.Empty;
             urlKind = UrlKind.Public;
+
+            string requestPath = filePathAndPathInfo;
 
             if(publicationScope == PublicationScope.Unpublished)
             {
@@ -367,7 +361,7 @@ namespace Composite.Plugins.Routing.Pages
                 {
                     string urlMappingName = requestPath.Substring(startIndex, endIndex - startIndex + 1);
 
-                    if (DataLocalizationFacade.UrlMappingNames.Contains(urlMappingName))
+                    if (DataLocalizationFacade.UrlMappingNames.Any(um => String.Equals(um, urlMappingName, StringComparison.OrdinalIgnoreCase)))
                     {
                         CultureInfo cultureInfo = DataLocalizationFacade.GetCultureInfoByUrlMappingName(urlMappingName);
 

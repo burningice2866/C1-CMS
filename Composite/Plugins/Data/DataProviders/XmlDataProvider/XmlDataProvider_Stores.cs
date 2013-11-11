@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using Composite.Core;
+using Composite.Core.Extensions;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
@@ -104,6 +106,10 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         }
 
 
+        private static Exception NewConfigurationException(ConfigurationElement element, string message)
+        {
+            return new ConfigurationErrorsException(message, element.ElementInformation.Source, element.ElementInformation.LineNumber);
+        }
 
         private void InitializeExistingStores()
         {
@@ -113,7 +119,19 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
 
             foreach (XmlProviderInterfaceConfigurationElement element in _dataTypeConfigurationElements)
             {
-                DataTypeDescriptor dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(element.DataTypeId.Value, true);
+                if (!element.DataTypeId.HasValue)
+                {
+                    throw NewConfigurationException(element, "Missing 'dataTypeId' attribute");
+                }
+
+                Guid dataTypeId = element.DataTypeId.Value;
+
+                var dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(dataTypeId, true);
+                if (dataTypeDescriptor == null)
+                {
+                    throw NewConfigurationException(element, "Failed to get a DataTypeDescriptor by id '{0}'".FormatWith(dataTypeId));
+                }
+
                 Type interfaceType = null;
 
                 try
@@ -125,7 +143,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
                     bool typeOk = EnsureNeededTypes(dataTypeDescriptor, out dataProviderHelperType, out dataIdClassType);
                     if (!typeOk)
                     {
-                        Log.LogError("XmlDataProvider", string.Format("The data interface type '{0}' does not exists and is not code generated. It will not be usable", dataTypeDescriptor.TypeManagerTypeName));
+                        Log.LogError(LogTitle, string.Format("The data interface type '{0}' does not exists and is not code generated. It will not be usable", dataTypeDescriptor.TypeManagerTypeName));
                         continue;
                     }
 
@@ -153,7 +171,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
                     {
                         DataProviderRegistry.AddKnownDataType(interfaceType, _dataProviderContext.ProviderName);
                     }
-                    Log.LogError("XmlDataProvider", string.Format("Failed initialization for the datatype {0}", dataTypeDescriptor.TypeManagerTypeName));
+                    Log.LogError(LogTitle, "Failed initialization for the datatype {{{0}}}, {1}", dataTypeId, dataTypeDescriptor.TypeManagerTypeName);
                 }
             }
         }
@@ -218,8 +236,8 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
 
                     IEnumerable<Type> types = CodeGenerationManager.CompileRuntimeTempTypes(codeGenerationBuilder, false);
 
-                    dataProviderHelperType = types.Where(f => f.FullName == dataProviderHelperClassFullName).Single();
-                    dataIdClassType = types.Where(f => f.FullName == dataIdClassFullName).Single();
+                    dataProviderHelperType = types.Single(f => f.FullName == dataProviderHelperClassFullName);
+                    dataIdClassType = types.Single(f => f.FullName == dataIdClassFullName);
                 }
 
                 return true;

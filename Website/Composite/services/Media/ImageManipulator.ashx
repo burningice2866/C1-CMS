@@ -373,34 +373,7 @@ public class ImageManipulator : IHttpHandler
             }
         }
 
-
-        Bitmap scaled = new Bitmap(resultWidth, resultHeight, image.PixelFormat);
-        try
-        {
-            using (Graphics graphics = Graphics.FromImage(scaled))
-            {
-                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                
-                using(var wrapMode = new ImageAttributes())
-                {
-                    wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-
-                    graphics.DrawImage(image,
-                                       new Rectangle(0, 0, resultWidth, resultHeight),
-                                       0, 0, image.Width, image.Height,
-                                       GraphicsUnit.Pixel, wrapMode);
-                }
-            }
-            image.Dispose();
-        }
-        catch (Exception)
-        {
-            scaled.Dispose();
-            throw;
-        }
-        
-        return scaled;
+		return Composite.Core.WebClient.Media.ImageResizer.ResizeImage(image, resultWidth, resultHeight, false);
     }
     
 
@@ -456,7 +429,7 @@ public class ImageManipulator : IHttpHandler
         {
         }
 
-        public void ShowMessage(DialogType dislogType, string title, string message)
+        public void ShowMessage(DialogType dialogType, string title, string message)
         {
         }
 

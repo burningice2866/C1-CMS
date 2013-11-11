@@ -93,10 +93,6 @@ BlockSelectorBinding.prototype.buildDOMContent = function() {
 
 	this.populateFromList(list);
 
-	//disable block seletor for IE
-	if (Client.isExplorer) {
-		this.hide();
-	}
 	if (!this.priorities.hasEntries())
 		this.hide();
 };
@@ -120,6 +116,7 @@ BlockSelectorBinding.prototype.initializeComponent = function(editor, engine, in
 	);
 
 	this._tinyTheme.registerNodeChangeHandler(this);
+	this._tinyTheme.registerEnterKeyHandler(this);
 };
 
 /**
@@ -133,35 +130,38 @@ BlockSelectorBinding.prototype.handleAction = function (action) {
 
 	switch (action.type) {
 		case SelectorBinding.ACTION_SELECTIONCHANGED:
+			if (Client.isExplorer || Client.isExplorer11) {
+				this._editorBinding.deleteBookmark();
+			} else {
 
-			var superstart = this._tinyInstance.selection.getStart();
-			var superend = this._tinyInstance.selection.getEnd();
-			var start = superstart;
-			var end = superend;
-			if (start.nodeName.toLowerCase() != "body" && end.nodeName.toLowerCase() != "body") {
-				while (start.parentNode != null && start.parentNode.nodeName.toLowerCase() != "body") {
-					start = start.parentNode;
-				}
-				while (end.parentNode != null && end.parentNode.nodeName.toLowerCase() != "body") {
-					end = end.parentNode;
-				}
-				if (start == superstart && start == end) {
-					
-				} else if (start == end) {
+				var superstart = this._tinyInstance.selection.getStart();
+				var superend = this._tinyInstance.selection.getEnd();
+				var start = superstart;
+				var end = superend;
+				if (start.nodeName.toLowerCase() != "body" && end.nodeName.toLowerCase() != "body") {
+					while (start.parentNode != null && start.parentNode.nodeName.toLowerCase() != "body") {
+						start = start.parentNode;
+					}
+					while (end.parentNode != null && end.parentNode.nodeName.toLowerCase() != "body") {
+						end = end.parentNode;
+					}
+					if (start == superstart && start == end) {
+
+					} else if (start == end) {
+						this._tinyInstance.selection.select(start);
+					} else {
+						var rng = this._tinyInstance.selection.getRng();
+						rng.setStartBefore(start);
+						rng.setEndAfter(end);
+						this._tinyInstance.selection.setRng(rng);
+					}
+				} else if (start.nodeName.toLowerCase() != "body") {
 					this._tinyInstance.selection.select(start);
-				} else {
-					var rng = this._tinyInstance.selection.getRng();
-					rng.setStartBefore(start);
-					rng.setEndAfter(end);
-					this._tinyInstance.selection.setRng(rng);
 				}
-			} else if (start.nodeName.toLowerCase() != "body") {
-				this._tinyInstance.selection.select(start);
 			}
-			
+
 			var value = this.getValue();
 			if (value != BlockSelectorBinding.VALUE_DEFAULT) {
-
 				this._tinyInstance.formatter.apply(value);
 			}
 
@@ -207,5 +207,45 @@ BlockSelectorBinding.prototype.handleNodeChange = function(element) {
 			value = BlockSelectorBinding.VALUE_DEFAULT;
 		}
 		this.selectByValue(value, true);
+	}
+};
+
+/**
+* Handle Editor Enter Key
+*/
+BlockSelectorBinding.prototype.handleEnterKey = function (e) {
+
+	var editor = this._tinyInstance;
+	var dom = editor.dom;
+	var rng = editor.selection.getRng();
+	
+	if (rng.startContainer != null && rng.startContainer == rng.endContainer && rng.startOffset == 0 && rng.endOffset == 0) {
+		var node = rng.startContainer;
+		if (dom.isBlock(node) && editor.dom.isEmpty(node) && (node.nextElementSibling === null || node.previousElementSibling === null)) {
+			var parent = rng.startContainer.parentNode;
+			var value;
+			this.priorities.each(function (format) {
+				if (editor.formatter.matchNode(parent, format.id)) {
+					value = format.id;
+				}
+				return value == null;
+			}, this);
+
+			if (value) {
+				var p = dom.create("p");
+				if (!editor.isIE) {
+					p.innerHTML = '<br data-mce-bogus="1">';
+				}
+				if (node.previousElementSibling === null) {
+					parent.parentNode.insertBefore(p, parent);
+				} else {
+					dom.insertAfter(p, parent);
+				}
+				dom.remove(node);
+				editor.selection.setCursorLocation(p, 0);
+				editor.undoManager.add();
+				e.preventDefault();
+			}
+		}
 	}
 };

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Composite.Data.Foundation;
 using Composite.Data.ProcessControlled;
+using Composite.Core.Linq;
 
 
 namespace Composite.Data.DynamicTypes
@@ -25,7 +26,14 @@ namespace Composite.Data.DynamicTypes
         {
             OldDataTypeDescriptor = oldDataTypeDescriptor;
             NewDataTypeDescriptor = newDataTypeDescriptor;
-            ProviderName = DataProviderRegistry.DefaultDynamicTypeDataProviderName;
+
+            var interfaceType = oldDataTypeDescriptor.GetInterfaceType();
+
+            ProviderName = interfaceType != null 
+                ? DataProviderRegistry.GetWriteableDataProviderNamesByInterfaceType(interfaceType)
+                                      .SingleOrException("Failed to get data provider by type '{0}'",
+                                                         "Multiple data providers for type '{0}'", interfaceType.FullName)
+                : DataProviderRegistry.DefaultDynamicTypeDataProviderName;
         }
 
 

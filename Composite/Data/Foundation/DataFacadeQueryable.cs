@@ -22,7 +22,7 @@ namespace Composite.Data.Foundation
 
         public DataFacadeQueryable(IEnumerable<IQueryable<T>> sources)
         {
-            if (null == sources) throw new ArgumentNullException("sources");
+            Verify.ArgumentNotNull(sources, "sources");
 
             _sources = new List<IQueryable>();
             foreach (IQueryable<T> source in sources)
@@ -36,7 +36,7 @@ namespace Composite.Data.Foundation
 
 
         /// <summary>
-        /// DO NOT USE! For internal use only
+        /// Invoked via reflection
         /// </summary>
         public DataFacadeQueryable(List<IQueryable> sources, Expression currentExpression)
         {
@@ -60,8 +60,7 @@ namespace Composite.Data.Foundation
         {
             bool pullIntoMemory = ShouldBePulledIntoMemory(expression);
 
-            DataFacadeQueryableExpressionVisitor handleInProviderVisitor =
-                new DataFacadeQueryableExpressionVisitor(pullIntoMemory);
+            var handleInProviderVisitor = new DataFacadeQueryableExpressionVisitor(pullIntoMemory);
 
             Expression newExpression = handleInProviderVisitor.Visit(expression);
 
@@ -115,7 +114,7 @@ namespace Composite.Data.Foundation
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            MethodInfo methodInfo = DataFacadeQueryableCache.GetDataFacadeQueryableGetEnumeratorMethodInfo(typeof(T));         
+            MethodInfo methodInfo = DataFacadeReflectionCache.GetDataFacadeQueryableGetEnumeratorMethodInfo(typeof(T));         
 
             return (IEnumerator)methodInfo.Invoke(this, null);
         }
@@ -146,7 +145,7 @@ namespace Composite.Data.Foundation
 
         public object Execute(Expression expression)
         {
-            MethodInfo methodInfo = DataFacadeQueryableCache.GetDataFacadeQueryableExecuteMethodInfo(typeof(T), expression.Type);
+            MethodInfo methodInfo = DataFacadeReflectionCache.GetDataFacadeQueryableExecuteMethodInfo(typeof(T), expression.Type);
 
             return methodInfo.Invoke(this, new object[] { expression });
         }
@@ -215,7 +214,7 @@ namespace Composite.Data.Foundation
             protected override Expression VisitConstant(ConstantExpression node)
             {
                 var value = node.Value;
-                if (value != null && value is IQueryable)
+                if (value is IQueryable)
                 {
                     if (value is ITable)
                     {
@@ -225,7 +224,7 @@ namespace Composite.Data.Foundation
                     {
                         CachedSqlQueries++;
                     }
-                    else if (typeof(EnumerableQuery).IsAssignableFrom(value.GetType()))
+                    else if (value is EnumerableQuery)
                     {
                         InMemoryQueries++;
                     }
@@ -255,7 +254,7 @@ namespace Composite.Data.Foundation
             protected override Expression VisitConstant(ConstantExpression node)
             {
                 object value = node.Value;
-                if(value != null && value is ICachedQuery)
+                if(value is ICachedQuery)
                 {
                     IQueryable originalQuery = (value as ICachedQuery).GetOriginalQuery();
 

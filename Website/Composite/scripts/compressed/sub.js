@@ -1025,7 +1025,7 @@ DOMEvents.addEventListener(document,DOMEvents.BEFOREUPDATE,this);
 DOMEvents.addEventListener(document,DOMEvents.AFTERUPDATE,this);
 DOMEvents.addEventListener(document,DOMEvents.ERRORUPDATE,this);
 DOMEvents.addEventListener(window,DOMEvents.UNLOAD,this);
-if(Client.isMozilla){
+if(Client.isFirefox){
 UpdateAssistant.serialize=function(_ef){
 _ef=_ef.cloneNode(true);
 _ef.setAttributeNS(Constants.NS_NS,"xmlns",Constants.NS_XHTML);

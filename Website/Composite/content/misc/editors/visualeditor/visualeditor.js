@@ -7,7 +7,7 @@ var config = {
 	elements : "editor",
 	theme : "composite",
 	browsers : "msie,gecko",
-	plugins: "autolink,compositelink,compositetable,compositeimage,compositerendering,compositecharmap,compositefield,compositetext,compositespellcheck,compositeimageresize,paste,lists",	
+	plugins: "autolink,composite,compositelink,table,compositetable,compositeimage,compositerendering,compositecharmap,compositefield,compositetext,compositespellcheck,compositeimageresize,paste,lists",
 	entity_encoding : "raw",
 	convert_fonts_to_spans : false,
 	apply_source_formatting : false,
@@ -18,7 +18,7 @@ var config = {
 	force_br_newlines: false,
 	forced_root_block: '',
 	visual : true,
-	object_resizing : Client.isExplorer,
+	object_resizing: Client.isExplorer,
 	auto_reset_designmode : true,
 	list_outdent_on_enter: true,
 	init_instance_callback 	: onInstanceInitialize
@@ -28,9 +28,11 @@ var config = {
  * Load configuration.
  */
 var conf = "common";
-var editorpath = window.location.toString ();
-if (editorpath.indexOf("config=") > -1) {
-    conf = editorpath.split("config=")[1];
+
+var editorpath = window.location.toString();
+var configParam = /[\?&]config=([^&#]*)/.exec(window.location.search);
+if (configParam != null) {
+	conf = configParam[1];
 }
 var sitepath = editorpath.substring(0, editorpath.toLowerCase().indexOf("/composite/content/"));
 var relconfigpath = "/Composite/services/WysiwygEditor/getconfig.ashx?name=" + conf;
@@ -63,6 +65,30 @@ elements.each ( function ( el ) {
 	});
 	groups.add ( group );
 });
+
+if (Client.isExplorer || Client.isExplorer11) {
+	config.content_css = "ie.css";
+}
+
+/*
+ * Preload plugins
+ */
+
+var plugins = config.plugins.split(',');
+var loadedPlugins = [];
+for (var i = 0, length = plugins.length; i < length; i++) {
+	var plugin = plugins[i];
+	window.tinyMCE.PluginManager.load(plugin, sitepath + "/Composite/content/misc/editors/visualeditor/tinymce/plugins/" + plugin + "/plugin.min.js?c1=" + Installation.versionString);
+	loadedPlugins.push("-" + plugin);
+}
+config.plugins = loadedPlugins.join(",");
+
+/*
+ * Preload theme
+ */
+window.tinyMCE.ThemeManager.load(plugin, sitepath + "/Composite/content/misc/editors/visualeditor/tinymce/themes/" + config.theme + "/theme.min.js?c1=" + Installation.versionString);
+config.theme = "-" + config.theme;
+
 
 /*
  * Init TinyMCE. 
@@ -118,17 +144,37 @@ function onInstanceInitialize ( inst ) {
 	// The toolbar will access this at some point...
 	tinyTheme.formatGroups = groups; 
 	
+	var head = tinyInstance.dom.doc.getElementsByTagName('head')[0];
+
 	/*
 	 * Load CSS.
 	 */
+	
 	var styles = new List ( doc.getElementsByTagName ( "style" ));
-	styles.each ( function ( style ) {
-		var file = style.getAttribute ( "file" );
-		if ( file != null && file != "" ) {
-			tinyInstance.dom.loadCSS ( Constants.CONFIGROOT + file );
+	styles.each(function(style) {
+		var file = style.getAttribute("file");
+		var rel = style.getAttribute("rel");
+		if (file != null && file != "") {
+			tinyInstance.dom.add(head, 'link', {
+				'href': Constants.CONFIGROOT + file,
+				'rel': rel ? rel:'stylesheet'
+			});
 		}
-	})
+	});
 
+	/*
+	 * Load Scripts.
+	 */
+	var scripts = new List(doc.getElementsByTagName("script"));
+	scripts.each(function (script) {
+		var file = script.getAttribute("file");
+		if (file != null && file != "") {
+			tinyInstance.dom.add(head, 'script', {
+				src: Constants.CONFIGROOT + file,
+				type: 'text/javascript'
+			});
+		}
+	});
 
 	//Enable SpellCheck
 	if (Client.hasSpellcheck) {

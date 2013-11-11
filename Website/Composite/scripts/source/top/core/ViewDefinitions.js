@@ -314,6 +314,28 @@ var ViewDefinitions = {
 				search : "MediaFileElementProvider.WebImages"
 			}]
 		}
+    }),
+
+	/*
+	* Writable Media Folder selector.
+	*/
+	"Composite.Management.MediaWritableFolderSelectorDialog": new DialogViewDefinition({
+		isMutable: true,
+		handle: "Composite.Management.MediaWritableFolderSelectorDialog",
+		position: Dialog.MODAL,
+		url: Dialog.URL_TREEACTIONSELECTOR,
+		argument: {
+			label: "${string:Composite.Management:Website.Folder.SelectDialog.Title}",
+			image: "${icon:image}",
+			selectionProperty: "ReadOnly",
+			selectionValue: "False",
+			selectionResult: "EntityToken",
+			actionGroup: "Folder",
+			nodes: [{
+				key: "MediaFileElementProvider",
+				search: "MediaFileElementProvider.WritableFolders"
+			}]
+		}
 	}),
 	
 	/*

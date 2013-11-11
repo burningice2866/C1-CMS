@@ -13,6 +13,7 @@ using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
 using Composite.Data.ProcessControlled;
+using Composite.Data.Types;
 
 
 namespace Composite.Core.PackageSystem.PackageFragmentInstallers
@@ -480,15 +481,21 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                         continue;
                     }
 
+                    Type referenceType;
+                    string keyPropertyName;
+                    object referenceKey;
+                    
+                    MapReference(foreignKeyProperty.TargetType, foreignKeyProperty.TargetKeyPropertyName, propertyValue, out referenceType, out keyPropertyName, out referenceKey);
+
                     // Checking key in the keys to be installed
-                    var keyValuePair = new KeyValuePair<string, object>(foreignKeyProperty.TargetKeyPropertyName, propertyValue);
+                    var keyValuePair = new KeyValuePair<string, object>(keyPropertyName, referenceKey);
 
                     if (!_missingDataReferences.ContainsKey(dataType.InterfaceType) 
                         || !_missingDataReferences[dataType.InterfaceType].Contains(keyValuePair))
                     {
-                        if (_dataKeysToBeInstalled.ContainsKey(foreignKeyProperty.TargetType))
+                        if (_dataKeysToBeInstalled.ContainsKey(referenceType))
                         {
-                            if (_dataKeysToBeInstalled[foreignKeyProperty.TargetType].KeyRegistered(dataType, keyValuePair))
+                            if (_dataKeysToBeInstalled[referenceType].KeyRegistered(dataType, keyValuePair))
                             {
                                 continue;
                             }
@@ -519,6 +526,25 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                 _validationResult.AddFatal(GetText("DataPackageFragmentInstaller.DataExists").FormatWith(dataType.InterfaceType, itemsAlreadePresentInDatabase));
             }
         }
+
+        private void MapReference(Type type, string propertyName, object key, out Type referenceType, out string keyPropertyName, out object referenceKey)
+        {
+            if ((type == typeof(IImageFile) || type == typeof(IMediaFile))
+                && ((string)key).StartsWith("MediaArchive:")
+                && propertyName == "KeyPath")
+            {
+                referenceType = typeof(IMediaFileData);
+                referenceKey = new Guid(((string)key).Substring("MediaArchive:".Length));
+                keyPropertyName = "Id";
+                return;
+            }
+
+            referenceType = type;
+            keyPropertyName = propertyName;
+            referenceKey = key;
+        }
+
+
 
         private DataScope GetDataScopeFromDataTypeElement(DataType dataType)
         {
@@ -647,32 +673,32 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
                 if (!_isLocalized)
                 {
-                    RegisterKeyUsage("", dataScopeIdentifier, keyValuePair);
+                    RegisterKeyUsage(dataType, "", dataScopeIdentifier, keyValuePair);
                     return;
                 }
 
                 if (dataType.AddToCurrentLocale)
                 {
-                    RegisterKeyUsage(LocalizationScopeManager.CurrentLocalizationScope.Name, dataScopeIdentifier, keyValuePair);
+                    RegisterKeyUsage(dataType, LocalizationScopeManager.CurrentLocalizationScope.Name, dataScopeIdentifier, keyValuePair);
                     return;
                 }
 
                 if (dataType.Locale != null)
                 {
-                    RegisterKeyUsage(dataType.Locale.Name, dataScopeIdentifier, keyValuePair);
+                    RegisterKeyUsage(dataType, dataType.Locale.Name, dataScopeIdentifier, keyValuePair);
                     return;
                 }
 
                 if (dataType.AddToAllLocales)
                 {
-                    RegisterKeyUsage(AllLocalesKey, dataScopeIdentifier, keyValuePair);
+                    RegisterKeyUsage(dataType, AllLocalesKey, dataScopeIdentifier, keyValuePair);
                     return;
                 }
 
                 throw new InvalidOperationException("Type is localized but no localization info specified");
             }
 
-            private void RegisterKeyUsage(string localeName, DataScopeIdentifier publicationScope, KeyValuePair<string, object> keyValuePair)
+            private void RegisterKeyUsage(DataType dataType, string localeName, DataScopeIdentifier publicationScope, KeyValuePair<string, object> keyValuePair)
             {
                 string dataScopeKey = GetDataScopeKey(publicationScope, localeName);
 
@@ -683,7 +709,8 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
                 var hashset = _dataScopes[dataScopeKey];
 
-                Verify.That(!hashset.Contains(keyValuePair), "Item with the same key present twice. {0}, value {1}", keyValuePair.Key, keyValuePair.Value ?? "null");
+                Verify.That(!hashset.Contains(keyValuePair), "Item with the same key present twice. Data type: '{0}', field '{1}', value '{2}'",
+                    dataType.InterfaceTypeName ?? "null", keyValuePair.Key, keyValuePair.Value ?? "null");
 
                 hashset.Add(keyValuePair);
             }

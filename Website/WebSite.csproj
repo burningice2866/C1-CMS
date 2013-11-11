@@ -172,17 +172,23 @@
     <Content Include="Composite\content\forms\Administrative\DeleteUserControlFunctionConfirm.xml" />
     <Content Include="Composite\content\forms\Administrative\PageTemplate\EditMasterPage.xml" />
     <Content Include="Composite\content\forms\Administrative\PageTemplate\AddNewPageTemplate.xml" />
+    <Content Include="Composite\content\misc\editors\codemirroreditor\CodeMirror\addon\dropmedia\dropmedia.js" />
     <Content Include="Composite\content\misc\editors\codemirroreditor\CodeMirror\addon\selection\active-line.js" />
     <Content Include="Composite\content\misc\editors\codemirroreditor\CodeMirror\addon\selection\mark-selection.js" />
     <Content Include="Composite\content\misc\editors\codemirroreditor\CodeMirror\mode\htmlembedded\htmlembedded.js" />
     <Content Include="Composite\content\misc\editors\codemirroreditor\CodeMirror\mode\razor\razor.js" />
+    <Content Include="Composite\content\misc\editors\codemirroreditor\CodeMirror\mode\sass\sass.js" />
     <Content Include="Composite\content\misc\editors\codemirroreditor\theme\composite.css" />
     <Content Include="Composite\content\misc\editors\visualeditor\bindings\BlockSelectorBinding.js" />
+    <Content Include="Composite\content\misc\editors\visualeditor\ie.css" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\autolink\plugin.min.js" />
-    <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\compositeimageresize\plugin.min.js" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\compositespellcheck\plugin.min.js" />
+    <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\composite\plugin.min.js" />
+    <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\compositeimageresize\plugin.min.js" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\lists\plugin.min.js" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\paste\plugin.min.js" />
+    <Content Include="Composite\content\misc\editors\visualeditor\tinymce\plugins\table\plugin.min.js" />
+    <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\content.inline.min.css" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\content.min.css" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\fonts\icomoon-small.svg" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\fonts\icomoon.svg" />
@@ -191,7 +197,6 @@
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\img\object.gif" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\img\trans.gif" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\img\wline.gif" />
-    <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\skin.classic.min.css" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\skin.ie7.min.css" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\skin.min.css" />
     <Content Include="Composite\content\misc\preview\error.aspx" />
@@ -472,6 +477,9 @@
       <DependentUpon>GenerateDynamicSchemas.aspx</DependentUpon>
     </Compile>
     <Content Include="Composite\controls\FormsControls\FormUiControlTemplates\Selectors\UrlComboBox.ascx" />
+    <Content Include="Composite\scripts\source\top\proxies\FunctionService.js" />
+    <Content Include="Composite\scripts\source\top\ui\bindings\pages\ResponsePageBinding.js" />
+    <Content Include="Composite\services\WysiwygEditor\FunctionService.asmx" />
     <Content Include="Composite\unsecure.js" />
     <Content Include="Composite\skins\system\dialogpages\unsecure_32.png" />
     <Content Include="Composite\unsecure.css" />
@@ -737,7 +745,6 @@
     <Content Include="Composite\scripts\source\top\dom\DOMEvents.js" />
     <Content Include="Composite\scripts\source\top\dom\DOMFormatter.js" />
     <Content Include="Composite\scripts\source\top\dom\DOMSerializer.js" />
-    <Content Include="Composite\scripts\source\top\dom\DOMUtil.BACKUP.js" />
     <Content Include="Composite\scripts\source\top\dom\DOMUtil.js" />
     <Content Include="Composite\scripts\source\top\dom\XMLParser.js" />
     <Content Include="Composite\scripts\source\top\dom\XPathResolver.js" />
@@ -1053,8 +1060,8 @@
     <Content Include="Frontend\Config\VisualEditor\Images\left.png" />
     <Content Include="Frontend\Config\VisualEditor\Images\right.png" />
     <Content Include="Frontend\Config\VisualEditor\Images\smalltext.png" />
-    <Content Include="Frontend\Styles\VisualEditor.common.css" />
     <Content Include="Frontend\Config\VisualEditor\Styles\core.css" />
+    <Content Include="robots.txt" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
     </Content>
@@ -1461,7 +1468,9 @@
     <Content Include="App_Data\Composite\Composite.config">
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="App_Data\Composite\ReleaseBuild.Composite.config" />
+    <Content Include="App_Data\Composite\ReleaseBuild.Composite.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="App_Data\Composite\app_offline.htm" />
     <Content Include="App_Data\Composite\ReleaseBuild.Composite.config.changeHistory.txt" />
     <Content Include="Composite\app.aspx" />
@@ -6019,7 +6028,7 @@
     <Content Include="Composite\help\help.ashx" />
     <Content Include="App_Data\PageTemplates\web.config" />
     <Content Include="App_Data\Razor\web.config" />
-    <Content Include="App_Data\UserControls\web.config" />
+    <Content Include="Composite\services\Media\Upload.ashx" />
     <None Include="Composite\content\misc\editors\visualeditor\includes\toolbaradvanced.inc" />
     <None Include="Composite\content\misc\editors\visualeditor\includes\toolbarsimple.inc" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\langs\readme.md" />
@@ -6030,6 +6039,7 @@
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\fonts\icomoon.ttf" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\fonts\icomoon.woff" />
     <Content Include="Composite\content\misc\editors\visualeditor\tinymce\skins\lightgray\fonts\readme.md" />
+    <Content Include="Composite\controls\Razor\RazorLayout.cshtml" />
     <None Include="Composite\extensions\compositec1\chrome.manifest" />
     <None Include="Composite\extensions\compositec1\chrome\content\compositec1.xul" />
     <None Include="Composite\extensions\compositec1\compositec1.xpi" />
@@ -6182,12 +6192,14 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\Composite\DynamicTypeForms\" />
+    <Folder Include="App_Data\UserControls\" />
     <Folder Include="Composite\content\dialogs\querytreeeditor\" />
     <Folder Include="Composite\controls\FormsControls\FormUiControlTemplates\ElementSelectors\" />
     <Folder Include="Composite\images\icons\republic\Zip files\" />
     <Folder Include="Frontend\Controls\" />
     <Folder Include="Frontend\Images\" />
     <Folder Include="Frontend\Scripts\" />
+    <Folder Include="Frontend\Styles\" />
     <Folder Include="Properties\" />
   </ItemGroup>
   <PropertyGroup>

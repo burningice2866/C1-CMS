@@ -55,7 +55,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.CodeGeneration
             }
 
             PropertySerializerTypeCodeGenerator.AddPropertySerializerTypeCode(_codeGenerationBuilder, codeGenerator.DataIdClassFullName, keyPropertiesList);
-
+            
             _codeGenerationBuilder.AddReference(interfaceType.Assembly);
         }
 

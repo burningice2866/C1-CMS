@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Web;
 using System.Web.UI.WebControls;
 using System.Xml.Linq;
@@ -152,18 +153,18 @@ namespace Composite.controls.FormsControls.FormUiControlTemplates.DeveloperTools
                 btnDefaultValueFunctionMarkup.Attributes["label"] = GetString(btnDefaultValueFunctionMarkup.Value.IsNullOrEmpty() ? "DefaultValueSpecify" : "DefaultValueEdit");
                 btnDefaultValueFunctionMarkup.Attributes["url"] =
                     "${root}/content/dialogs/functions/editFunctionCall.aspx?type=" + this.CurrentlySelectedType.FullName +
-                    "&dialoglabel=" + HttpUtility.UrlEncodeUnicode(GetString("DefaultValueDialogLabel")) + "&multimode=false&functionmarkup=";
+                    "&dialoglabel=" + HttpUtility.UrlEncode(GetString("DefaultValueDialogLabel"), Encoding.UTF8) + "&multimode=false&functionmarkup=";
 
 
                 btnTestValueFunctionMarkup.Attributes["label"] = GetString(btnTestValueFunctionMarkup.Value.IsNullOrEmpty() ? "TestValueSpecify" : "TestValueEdit");
                 btnTestValueFunctionMarkup.Attributes["url"] =
                     "${root}/content/dialogs/functions/editFunctionCall.aspx?type=" + this.CurrentlySelectedType.FullName +
-                    "&dialoglabel=" + HttpUtility.UrlEncodeUnicode(GetString("TestValueDialogLabel")) + "&multimode=false&functionmarkup=";
+                    "&dialoglabel=" + HttpUtility.UrlEncode(GetString("TestValueDialogLabel"), Encoding.UTF8) + "&multimode=false&functionmarkup=";
 
                 btnWidgetFunctionMarkup.Attributes["label"] = CurrentlySelectedWidgetText;
                 btnWidgetFunctionMarkup.Attributes["url"] =
                     "${root}/content/dialogs/functions/editFunctionCall.aspx?functiontype=widget&type=" + this.CurrentlySelectedWidgetReturnType.FullName +
-                    "&dialoglabel=" + HttpUtility.UrlEncodeUnicode(GetString("WidgetDialogLabel")) + "&multimode=false&functionmarkup=";
+                    "&dialoglabel=" + HttpUtility.UrlEncode(GetString("WidgetDialogLabel"), Encoding.UTF8) + "&multimode=false&functionmarkup=";
 
                 if (defaultFunction != null)
                 {

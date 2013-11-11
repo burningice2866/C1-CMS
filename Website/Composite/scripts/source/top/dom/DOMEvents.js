@@ -86,7 +86,7 @@ _DOMEvents.prototype = {
 		* Clearing eventlisteners on unload. This should 
 		* in theory minimize memory leaks (clearly not!).
 		*/
-		if (!Client.isExplorer)
+		if (!Client.isExplorer &&  !Client.isExplorer11)
 		{
 			if (target && typeof target.nodeType != Types.UNDEFINED) {
 				if (target.nodeType == Node.ELEMENT_NODE) {
@@ -192,6 +192,17 @@ _DOMEvents.prototype = {
 		return e.button == 2 ? true : false;
 	},
 
+    /**
+    * @param {MouseEvent} e
+    */
+	isButtonPressed: function (e) {
+		if ((Client.isFirefox || Client.isExplorer11) && e.buttons === 0)
+			return false;
+		else if (Client.isWebKit && e.which === 0)
+			return false;
+		return undefined;
+	},
+
 	/**
 	* @param {IEventListener} handler
 	*/
@@ -251,7 +262,7 @@ _DOMEvents.prototype = {
 			if (typeof event != Types.UNDEFINED) {
 				var action = this._getAction(isAdd);
 				if (target[action]) {
-					if (Client.isExplorer == true) {
+					if (Client.isExplorer || Client.isExplorer11) {
 						switch (event) {
 							case DOMEvents.MOUSEDOWN:
 							case DOMEvents.MOUSEUP:

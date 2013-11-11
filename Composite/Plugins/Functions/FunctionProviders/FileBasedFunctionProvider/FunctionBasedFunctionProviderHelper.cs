@@ -54,6 +54,11 @@ namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvide
                 {
                     // Skipping overriden base properties
                     if (property.GetAccessors()[0].GetBaseDefinition().DeclaringType == baseFunctionType) continue;
+                    // Skipping private setters
+                    if (property.GetSetMethod(false) == null) continue;
+                    // Skipping explicitly ignored attributes
+                    if (property.GetCustomAttributes(typeof(FunctionParameterIgnoreAttribute), false).Any()) continue;
+
 
                     var propType = property.PropertyType;
                     var name = property.Name;

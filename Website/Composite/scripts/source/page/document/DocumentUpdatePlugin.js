@@ -96,7 +96,7 @@ _DocumentUpdatePlugin.prototype = {
 		 * to ignore the evil hack presented below, but it does seem to work.
 		 * TODO: Verify this after https://bugzilla.mozilla.org/show_bug.cgi?id=368437
 		 */
-		if ( Client.isMozilla ) {
+		if ( Client.isFirefox ) {
 			UpdateAssistant.serialize = function ( element ) {
 				element = element.cloneNode ( true ); // don't modify UpdateManager.currentDOM!
 				element.setAttributeNS ( Constants.NS_NS, "xmlns", Constants.NS_XHTML );

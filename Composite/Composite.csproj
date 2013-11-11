@@ -148,6 +148,7 @@
     <Compile Include="AspNet\BrowserOverrideStores.cs" />
     <Compile Include="AspNet\CompositeC1SiteMapProvider.cs" />
     <Compile Include="AspNet\CookieBrowserOverrideStore.cs" />
+    <Compile Include="AspNet\Razor\CustomHttpContextWrapper.cs" />
     <Compile Include="AspNet\Razor\RazorFunction.cs" />
     <Compile Include="AspNet\Razor\RazorHelper.cs" />
     <Compile Include="AspNet\Razor\RazorPageTemplate.cs" />
@@ -173,19 +174,32 @@
       <DependentUpon>LocalizationFiles.tt</DependentUpon>
     </Compile>
     <Compile Include="Core\ResourceSystem\Plugins\ResourceProvider\ILocalizationProvider.cs" />
+    <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectHttpHandler.cs" />
+    <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectRouteHandler.cs" />
     <Compile Include="Core\Threading\ThreadCultureScope.cs" />
     <Compile Include="Core\WebClient\BuildManagerHelper.cs" />
     <Compile Include="Core\WebClient\Captcha\CaptchaConfiguration.cs" />
     <Compile Include="Core\WebClient\FunctionBoxRouteHandler.cs" />
+    <Compile Include="Core\WebClient\Media\ImageSizeReader.cs" />
+    <Compile Include="Core\WebClient\Presentation\ViewServices.cs" />
     <Compile Include="Core\WebClient\Renderings\Template\PageTemplateFeatureFacade.cs" />
+    <Compile Include="Core\WebClient\ScriptLoader.cs" />
+    <Compile Include="Core\WebClient\StyleLoader.cs" />
     <Compile Include="Data\DynamicTypes\DataFieldTreeOrderingProfile.cs" />
     <Compile Include="Data\TreeOrderingProfileAttribute.cs" />
     <Compile Include="Data\Foundation\ProcessControllerSettings.cs" />
     <Compile Include="Data\StoreEventHandler.cs" />
     <Compile Include="Data\StoreEventArgs.cs" />
+    <Compile Include="Data\Types\ICustomFunctionCallEditorMapping.cs" />
     <Compile Include="Data\Types\TypeVersionAttribute.cs" />
     <Compile Include="Functions\ContentFilterFacade.cs" />
     <Compile Include="Functions\IContentFilter.cs" />
+    <Compile Include="Functions\FunctionParameterIgnoreAttribute.cs" />
+    <Compile Include="Functions\DynamicMethodHelper.cs" />
+    <Compile Include="Functions\FunctionCallEditorManager.cs" />
+    <Compile Include="Functions\FunctionCallEditorSettings.cs" />
+    <Compile Include="Plugins\Data\DataProviders\VirtualImageFileProvider\VirtualImageFileQueryable.cs" />
+    <Compile Include="Plugins\Data\DataProviders\VirtualImageFileProvider\VirtualImageFileQueryableVisitor.cs" />
     <Compile Include="Plugins\Data\DataProviders\XmlDataProvider\Foundation\FileRecord.cs" />
     <Compile Include="Plugins\Data\DataProviders\XmlDataProvider\Foundation\XmlDataProviderDocumentWriter.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\PageTemplateFeatureElementProvider\PageTemplateFeatureElementProvider.cs" />
@@ -1690,7 +1704,7 @@
     <Compile Include="Data\Types\StoreIdFilter\Foundation\IStoreIdFilterQueryable.cs" />
     <Compile Include="Data\Types\StoreIdFilter\Foundation\StoreIdFilterQueryableCache.cs" />
     <Compile Include="Data\Types\StoreIdFilter\Foundation\StoreIdFilterQueryableExpressionVisitor.cs" />
-    <Compile Include="Data\Types\StoreIdFilter\Foundation\StoreIdFilterQueryableSourceChanringExpressionVisitor.cs" />
+    <Compile Include="Data\Types\StoreIdFilter\Foundation\StoreIdFilterQueryableChangeSourceExpressionVisitor.cs" />
     <Compile Include="Data\Types\StoreIdFilter\StoreIdFilterQueryable.cs" />
     <Compile Include="C1Console\Elements\Foundation\ElementActionProviderFacade.cs" />
     <Compile Include="C1Console\Elements\ElementDragAndDropInfo.cs" />
@@ -1810,7 +1824,7 @@
     <Compile Include="Data\DynamicTypes\StoreFieldType.cs" />
     <Compile Include="Data\Foundation\CodeGeneration\EmptyDataClassBase.cs" />
     <Compile Include="Data\Foundation\CodeGeneration\EmptyDataClassCodeGenerator.cs" />
-    <Compile Include="Data\Foundation\DataFacadeQueryableCache.cs" />
+    <Compile Include="Data\Foundation\DataFacadeReflectionCache.cs" />
     <Compile Include="Data\Foundation\DataFacadeQueryableExpressionVisitor.cs" />
     <Compile Include="Data\Foundation\DataFacadeQueryableGathererExpressionVisitor.cs" />
     <Compile Include="Data\Foundation\IDataFacadeQueryable.cs" />
