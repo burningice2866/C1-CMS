@@ -98,7 +98,7 @@ namespace Composite.AspNet.Razor
                     return;
                 }
 
-                _innerDictionary.Remove(_templateStack);
+                _innerDictionary.Remove(key);
             }
 
             override public ICollection Values
