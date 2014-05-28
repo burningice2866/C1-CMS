@@ -21,7 +21,40 @@ var config = {
 	object_resizing: Client.isExplorer,
 	auto_reset_designmode : true,
 	list_outdent_on_enter: true,
-	init_instance_callback 	: onInstanceInitialize
+	noneditable_leave_contenteditable: true,
+	init_instance_callback: onInstanceInitialize,
+	setup: function (editor) {
+		editor.on('PreInit', function (e) {
+			var ed = e.target;
+			var blockElementsMap = ed.schema.getBlockElements();
+			ed.dom.isBlock = function (node) {
+				// Fix for #5446
+				if (!node) {
+					return false;
+				}
+
+				if (ed.formatter.functionIsBlock) {
+					if (node.nodeName && node.nodeName.toLowerCase() == "img" && ed.dom.hasClass(node, "compositeFunctionWysiwygRepresentation")) {
+						return true;
+					}
+				}
+
+				// This function is called in module pattern style since it might be executed with the wrong this scope
+				var type = node.nodeType;
+
+				// If it's a node then check the type and use the nodeName
+				if (type) {
+					return !!(type === 1 && blockElementsMap[node.nodeName]);
+				}
+
+
+				return !!blockElementsMap[node];
+			};
+			//ReInit Formatter with our isBlock;
+			ed.formatter = new tinyMCE.Formatter(ed);
+			ed.formatter.functionIsBlock = false;
+		});
+	}
 };
 
 /*
@@ -86,7 +119,7 @@ config.plugins = loadedPlugins.join(",");
 /*
  * Preload theme
  */
-window.tinyMCE.ThemeManager.load(plugin, sitepath + "/Composite/content/misc/editors/visualeditor/tinymce/themes/" + config.theme + "/theme.min.js?c1=" + Installation.versionString);
+window.tinyMCE.ThemeManager.load(config.theme, sitepath + "/Composite/content/misc/editors/visualeditor/tinymce/themes/" + config.theme + "/theme.min.js?c1=" + Installation.versionString);
 config.theme = "-" + config.theme;
 
 

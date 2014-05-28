@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Composite.Core.Extensions;
-using Composite.Functions;
 using Composite.Core.Types;
 
 
@@ -84,6 +83,24 @@ namespace Composite.Data.DynamicTypes.Foundation
                 }
             }
 
+            var indexes = new List<DataTypeIndex>();
+            foreach (var indexAttribute in type.GetCustomAttributesRecursively<IndexAttribute>())
+            {
+                foreach (var field in indexAttribute.Fields)
+                {
+                    if (typeDescriptor.Fields[field.Item1] == null)
+                    {
+                        throw new InvalidOperationException(string.Format("Index field '{0}' is not defined", field.Item1));
+                    }
+                }
+
+                indexes.Add(new DataTypeIndex(indexAttribute.Fields) { Clustered = indexAttribute.Clustered });
+            }
+
+            indexes.Sort((a,b) => string.Compare(a.ToString(), b.ToString(), StringComparison.Ordinal));
+
+            typeDescriptor.Indexes = indexes;
+
             return typeDescriptor;
         }
 
@@ -127,6 +144,12 @@ namespace Composite.Data.DynamicTypes.Foundation
             fieldDescriptor.ForeignKeyReferenceTypeName = DynamicTypeReflectionFacade.ForeignKeyReferenceTypeName(propertyInfo);
             fieldDescriptor.GroupByPriority = DynamicTypeReflectionFacade.GetGroupByPriority(propertyInfo);
             fieldDescriptor.TreeOrderingProfile = DynamicTypeReflectionFacade.GetTreeOrderingProfile(propertyInfo);
+
+            var formRenderingProfile = DynamicTypeReflectionFacade.GetFormRenderingProfile(propertyInfo);
+            if (formRenderingProfile != null)
+            {
+                fieldDescriptor.FormRenderingProfile = formRenderingProfile;
+            }
 
             // These auto added widget functions does not work on a empty system.
             // This code could have added widgets for data types that does not have any widgets attached to them

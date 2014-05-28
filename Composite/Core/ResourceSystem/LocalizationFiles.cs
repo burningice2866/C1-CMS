@@ -67,9 +67,9 @@ namespace Composite.Core.ResourceSystem
  public static string TreeValidationError_Common_UnkownInterfaceType(string parameter0) { return string.Format(T("TreeValidationError.Common.UnkownInterfaceType"), parameter0); } 
  /// <summary>&quot;The type &apos;{0}&apos; does not implement the interface &apos;{1}&apos;&quot;</summary> 
  public static string TreeValidationError_Common_NotImplementingIData(string parameter0,string parameter1) { return string.Format(T("TreeValidationError.Common.NotImplementingIData"), parameter0,parameter1); } 
- /// <summary>&quot;The value &apos;{0} is not allowed as a permission type value&quot;</summary> 
+ /// <summary>&quot;The value &apos;{0}&apos; is not allowed as a permission type value&quot;</summary> 
  public static string TreeValidationError_Common_WrongPermissinValue(string parameter0) { return string.Format(T("TreeValidationError.Common.WrongPermissinValue"), parameter0); } 
- /// <summary>&quot;The value &apos;{0} is not allowed as a location value&quot;</summary> 
+ /// <summary>&quot;The value &apos;{0}&apos; is not allowed as a location value&quot;</summary> 
  public static string TreeValidationError_Common_WrongLocationValue(string parameter0) { return string.Format(T("TreeValidationError.Common.WrongLocationValue"), parameter0); } 
  /// <summary>&quot;No function markup provided as a child element&quot;</summary> 
  public static string TreeValidationError_Common_MissingFunctionMarkup { get { return T("TreeValidationError.Common.MissingFunctionMarkup"); } } 
@@ -445,8 +445,12 @@ namespace Composite.Core.ResourceSystem
  public static string DataPackageFragmentUninstaller_OnlyOneElement { get { return T("DataPackageFragmentUninstaller.OnlyOneElement"); } } 
  /// <summary>&quot;Missing {0} attribute in the configuration&quot;</summary> 
  public static string DataPackageFragmentUninstaller_MissingAttribute(string parameter0) { return string.Format(T("DataPackageFragmentUninstaller.MissingAttribute"), parameter0); } 
- /// <summary>&quot;The data type &apos;{0}&apos; does not contain a key property named &apos;{1}&quot;</summary> 
+ /// <summary>&quot;The data type &apos;{0}&apos; does not contain a key property named &apos;{1}&apos;&quot;</summary> 
  public static string DataPackageFragmentUninstaller_MissingKeyProperty(string parameter0,string parameter1) { return string.Format(T("DataPackageFragmentUninstaller.MissingKeyProperty"), parameter0,parameter1); } 
+ /// <summary>&quot;Data item &apos;{0}&apos; of type {1} is referenced from a data item &apos;{2}&apos; of type &apos;{3}&apos;&quot;</summary> 
+ public static string DataPackageFragmentUninstaller_DataIsReferenced(string parameter0,string parameter1,string parameter2,string parameter3) { return string.Format(T("DataPackageFragmentUninstaller.DataIsReferenced"), parameter0,parameter1,parameter2,parameter3); } 
+ /// <summary>&quot;Page type &apos;{0}&apos; is referenced by page &apos;{1}&apos;&quot;</summary> 
+ public static string DataPackageFragmentUninstaller_PageTypeIsReferenced(string parameter0,string parameter1) { return string.Format(T("DataPackageFragmentUninstaller.PageTypeIsReferenced"), parameter0,parameter1); } 
  /// <summary>&quot;Only one &apos;Types&apos; element allowed&quot;</summary> 
  public static string DataTypePackageFragmentInstaller_OnlyOneElement { get { return T("DataTypePackageFragmentInstaller.OnlyOneElement"); } } 
  /// <summary>&quot;Missing &apos;Types&apos; element&quot;</summary> 
@@ -551,6 +555,8 @@ namespace Composite.Core.ResourceSystem
  public static string PackageVersionBumberFragmentUninstaller_WrongAttributeVersionFormat { get { return T("PackageVersionBumberFragmentUninstaller.WrongAttributeVersionFormat"); } } 
  /// <summary>&quot;A public RSA key is missing in the package configuration&quot;</summary> 
  public static string PackageLicenseFragmentInstaller_MissingPublicKeyElement { get { return T("PackageLicenseFragmentInstaller.MissingPublicKeyElement"); } } 
+ /// <summary>&quot;File &apos;{0}&apos; does not exist.&quot;</summary> 
+ public static string FileModifyPackageFragmentInstaller_FileDoesNotExist(string parameter0) { return string.Format(T("FileModifyPackageFragmentInstaller.FileDoesNotExist"), parameter0); } 
  /// <summary>&quot;Invalid license key&quot;</summary> 
  public static string License_InvalidKeyTitle { get { return T("License.InvalidKeyTitle"); } } 
  /// <summary>&quot;The license key is invalid. You need to obtain a valid license key.&quot;</summary> 
@@ -1073,14 +1079,6 @@ namespace Composite.Core.ResourceSystem
  public static string ManageUserPermissions_ManageGlobalUserPermissionsLabel { get { return T("ManageUserPermissions.ManageGlobalUserPermissionsLabel"); } } 
  /// <summary>&quot;Manage user permissions&quot;</summary> 
  public static string ManageUserPermissions_ManageUserPermissionsToolTip { get { return T("ManageUserPermissions.ManageUserPermissionsToolTip"); } } 
- /// <summary>&quot;Log&quot;</summary> 
- public static string LogElementProvider_RootLabel { get { return T("LogElementProvider.RootLabel"); } } 
- /// <summary>&quot;System log&quot;</summary> 
- public static string LogElementProvider_RootLabelToolTip { get { return T("LogElementProvider.RootLabelToolTip"); } } 
- /// <summary>&quot;Show the log&quot;</summary> 
- public static string LogElementProvider_ShowLogLabel { get { return T("LogElementProvider.ShowLogLabel"); } } 
- /// <summary>&quot;Show the system log&quot;</summary> 
- public static string LogElementProvider_ShowLogToolTip { get { return T("LogElementProvider.ShowLogToolTip"); } } 
  /// <summary>&quot;Metadata&quot;</summary> 
  public static string DataCompositionVisabilityFacade_DefaultContainerLabel { get { return T("DataCompositionVisabilityFacade.DefaultContainerLabel"); } } 
  /// <summary>&quot;Delete User?&quot;</summary> 
@@ -1121,6 +1119,10 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Forms_Administrative_EditUserStep1_PasswordLabel { get { return T("Website.Forms.Administrative.EditUserStep1.PasswordLabel"); } } 
  /// <summary>&quot;The password has to be more than 6 characters long.&quot;</summary> 
  public static string Website_Forms_Administrative_EditUserStep1_PasswordHelp { get { return T("Website.Forms.Administrative.EditUserStep1.PasswordHelp"); } } 
+ /// <summary>&quot;Name&quot;</summary> 
+ public static string Website_Forms_Administrative_EditUserStep1_NameLabel { get { return T("Website.Forms.Administrative.EditUserStep1.NameLabel"); } } 
+ /// <summary>&quot;The full name of the person using this account.&quot;</summary> 
+ public static string Website_Forms_Administrative_EditUserStep1_NameHelp { get { return T("Website.Forms.Administrative.EditUserStep1.NameHelp"); } } 
  /// <summary>&quot;Email&quot;</summary> 
  public static string Website_Forms_Administrative_EditUserStep1_EmailLabel { get { return T("Website.Forms.Administrative.EditUserStep1.EmailLabel"); } } 
  /// <summary>&quot;The e-mail address of the user (optional).&quot;</summary> 
@@ -1149,7 +1151,7 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Forms_Administrative_EditUserStep1_GlobalPermissionsFieldLabel { get { return T("Website.Forms.Administrative.EditUserStep1.GlobalPermissionsFieldLabel"); } } 
  /// <summary>&quot;Global permissions&quot;</summary> 
  public static string Website_Forms_Administrative_EditUserStep1_GlobalPermissionsMultiSelectLabel { get { return T("Website.Forms.Administrative.EditUserStep1.GlobalPermissionsMultiSelectLabel"); } } 
- /// <summary>&quot;The Administrate permission grants the user access to manage user permissions and execute other administrative tasks.&quot;</summary> 
+ /// <summary>&quot;The Administrate permission grants the user access to manage user permissions and execute other administrative tasks. The Configure permission grants access to super user tasks.&quot;</summary> 
  public static string Website_Forms_Administrative_EditUserStep1_GlobalPermissionsMultiSelectHelp { get { return T("Website.Forms.Administrative.EditUserStep1.GlobalPermissionsMultiSelectHelp"); } } 
  /// <summary>&quot;The removal of your own administrative permission has been ignored. You still have administrative privileges.&quot;</summary> 
  public static string Website_Forms_Administrative_EditUserStep1_GlobalPermissions_IgnoredOwnAdministrativeRemoval { get { return T("Website.Forms.Administrative.EditUserStep1.GlobalPermissions.IgnoredOwnAdministrativeRemoval"); } } 
@@ -1211,12 +1213,16 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Forms_Administrative_AddNewUserStep1_LabelFieldGroup { get { return T("Website.Forms.Administrative.AddNewUserStep1.LabelFieldGroup"); } } 
  /// <summary>&quot;User name&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewUserStep1_UserNameLabel { get { return T("Website.Forms.Administrative.AddNewUserStep1.UserNameLabel"); } } 
- /// <summary>&quot;When you have created a new user the username cannot be changed&quot;</summary> 
+ /// <summary>&quot;When you have created a new user the username cannot be changed.&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewUserStep1_UserNameHelp { get { return T("Website.Forms.Administrative.AddNewUserStep1.UserNameHelp"); } } 
  /// <summary>&quot;Password&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewUserStep1_PasswordLabel { get { return T("Website.Forms.Administrative.AddNewUserStep1.PasswordLabel"); } } 
  /// <summary>&quot;The password has to be more than 6 characters long.&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewUserStep1_PasswordHelp { get { return T("Website.Forms.Administrative.AddNewUserStep1.PasswordHelp"); } } 
+ /// <summary>&quot;Name&quot;</summary> 
+ public static string Website_Forms_Administrative_AddNewUserStep1_NameLabel { get { return T("Website.Forms.Administrative.AddNewUserStep1.NameLabel"); } } 
+ /// <summary>&quot;The full name of the person using this account.&quot;</summary> 
+ public static string Website_Forms_Administrative_AddNewUserStep1_NameHelp { get { return T("Website.Forms.Administrative.AddNewUserStep1.NameHelp"); } } 
  /// <summary>&quot;Email address&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewUserStep1_EmailLabel { get { return T("Website.Forms.Administrative.AddNewUserStep1.EmailLabel"); } } 
  /// <summary>&quot;The e-mail address of the user (optional).&quot;</summary> 
@@ -1595,10 +1601,6 @@ namespace Composite.Core.ResourceSystem
  public static string VirtualElementProviderElementProvider_SqlFunctionPerspective { get { return T("VirtualElementProviderElementProvider.SqlFunctionPerspective"); } } 
  /// <summary>&quot;Xslt Based Functions&quot;</summary> 
  public static string VirtualElementProviderElementProvider_XsltBasedFunctionPerspective { get { return T("VirtualElementProviderElementProvider.XsltBasedFunctionPerspective"); } } 
- /// <summary>&quot;Server Log&quot;</summary> 
- public static string VirtualElementProviderElementProvider_RootActions_ViewSystemLogLabel { get { return T("VirtualElementProviderElementProvider.RootActions.ViewSystemLogLabel"); } } 
- /// <summary>&quot;View recent server events&quot;</summary> 
- public static string VirtualElementProviderElementProvider_RootActions_ViewSystemLogTooltip { get { return T("VirtualElementProviderElementProvider.RootActions.ViewSystemLogTooltip"); } } 
  /// <summary>&quot;Broadcast Message&quot;</summary> 
  public static string VirtualElementProviderElementProvider_RootActions_SendMessageLabel { get { return T("VirtualElementProviderElementProvider.RootActions.SendMessageLabel"); } } 
  /// <summary>&quot;Send a message to all running consoles&quot;</summary> 
@@ -1811,6 +1813,12 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Dialogs_SystemTree_DetailedPaste_LabelInsertBefore { get { return T("Website.Dialogs.SystemTree.DetailedPaste.LabelInsertBefore"); } } 
  /// <summary>&quot;Insert after&quot;</summary> 
  public static string Website_Dialogs_SystemTree_DetailedPaste_LabelInsertAfter { get { return T("Website.Dialogs.SystemTree.DetailedPaste.LabelInsertAfter"); } } 
+ /// <summary>&quot;Basic view&quot;</summary> 
+ public static string Website_Dialogs_EditFunction_BasicView { get { return T("Website.Dialogs.EditFunction.BasicView"); } } 
+ /// <summary>&quot;Advanced view&quot;</summary> 
+ public static string Website_Dialogs_EditFunction_AdvancedView { get { return T("Website.Dialogs.EditFunction.AdvancedView"); } } 
+ /// <summary>&quot;This function has no parameters&quot;</summary> 
+ public static string Website_Dialogs_EditFunction_BasicView_NoParameters { get { return T("Website.Dialogs.EditFunction.BasicView.NoParameters"); } } 
  /// <summary>&quot;Edit image&quot;</summary> 
  public static string Website_Content_Views_Editors_ImageEditor_ImageEditor_LabelTitle { get { return T("Website.Content.Views.Editors.ImageEditor.ImageEditor.LabelTitle"); } } 
  /// <summary>&quot;File&quot;</summary> 
@@ -1903,6 +1911,14 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Content_Views_ViewSource_LabelFormatted { get { return T("Website.Content.Views.ViewSource.LabelFormatted"); } } 
  /// <summary>&quot;Raw&quot;</summary> 
  public static string Website_Content_Views_ViewSource_LabelRaw { get { return T("Website.Content.Views.ViewSource.LabelRaw"); } } 
+ /// <summary>&quot;Server Log&quot;</summary> 
+ public static string ServerLog_Element_Label { get { return T("ServerLog.Element.Label"); } } 
+ /// <summary>&quot;The server log contain security and system health related messages.&quot;</summary> 
+ public static string ServerLog_Element_Tooltip { get { return T("ServerLog.Element.Tooltip"); } } 
+ /// <summary>&quot;View Server Log&quot;</summary> 
+ public static string ServerLog_Element_View_Label { get { return T("ServerLog.Element.View.Label"); } } 
+ /// <summary>&quot;View recent server events&quot;</summary> 
+ public static string ServerLog_Element_View_Tooltip { get { return T("ServerLog.Element.View.Tooltip"); } } 
  /// <summary>&quot;Server Log&quot;</summary> 
  public static string ServerLog_LabelTitle { get { return T("ServerLog.LabelTitle"); } } 
  /// <summary>&quot;Delete old&quot;</summary> 
@@ -2107,6 +2123,8 @@ namespace Composite.Core.ResourceSystem
  public static string Website_App_LabelPaste { get { return T("Website.App.LabelPaste"); } } 
  /// <summary>&quot;Refresh&quot;</summary> 
  public static string Website_App_LabelRefresh { get { return T("Website.App.LabelRefresh"); } } 
+ /// <summary>&quot;Only first {0} elements are shown in the tree.&quot;</summary> 
+ public static string Website_App_LimitedElementsShown(string parameter0) { return string.Format(T("Website.App.LimitedElementsShown"), parameter0); } 
  /// <summary>&quot;Loading...&quot;</summary> 
  public static string Website_App_LabelLoading { get { return T("Website.App.LabelLoading"); } } 
  /// <summary>&quot;Loaded&quot;</summary> 
@@ -2145,7 +2163,7 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Forms_Administrative_AddNewMediaFile_FieldGroup_Label { get { return T("Website.Forms.Administrative.AddNewMediaFile.FieldGroup.Label"); } } 
  /// <summary>&quot;Filename&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewMediaFile_FileUpload_Label { get { return T("Website.Forms.Administrative.AddNewMediaFile.FileUpload.Label"); } } 
- /// <summary>&quot;Select/enter the filename to upload&quot;</summary> 
+ /// <summary>&quot;Select the file to upload&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewMediaFile_FileUpload_Help { get { return T("Website.Forms.Administrative.AddNewMediaFile.FileUpload.Help"); } } 
  /// <summary>&quot;Allow overwrite&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewMediaFile_OverwriteCheckBox_Label { get { return T("Website.Forms.Administrative.AddNewMediaFile.OverwriteCheckBox.Label"); } } 
@@ -2281,6 +2299,10 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Forms_Administrative_EditPage_AwaitingApprovalTransition { get { return T("Website.Forms.Administrative.EditPage.AwaitingApprovalTransition"); } } 
  /// <summary>&quot;Awaiting Publication&quot;</summary> 
  public static string Website_Forms_Administrative_EditPage_AwaitingPublicationTransition { get { return T("Website.Forms.Administrative.EditPage.AwaitingPublicationTransition"); } } 
+ /// <summary>&quot;Saved, but not published&quot;</summary> 
+ public static string Website_Forms_Administrative_EditPage_PublishDatePreventPublishTitle { get { return T("Website.Forms.Administrative.EditPage.PublishDatePreventPublishTitle"); } } 
+ /// <summary>&quot;Your page has been saved, but not published since you have a future publish date set on the &apos;Settings&apos; tab.&quot;</summary> 
+ public static string Website_Forms_Administrative_EditPage_PublishDatePreventPublish { get { return T("Website.Forms.Administrative.EditPage.PublishDatePreventPublish"); } } 
  /// <summary>&quot;Search&quot;</summary> 
  public static string Website_Forms_Administrative_ElementKeywordSearch_LabelFieldGroup { get { return T("Website.Forms.Administrative.ElementKeywordSearch.LabelFieldGroup"); } } 
  /// <summary>&quot;Keyword&quot;</summary> 
@@ -2357,8 +2379,14 @@ namespace Composite.Core.ResourceSystem
  public static string Validation_Decimal_SymbolsAfterPointAllowed(string parameter0) { return string.Format(T("Validation.Decimal.SymbolsAfterPointAllowed"), parameter0); } 
  /// <summary>&quot;Only {0} digit(s) before decimal point allowed&quot;</summary> 
  public static string Validation_Decimal_SymbolsBeforePointAllowed(string parameter0) { return string.Format(T("Validation.Decimal.SymbolsBeforePointAllowed"), parameter0); } 
+ /// <summary>&quot;Invalid date string: &apos;{0}&apos;. Use the format &apos;{1}&apos;.&quot;</summary> 
+ public static string Validation_DateTime_InvalidDateFormat(string parameter0,string parameter1) { return string.Format(T("Validation.DateTime.InvalidDateFormat"), parameter0,parameter1); } 
  /// <summary>&quot;The specified value is either too big or too small. The acceptable range is from -2,147,483,648 to 2,147,483,647&quot;</summary> 
  public static string Validation_Int32_Overflow { get { return T("Validation.Int32.Overflow"); } } 
+ /// <summary>&quot;Page Browser&quot;</summary> 
+ public static string Browser_Label { get { return T("Browser.Label"); } } 
+ /// <summary>&quot;Browse unpublished pages&quot;</summary> 
+ public static string Browser_ToolTip { get { return T("Browser.ToolTip"); } } 
      private static string T(string key) 
        { 
             return StringResourceSystemFacade.GetString("Composite.Management", key);
@@ -2399,6 +2427,8 @@ namespace Composite.Core.ResourceSystem
  public static string ApproveLabel { get { return T("ApproveLabel"); } } 
  /// <summary>&quot;Publish&quot;</summary> 
  public static string PublishLabel { get { return T("PublishLabel"); } } 
+ /// <summary>&quot;Configure&quot;</summary> 
+ public static string ConfigureLabel { get { return T("ConfigureLabel"); } } 
  /// <summary>&quot;Administrate&quot;</summary> 
  public static string AdministrateLabel { get { return T("AdministrateLabel"); } } 
  /// <summary>&quot;ClearPermissions&quot;</summary> 
@@ -2477,10 +2507,6 @@ namespace Composite.Core.ResourceSystem
  public static string GlobalDataFolderLabel_OnlyGlobalData { get { return T("GlobalDataFolderLabel_OnlyGlobalData"); } } 
  /// <summary>&quot;Website Items (Data)&quot;</summary> 
  public static string GlobalDataFolderToolTip_OnlyGlobalData { get { return T("GlobalDataFolderToolTip_OnlyGlobalData"); } } 
- /// <summary>&quot;Static Datatypes&quot;</summary> 
- public static string StaticDataTypesFolderLabel { get { return T("StaticDataTypesFolderLabel"); } } 
- /// <summary>&quot;Custom defined interfaces&quot;</summary> 
- public static string StaticDataTypesFolderToolTip { get { return T("StaticDataTypesFolderToolTip"); } } 
  /// <summary>&quot;Page Datafolders&quot;</summary> 
  public static string PageDataFolderDataFolderLabel { get { return T("PageDataFolderDataFolderLabel"); } } 
  /// <summary>&quot;Page datafolders&quot;</summary> 
@@ -3505,7 +3531,7 @@ namespace Composite.Core.ResourceSystem
  public static string PageElementProvider_DisabledPage { get { return T("PageElementProvider.DisabledPage"); } } 
  /// <summary>&quot;Website Template required&quot;</summary> 
  public static string PageElementProvider_MissingTemplateTitle { get { return T("PageElementProvider.MissingTemplateTitle"); } } 
- /// <summary>&quot;To create a page, a Website Template is required, but none has been created yet. You can create one under the Layout perspective.&quot;</summary> 
+ /// <summary>&quot;You should create a &apos;Page Template&apos; first. Go to the &apos;Layout&apos; perspective and create one.&quot;</summary> 
  public static string PageElementProvider_MissingTemplateMessage { get { return T("PageElementProvider.MissingTemplateMessage"); } } 
  /// <summary>&quot;Language required&quot;</summary> 
  public static string PageElementProvider_MissingActiveLanguageTitle { get { return T("PageElementProvider.MissingActiveLanguageTitle"); } } 
@@ -3513,7 +3539,7 @@ namespace Composite.Core.ResourceSystem
  public static string PageElementProvider_MissingActiveLanguageMessage { get { return T("PageElementProvider.MissingActiveLanguageMessage"); } } 
  /// <summary>&quot;No page type available&quot;</summary> 
  public static string PageElementProvider_NoPageTypesAvailableTitle { get { return T("PageElementProvider.NoPageTypesAvailableTitle"); } } 
- /// <summary>&quot;You should create at least one page type first&quot;</summary> 
+ /// <summary>&quot;You should create a &apos;Page Type&apos; first. Go to the &apos;Layout&apos; perspective and create one.&quot;</summary> 
  public static string PageElementProvider_NoPageTypesAvailableMessage { get { return T("PageElementProvider.NoPageTypesAvailableMessage"); } } 
  /// <summary>&quot;Page type required&quot;</summary> 
  public static string PageElementProvider_MissingPageTypeTitle { get { return T("PageElementProvider.MissingPageTypeTitle"); } } 
@@ -5200,7 +5226,7 @@ namespace Composite.Core.ResourceSystem
  public static string EditUserGroup_EditUserGroupStep1_GlobalPermissionsFieldLabel { get { return T("EditUserGroup.EditUserGroupStep1.GlobalPermissionsFieldLabel"); } } 
  /// <summary>&quot;Global permissions&quot;</summary> 
  public static string EditUserGroup_EditUserGroupStep1_GlobalPermissionsMultiSelectLabel { get { return T("EditUserGroup.EditUserGroupStep1.GlobalPermissionsMultiSelectLabel"); } } 
- /// <summary>&quot;The Administrate permission grants the user group access to manage user group permissions and execute other administrative tasks.&quot;</summary> 
+ /// <summary>&quot;The Administrate permission grants the user group access to manage user group permissions and execute other administrative tasks.  The Configure permission grants access to super user tasks.&quot;</summary> 
  public static string EditUserGroup_EditUserGroupStep1_GlobalPermissionsMultiSelectHelp { get { return T("EditUserGroup.EditUserGroupStep1.GlobalPermissionsMultiSelectHelp"); } } 
  /// <summary>&quot;User Group Has Users&quot;</summary> 
  public static string DeleteUserGroup_DeleteUserGroupInitialStep_UserGroupHasUsersTitle { get { return T("DeleteUserGroup.DeleteUserGroupInitialStep.UserGroupHasUsersTitle"); } } 
@@ -5958,6 +5984,8 @@ namespace Composite.Core.ResourceSystem
 	   public static class Composite_Web_SEOAssistant {
  /// <summary>&quot;SEO Assistant&quot;</summary> 
  public static string SEOAssistant { get { return T("SEOAssistant"); } } 
+ /// <summary>&quot;Search engine optimization&quot;</summary> 
+ public static string SEOAssistant_ToolTip { get { return T("SEOAssistant.ToolTip"); } } 
  /// <summary>&quot;Generate a page preview to compute the SEO indication.&quot;</summary> 
  public static string IntroText { get { return T("IntroText"); } } 
  /// <summary>&quot;Result&quot;</summary> 
@@ -6445,6 +6473,10 @@ namespace Composite.Core.ResourceSystem
  public static string SpellCheck_InfoCaption { get { return T("SpellCheck.InfoCaption"); } } 
  /// <summary>&quot;To get suggestions for a misspelled word, press your SHIFT key down when you invoke the context menu.&quot;</summary> 
  public static string SpellCheck_InfoText { get { return T("SpellCheck.InfoText"); } } 
+ /// <summary>&quot;Edit&quot;</summary> 
+ public static string Function_Edit { get { return T("Function.Edit"); } } 
+ /// <summary>&quot;Edit {0}&quot;</summary> 
+ public static string LaunchButton_Label(string parameter0) { return string.Format(T("LaunchButton.Label"), parameter0); } 
      private static string T(string key) 
        { 
             return StringResourceSystemFacade.GetString("Composite.Web.VisualEditor", key);

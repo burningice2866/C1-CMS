@@ -40,13 +40,28 @@ namespace Composite.Core.Types
 
         static CodeGenerationManager()
         {
-            string assemblyTempPath = PathUtil.Resolve(GlobalSettingsFacade.GeneratedAssembliesDirectory);
-            if (!C1Directory.Exists(assemblyTempPath))
+            string assemblyTempPath = null;
+
+            try
             {
-                C1Directory.CreateDirectory(assemblyTempPath);
+                assemblyTempPath = PathUtil.Resolve(GlobalSettingsFacade.GeneratedAssembliesDirectory);
+            }
+            catch
+            {
+                // NOTE: We don't want this static constructor fail if GlobalSettingsFacade failed to load.
             }
 
-            GlobalEventSystemFacade.SubscribeToFlushEvent(OnFlushEvent);
+            if (assemblyTempPath != null)
+            {
+                if (!C1Directory.Exists(assemblyTempPath))
+                {
+                    C1Directory.CreateDirectory(assemblyTempPath);
+                }
+            }
+
+            GlobalEventSystemFacade.SubscribeToFlushEvent(args => Flush());
+
+            GlobalEventSystemFacade.SubscribeToShutDownEvent(args => ClearOldTempFiles());
         }
 
 
@@ -449,11 +464,22 @@ namespace Composite.Core.Types
             _dynamicallyAddedCodeProviders = new List<ICodeProvider>();
         }
 
-
-
-        private static void OnFlushEvent(FlushEventArgs args)
+        private static void ClearOldTempFiles()
         {
-            Flush();
+            DateTime yeasterday = DateTime.Now.AddDays(-1);
+            var oldFiles = C1Directory.GetFiles(TempAssemblyFolderPath, "*.*").Where(filePath => C1File.GetCreationTime(filePath) < yeasterday).ToArray();
+
+            foreach (var file in oldFiles)
+            {
+                try
+                {
+                    C1File.Delete(file);
+                }
+                catch
+                {
+                    // Silent
+                }
+            }
         }
     }
 }

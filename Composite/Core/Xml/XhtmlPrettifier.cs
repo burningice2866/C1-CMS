@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -16,17 +17,21 @@ namespace Composite.Core.Xml
     public static class XhtmlPrettifier
     {
         private static string _ampersandWord = "C1AMPERSAND";
-        private static Regex _encodeCDataRegex = new Regex(@"<!\[CDATA\[((?:[^]]|\](?!\]>))*)\]\]>", RegexOptions.Compiled);
-        private static Regex _decodeCDataRegex = new Regex("C1CDATAREPLACE(?<counter>[0-9]*)", RegexOptions.Compiled);
-        private static Regex _encodeRegex = new Regex(@"&(?<tag>[^\;]+;)", RegexOptions.Compiled);
-        private static Regex _decodeRegex = new Regex(@"C1AMPERSAND(?<tag>[^\;]+;)", RegexOptions.Compiled);
+        private static readonly Regex _encodeCDataRegex = new Regex(@"<!\[CDATA\[((?:[^]]|\](?!\]>))*)\]\]>", RegexOptions.Compiled);
+        private static readonly Regex _decodeCDataRegex = new Regex("C1CDATAREPLACE(?<counter>[0-9]*)", RegexOptions.Compiled);
+        private static readonly Regex _encodeRegex = new Regex(@"&(?<tag>[^\;]+;)", RegexOptions.Compiled);
+        private static readonly Regex _decodeRegex = new Regex(@"C1AMPERSAND(?<tag>[^\;]+;)", RegexOptions.Compiled);
 
-        private static readonly char[] IncorrectEscapeSequenceCharacters = new [] { '\'', '\"', '<', '>', ' ' };
+        private static readonly char[] IncorrectEscapeSequenceCharacters = { '\'', '\"', '<', '>', ' ' };
         
 
-        private static readonly char[] WhitespaceChars = new char[] { '\t', '\n', '\v', '\f', '\r', ' ', '\x0085', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '​', '\u2028', '\u2029', '　', '﻿' };
+        private static readonly char[] WhitespaceChars = { '\t', '\n', '\v', '\f', '\r', ' ', '\x0085', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '​', '\u2028', '\u2029', '　', '﻿' };
         private static readonly HashSet<char> WhitespaceCharsLookup = new HashSet<char>(WhitespaceChars);
 
+        private static readonly HashSet<NamespaceName> CompactElements = new HashSet<NamespaceName>(new []
+        {
+            new NamespaceName { Name = "title", Namespace = "" }
+        });
 
         private static readonly HashSet<NamespaceName> InlineElements = new HashSet<NamespaceName>(new []
         {
@@ -131,29 +136,30 @@ namespace Composite.Core.Xml
                 if (node.NodeType == XmlNodeType.Element)
                 {
                     if (!keepWhiteSpaces
-                        && ((node.IsBlockElement() ) || (node.ContainsBlockElements ) || ((node.ParentNode != null) && (node.ParentNode.ContainsBlockElements))) && (node.Level > 0))
+                        && (node.IsBlockElement() 
+                            || node.ContainsBlockElements 
+                            || (node.ParentNode != null && node.ParentNode.ContainsBlockElements)) 
+                        && (node.Level > 0))
                     {
-                        stringBuilder.AppendLine();
-                        stringBuilder.Append(GetIndent(node.Level, indentString));
+                        stringBuilder.AppendLine().AddIndent(node.Level, indentString);
                     }
 
-                    stringBuilder.Append("<" + node.Name);
+                    stringBuilder.Append("<").Append(node.Name);
                     foreach (XmlAttribute attribute in node.Attributes)
                     {
-                        if ((attribute.Name.ToLowerInvariant().StartsWith("xmlns") == false) ||
-                            (node.ParentNode == null) || (node.ParentNode.NamespaceByPrefix(attribute.Name) !=node.NamespaceURI))
+                        if (!attribute.Name.StartsWith("xmlns", StringComparison.OrdinalIgnoreCase) 
+                            || node.ParentNode == null 
+                            || node.ParentNode.NamespaceByPrefix(attribute.Name) != node.NamespaceURI)
                         {
-                            stringBuilder.Append(" " + attribute.Name + "=\"" + EncodeAttributeString(attribute.Value) + "\"");
+                            stringBuilder.Append(" ").Append(attribute.Name).Append("=\"").Append(EncodeAttributeString(attribute.Value)).Append("\"");
                         }
                     }
 
-                    bool isSelfClosingAndEmpty = false;
-                    if ((node.IsSelfClosingElement() ) && (node.ChildNodes.Where(f => f.NodeType == XmlNodeType.Element).Any() == false) && (node.ChildNodes.Where(f => f.NodeType == XmlNodeType.Text).Any() == false))
-                    {
-                        isSelfClosingAndEmpty = true;
-                    }
+                    bool isSelfClosingAndEmpty = node.IsSelfClosingElement() &&
+                                                 !node.ChildNodes.Any(f => f.NodeType == XmlNodeType.Element 
+                                                                           || f.NodeType == XmlNodeType.Text);
 
-                    if ((node.IsEmpty == false) && (isSelfClosingAndEmpty == false))
+                    if (!node.IsEmpty && !isSelfClosingAndEmpty)
                     {
                         stringBuilder.Append(">");
                     }
@@ -170,18 +176,19 @@ namespace Composite.Core.Xml
 
                     if ((node.IsEmpty == false) && (isSelfClosingAndEmpty == false))
                     {
-                        if (!keepWhiteSpaces && !nodeIsWhiteSpaceAware && node.ContainsBlockElements)
+                        if (!keepWhiteSpaces && !nodeIsWhiteSpaceAware && (node.ContainsBlockElements || node.IsBlockElement()) && !node.IsCompactElement())
                         {
-                            stringBuilder.AppendLine();
-                            stringBuilder.Append(GetIndent(node.Level, indentString));
+                            stringBuilder.AppendLine().AddIndent(node.Level, indentString);
                         }
 
-                        stringBuilder.Append("</" + node.Name + ">");
+                        stringBuilder.Append("</").Append(node.Name).Append(">");
                     }
                 }
                 else if (node.NodeType == XmlNodeType.Text)
                 {
                     string value;
+
+                    bool addSpaceToBegin = false, addSpaceToEnd = false;
 
                     if (!keepWhiteSpaces)
                     {
@@ -192,19 +199,19 @@ namespace Composite.Core.Xml
 
                         if (startsWithWhitespace )
                         {
-                            if (((node.PreviousNode != null) && (node.PreviousNode.IsBlockElement() == false)) |
-                                ((node.ParentNode != null) && (node.ParentNode.IsBlockElement() == false)))
+                            if ((node.PreviousNode != null && !node.PreviousNode.IsBlockElement())
+                                || (node.ParentNode != null && !node.ParentNode.IsBlockElement() && !node.ParentNode.IsCompactElement()))
                             {
-                                value = " " + value;
+                                addSpaceToBegin = true;
                             }
                         }
 
                         if (endsWithWhitespace )
                         {
-                            if (((node.NextNode != null) && (node.NextNode.IsBlockElement() == false)) ||
-                                ((node.ParentNode != null) && (node.ParentNode.IsBlockElement() == false)))
+                            if ((node.NextNode != null && !node.NextNode.IsBlockElement())
+                                || (node.ParentNode != null && !node.ParentNode.IsBlockElement() && !node.ParentNode.IsCompactElement()))
                             {
-                                value += " ";
+                                addSpaceToEnd = true;
                             }
                         }
                     }
@@ -213,12 +220,22 @@ namespace Composite.Core.Xml
                         value = node.Value;
                     }
 
+                    if (addSpaceToBegin)
+                    {
+                        stringBuilder.Append(" ");
+                    }
+
                     stringBuilder.Append(EncodeElementString(value));
+
+                    if (addSpaceToEnd)
+                    {
+                        stringBuilder.Append(" ");
+                    }
                 }
-                else if ((node.NodeType == XmlNodeType.Whitespace) || (node.NodeType == XmlNodeType.SignificantWhitespace))
+                else if (node.NodeType == XmlNodeType.Whitespace || node.NodeType == XmlNodeType.SignificantWhitespace)
                 {
-                    if ((node.PreviousNode != null) && (node.PreviousNode.NodeType == XmlNodeType.Element) && (node.PreviousNode.IsBlockElement() == false) &&
-                        (node.NextNode != null) && (node.NextNode.NodeType == XmlNodeType.Element) && (node.NextNode.IsBlockElement() == false))
+                    if (node.PreviousNode != null && node.PreviousNode.NodeType == XmlNodeType.Element && !node.PreviousNode.IsBlockElement() &&
+                        node.NextNode != null && node.NextNode.NodeType == XmlNodeType.Element && !node.NextNode.IsBlockElement())
                     {
                         stringBuilder.Append(" ");
                     }
@@ -239,8 +256,7 @@ namespace Composite.Core.Xml
 
                     if (!keepWhiteSpaces)
                     {
-                        stringBuilder.AppendLine();
-                        stringBuilder.Append(GetIndent(node.Level - 1, indentString));
+                        stringBuilder.AppendLine().AddIndent(node.Level - 1, indentString);
                     }
                 }
                 else if (node.NodeType == XmlNodeType.Comment)
@@ -251,15 +267,13 @@ namespace Composite.Core.Xml
                         (previousNode.NodeType != XmlNodeType.Text 
                         && previousNode.NodeType != XmlNodeType.Whitespace))
                     {
-                        stringBuilder.AppendLine();
-                        stringBuilder.Append(GetIndent(node.Level, indentString));
+                        stringBuilder.AppendLine().AddIndent(node.Level, indentString);
                     }
 
-                    stringBuilder.Append("<!--" + RemoveC1EncodedAmpersands(node.Value) + "-->");
-                    if ((node.ParentNode != null) && (node.ParentNode.IsBlockElement() == false))
+                    stringBuilder.Append("<!--").Append(RemoveC1EncodedAmpersands(node.Value)).Append("-->");
+                    if (node.ParentNode != null && !node.ParentNode.IsBlockElement())
                     {
-                        stringBuilder.AppendLine();
-                        stringBuilder.Append(GetIndent(node.Level - 1, indentString));
+                        stringBuilder.AppendLine().AddIndent(node.Level - 1, indentString);
                     }
                 }
                 else if (node.NodeType == XmlNodeType.DocumentType)
@@ -270,11 +284,11 @@ namespace Composite.Core.Xml
                     {
                         if (attribute.Name.ToLowerInvariant() != "system")
                         {
-                            stringBuilder.Append(" " + attribute.Name + " \"" + attribute.Value + "\"");
+                            stringBuilder.Append(" ").Append(attribute.Name).Append(" \"").Append(attribute.Value).Append("\"");
                         }
                         else
                         {
-                            stringBuilder.Append(" \"" + attribute.Value + "\"");
+                            stringBuilder.Append(" \"").Append(attribute.Value).Append("\"");
                         }
                     }
 
@@ -292,17 +306,14 @@ namespace Composite.Core.Xml
         }
 
 
-
-        private static string GetIndent(int level, string indentString)
+        private static StringBuilder AddIndent(this StringBuilder sb, int level, string indentString)
         {
-            StringBuilder sb = new StringBuilder();
-
             for (int i = 0; i < level; i++)
             {
                 sb.Append(indentString);
             }
 
-            return sb.ToString();
+            return sb;
         }
 
 
@@ -333,7 +344,7 @@ namespace Composite.Core.Xml
         /// <exclude />
         public static string SuperTrim(string value)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = null;
 
             value = value.Trim(WhitespaceChars); /* Symbol #160 - the non-breaking space, shouldn't be trimmed */
 
@@ -343,6 +354,8 @@ namespace Composite.Core.Xml
             {
                 if (WhitespaceCharsLookup.Contains(value[index]) )
                 {
+                    sb = sb ?? new StringBuilder();
+
                     sb.Append(value.Substring(oldIndex, index - oldIndex));
                     sb.Append(" ");
 
@@ -355,6 +368,11 @@ namespace Composite.Core.Xml
                 }
 
                 index++;
+            }
+
+            if (sb == null)
+            {
+                return value;
             }
 
             sb.Append(value.Substring(oldIndex, index - oldIndex));
@@ -442,34 +460,28 @@ namespace Composite.Core.Xml
         }
 
 
-
+        private enum TriState
+        {
+            Undefined = -1,
+            False = 0,
+            True = 1
+        }
 
         [DebuggerDisplay("Type = {NodeType}, Name = {Name}, Value = {Value}")]
         private class XmlNode
         {
-            private XmlNode _firstNode = null;
-            private XmlNode _lastNode = null;
-            private List<XmlAttribute> _attributes = new List<XmlAttribute>();
-            private bool? _containsBlockElements;
-            private bool? _isBlockElement;
+            private static readonly List<XmlAttribute> EmptyAttributeList = new List<XmlAttribute>(0);
+
+            private XmlNode _firstNode;
+            private XmlNode _lastNode;
+            private List<XmlAttribute> _attributes;
+            private TriState _containsBlockElements = TriState.Undefined;
+            private TriState _isBlockElement = TriState.Undefined;
+            private TriState _isCompactElement = TriState.Undefined;
+            private NamespaceName _namespaceName;
 
             public XmlNodeType NodeType { get; internal set; }
             public string Name { get; internal set; }
-
-            public string LocalName { 
-                get
-                {
-                    // TODO: refactor
-                    string name = Name;
-                    int separatorIndex = name.IndexOf(":");
-                    if(separatorIndex < 0)
-                    {
-                        return name;
-                    }
-                    return name.Substring(separatorIndex + 1);
-                }
-            }
-
             public string Value { get; internal set; }
             public bool IsEmpty { get; internal set; }
             public string NamespaceURI { get; internal set; }
@@ -479,6 +491,14 @@ namespace Composite.Core.Xml
             public XmlNode PreviousNode { get; internal set; }
             public XmlNode NextNode { get; internal set; }
 
+            private NamespaceName GetNamespaceName()
+            {
+                if (_namespaceName == null)
+                {
+                    _namespaceName = new NamespaceName { Name = this.Name.ToLowerInvariant(), Namespace = GetCustomNamespace() };
+                }
+                return _namespaceName;
+            }
 
 
             public void AddChild(XmlNode childNode)
@@ -502,6 +522,10 @@ namespace Composite.Core.Xml
 
             public void AddAttribute(XmlAttribute attribute)
             {
+                if (_attributes == null)
+                {
+                    _attributes = new List<XmlAttribute>();
+                }
                 _attributes.Add(attribute);
             }
 
@@ -526,7 +550,7 @@ namespace Composite.Core.Xml
             {
                 get
                 {
-                    return _attributes;
+                    return _attributes ?? EmptyAttributeList;
                 }
             }
 
@@ -536,12 +560,13 @@ namespace Composite.Core.Xml
             {
                 get
                 {
-                    if(_containsBlockElements == null)
+                    if(_containsBlockElements == TriState.Undefined)
                     {
-                        _containsBlockElements = ChildNodes.Any(node => node.IsBlockElement() || node.ContainsBlockElements);
+                        _containsBlockElements = ChildNodes.Any(node => node.IsBlockElement() || node.ContainsBlockElements)
+                            ? TriState.True : TriState.False;
                     }
 
-                    return _containsBlockElements.Value;
+                    return _containsBlockElements == TriState.True;
                 }
             }
 
@@ -549,9 +574,9 @@ namespace Composite.Core.Xml
 
             public string NamespaceByPrefix(string namespacePrefix)
             {
-                var defined = _attributes.Where(f => f.Name == namespacePrefix).FirstOrDefault();
+                var defined = _attributes == null ? null : _attributes.FirstOrDefault(f => f.Name == namespacePrefix);
 
-                if (defined!=null)
+                if (defined != null)
                 {
                     return defined.Value;
                 }
@@ -565,25 +590,37 @@ namespace Composite.Core.Xml
             }
 
 
+            public bool IsCompactElement()
+            {
+                if (_isCompactElement == TriState.Undefined)
+                {
+                    _isCompactElement = this.NodeType == XmlNodeType.Element
+                                      && CompactElements.Contains(GetNamespaceName())
+                                      ? TriState.True : TriState.False; ;
+                }
+
+                return _isCompactElement == TriState.True;
+            }
 
             public bool IsBlockElement()
             {
-                if(_isBlockElement == null)
+                if(_isBlockElement == TriState.Undefined)
                 {
                     _isBlockElement = this.NodeType == XmlNodeType.Element
-                                      && !InlineElements.Contains(new NamespaceName { Name = this.Name.ToLowerInvariant(), Namespace = GetCustomNamespace() });
+                                      && !InlineElements.Contains(GetNamespaceName())
+                                      && !CompactElements.Contains(GetNamespaceName())
+                                      ? TriState.True : TriState.False; ;
                 }
 
-                return _isBlockElement.Value;
+                return _isBlockElement == TriState.True;
             }
-
-
+            
 
             public bool IsWhitespaceAware()
             {
                 if (this.NodeType != XmlNodeType.Element) return false;
 
-                if (WhitespaceAwareElements.Contains(new NamespaceName { Name = this.LocalName.ToLowerInvariant(), Namespace = GetCustomNamespace() }) ) return true;
+                if (WhitespaceAwareElements.Contains(GetNamespaceName())) return true;
 
                 return false;
             }
@@ -594,11 +631,11 @@ namespace Composite.Core.Xml
             {
                 if (this.NodeType != XmlNodeType.Element) return false;
 
-                string customNamespace = GetCustomNamespace();
+                var @namespace = GetNamespaceName();
 
-                if (SelfClosingElements.Contains(new NamespaceName { Name = this.Name.ToLowerInvariant(), Namespace = customNamespace }) ) return true;
+                if (SelfClosingElements.Contains(@namespace)) return true;
 
-                return (customNamespace != "");
+                return @namespace.Namespace != "";
             }
 
 

@@ -4,6 +4,8 @@
 >
 	<xsl:output method="html" indent="no"/>
 
+  <xsl:variable name="TimeMeasurementDefined" select="count(descendant::Measurement[@memoryUsageKb]) &gt; 0" />
+    
 	<xsl:template match="Measurements">
 		<html xmlns="http://www.w3.org/1999/xhtml">
 			<head></head>
@@ -72,6 +74,7 @@
 				.__TraceOwn { text-align: right; padding-right: 5px; }
 				.__TraceTotalTime { text-align: right; padding-right: 5px;  }
 				.__TraceName { text-align: left; padding-right: 50px; background-repeat: no-repeat }
+        .__TraceMemoryUsage { text-align: right; padding-right: 5px;  }
 
 				.__ParallelColumn {text-align: center;}
 
@@ -188,6 +191,10 @@
 						<th>P</th>
 
 						<th style="width: 800px;">Function calls, ms</th>
+            
+            <xsl:if test="$TimeMeasurementDefined">
+              <th>Memory usage, kb</th>
+            </xsl:if>
 					</tr>
 				</thead>
 				<tbody>
@@ -204,6 +211,12 @@
 				<br />
 				<span class="__parallel">P</span> - code is executed in a parallel task
 			</xsl:if>
+      <br />
+      <br />
+      Allocated memory: <strong><xsl:value-of select="@MemoryUsageKb"/></strong> kb. 
+      <br/>
+      Note that memory measurement may be affected by other work happening in the AppDomain at the same time. Possible negative values are caused by garbage collections. 
+      Run this in an isolated environment for getting precise data.
 
 			<script language="javascript" type="text/javascript">
 				<![CDATA[ // <!--
@@ -278,6 +291,12 @@
 					<span class="__parallel">*</span>
 				</xsl:if -->
 			</td>
+      <xsl:if test="$TimeMeasurementDefined">
+        <td class="__TraceMemoryUsage">
+          <xsl:value-of select="@memoryUsageKb"/>
+        </td>
+      
+      </xsl:if>
 		</tr>
 
 		<xsl:apply-templates select="./Measurement">

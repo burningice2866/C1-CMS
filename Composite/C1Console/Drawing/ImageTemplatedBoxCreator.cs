@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Drawing;
 using System.Collections.Generic;
@@ -13,12 +14,13 @@ namespace Composite.C1Console.Drawing
     {
         private Point _topLeftResize;
         private Point _bottomRightResize;
-        private Bitmap _templateBitmap;
+        private readonly Bitmap _templateBitmap;
 
-        private TitleItem _titleItem = null;
-        private WrappedTextItem _wrappedTextItem = null;
-        private TextLinesItem _textLinesItem = null;
-        private TopRightIconItem _topRightIconItem = null;
+        private TitleItem _titleItem;
+        private WrappedTextItem _wrappedTextItem;
+        private TextLinesItem _textLinesItem;
+        private ImageItem _topRightIconItem;
+        private ImageItem _image;
 
         private int _width;
         private int _height;
@@ -43,52 +45,25 @@ namespace Composite.C1Console.Drawing
 
         #region Simple properties
         /// <exclude />
-        public int MinWidth
-        {
-            get;
-            set;
-        }
+        public int MinWidth { get; set; }
 
+        /// <exclude />
+        public int MaxWidth { get; set; }
+
+        /// <exclude />
+        public int MinHeight { get; set; }
+
+        /// <exclude />
+        public int LinePadding { get; set; }
 
 
         /// <exclude />
-        public int MaxWidth
-        {
-            get;
-            set;
-        }
-
-
-
-        /// <exclude />
-        public int MinHeight
-        {
-            get;
-            set;
-        }
-
-
-
-        /// <exclude />
-        public int LinePadding
-        {
-            get;
-            set;
-        }
-
-
-
-        /// <exclude />
-        public char SeparatorChar
-        {
-            get;
-            set;
-        }
+        public char SeparatorChar { get; set; }
         #endregion
 
 
         /// <exclude />
-        public void SetTitle(string title, Point topLeftPadding, Point bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
+        public void SetTitle(string title, Size topLeftPadding, Size bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
         {
             _titleItem = new TitleItem(title, topLeftPadding, bottomRightPadding, fontColor, fontFamilyName, fontSize, fontStyle);
         }
@@ -105,20 +80,23 @@ namespace Composite.C1Console.Drawing
 
 
         /// <exclude />
-        public void SetTextLines(IEnumerable<string> lines, Point topLeftPadding, Point bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
+        public void SetTextLines(ICollection<string> lines, Size topLeftPadding, Size bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
         {
             _wrappedTextItem = null;
             _textLinesItem = new TextLinesItem(lines, topLeftPadding, bottomRightPadding, fontColor, fontFamilyName, fontSize, fontStyle);
         }
 
-
-
         /// <exclude />
-        public void SetIcon(Bitmap icon, Point topRightPadding, Point buttomLeftPadding)
+        public void SetIcon(Bitmap icon, Size topLeftPadding, Size bottomRightPadding)
         {
-            _topRightIconItem = new TopRightIconItem(icon, topRightPadding, buttomLeftPadding);
+            _topRightIconItem = new ImageItem(icon, topLeftPadding, bottomRightPadding);
         }
 
+        /// <exclude />
+        public void SetPreviewImage(Bitmap previewImage, Size topLeftPadding, Size bottomRightPadding)
+        {
+            _image = new ImageItem(previewImage, topLeftPadding, bottomRightPadding); 
+        }
 
 
         /// <exclude />
@@ -134,21 +112,24 @@ namespace Composite.C1Console.Drawing
             {
                 if (_topRightIconItem != null)
                 {
-                    Point point = new Point(_width - _topRightIconItem.TopRightPadding.X - _topRightIconItem.Icon.Width, _topRightIconItem.TopRightPadding.Y);
+                    Point point = new Point(_width - _topRightIconItem.BottomRightPadding.Width - _topRightIconItem.Image.Width, 
+                                            _topRightIconItem.BottomRightPadding.Height);
 
-                    graphics.DrawImage(_topRightIconItem.Icon, point);
+                    graphics.DrawImage(_topRightIconItem.Image, point);
                 }
 
 
                 if (_titleItem != null)
                 {
                     int counter = 0;
+
+                    using (var solidBrush = new SolidBrush(_titleItem.FontColor))
                     foreach (string line in _titleItem.Lines)
                     {
-                        int x = _titleItem.TopLeftPadding.X;
-                        int y = _titleItem.TopLeftPadding.Y + counter * (this.LinePadding + _titleItem.LineHeight);
+                        int x = _titleItem.TopLeftPadding.Width;
+                        int y = _titleItem.TopLeftPadding.Height + counter * (this.LinePadding + _titleItem.LineHeight);
 
-                        graphics.DrawString(line, _titleItem.Font, new SolidBrush(_titleItem.FontColor), x, y);
+                        graphics.DrawString(line, _titleItem.Font, solidBrush, x, y);
 
                         counter++;
                     }
@@ -161,12 +142,14 @@ namespace Composite.C1Console.Drawing
                 if (_wrappedTextItem != null)
                 {
                     int counter = 0;
+
+                    using (var solidBrush = new SolidBrush(_wrappedTextItem.FontColor))
                     foreach (string line in _wrappedTextItem.Lines)
                     {
                         int x = _wrappedTextItem.TopLeftPadding.X;
                         int y = _wrappedTextItem.TopLeftPadding.Y + counter * (this.LinePadding + _wrappedTextItem.LineHeight) + titleHeightWidthPadding;
 
-                        graphics.DrawString(line, _wrappedTextItem.Font, new SolidBrush(_wrappedTextItem.FontColor), x, y);
+                        graphics.DrawString(line, _wrappedTextItem.Font, solidBrush, x, y);
 
                         counter++;
                     }
@@ -174,12 +157,13 @@ namespace Composite.C1Console.Drawing
                 else if (_textLinesItem != null)
                 {
                     int counter = 0;
+                    using (var solidBrush = new SolidBrush(_textLinesItem.FontColor))
                     foreach (string line in _textLinesItem.Lines)
                     {
-                        int x = _textLinesItem.TopLeftPadding.X;
-                        int y = _textLinesItem.TopLeftPadding.Y + counter * (this.LinePadding + _textLinesItem.LineHeight) + titleHeightWidthPadding;
+                        int x = _textLinesItem.TopLeftPadding.Width;
+                        int y = _textLinesItem.TopLeftPadding.Height + counter * (this.LinePadding + _textLinesItem.LineHeight) + titleHeightWidthPadding;
 
-                        graphics.DrawString(line, _textLinesItem.Font, new SolidBrush(_textLinesItem.FontColor), x, y);
+                        graphics.DrawString(line, _textLinesItem.Font, solidBrush, x, y);
 
                         counter++;
                     }
@@ -206,11 +190,11 @@ namespace Composite.C1Console.Drawing
 
                     SizeF titleSize = graphics.MeasureString(_titleItem.Title, _titleItem.Font);
 
-                    int titleWidth = (int)titleSize.Width + _titleItem.TopLeftPadding.X + _titleItem.BottomRightPadding.X;
+                    int titleWidth = (int)titleSize.Width + _titleItem.TopLeftPadding.Width + _titleItem.BottomRightPadding.Width;
 
                     if (_topRightIconItem != null)
                     {
-                        titleWidth += _topRightIconItem.Icon.Width + _topRightIconItem.BottomLeftPadding.X + _topRightIconItem.TopRightPadding.X;
+                        titleWidth += _topRightIconItem.GetBoxSize().Width;
                     }
 
                     int titleHeight;
@@ -218,14 +202,14 @@ namespace Composite.C1Console.Drawing
                     if (titleWidth > this.MaxWidth)
                     {
                         int lineHeight;
-                        _titleItem.Lines = SplitLine(this.MaxWidth - _titleItem.TopLeftPadding.X - _titleItem.BottomRightPadding.X, _titleItem.Title, _titleItem.Font, _titleItem.TopLeftPadding.Y, out titleWidth, out lineHeight);
+                        _titleItem.Lines = SplitLine(this.MaxWidth - _titleItem.PaddingSize.Width, _titleItem.Title, _titleItem.Font, _titleItem.TopLeftPadding.Height, out titleWidth, out lineHeight);
                         _titleItem.LineHeight = lineHeight;
 
                         width = this.MaxWidth;
 
                         titleHeight = _titleItem.Lines.Count * _titleItem.LineHeight +
                                      (_titleItem.Lines.Count - 1) * this.LinePadding +
-                                     _titleItem.TopLeftPadding.Y + _titleItem.BottomRightPadding.Y;
+                                     _titleItem.PaddingSize.Width;
 
                         if (titleHeight > height)
                         {
@@ -236,7 +220,8 @@ namespace Composite.C1Console.Drawing
                     {
                         _titleItem.Lines = new List<string> { _titleItem.Title };
                         _titleItem.LineHeight = (int)titleSize.Height;
-                        titleHeight = (int)titleSize.Height + _titleItem.TopLeftPadding.Y + _titleItem.BottomRightPadding.Y;
+
+                        titleHeight = (int)titleSize.Height + _titleItem.PaddingSize.Height;
 
                         width = titleWidth;
                     }
@@ -280,7 +265,7 @@ namespace Composite.C1Console.Drawing
                     {
                         SizeF lineSize = graphics.MeasureString(line, _textLinesItem.Font);
 
-                        int lineWidth = (int)lineSize.Width + _textLinesItem.TopLeftPadding.X + _textLinesItem.BottomRightPadding.X;
+                        int lineWidth = (int)lineSize.Width + _textLinesItem.TopLeftPadding.Width + _textLinesItem.BottomRightPadding.Width;
 
                         if (lineWidth > width)
                         {
@@ -290,9 +275,9 @@ namespace Composite.C1Console.Drawing
                         _textLinesItem.LineHeight = (int)lineSize.Height;
                     }
 
-                    int textHeight = _textLinesItem.Lines.Count() * _textLinesItem.LineHeight +
-                                     (_textLinesItem.Lines.Count() - 1) * this.LinePadding +
-                                     _textLinesItem.TopLeftPadding.Y + _textLinesItem.BottomRightPadding.Y;
+                    int textHeight = _textLinesItem.Lines.Count * _textLinesItem.LineHeight +
+                                     (_textLinesItem.Lines.Count - 1) * this.LinePadding +
+                                     _textLinesItem.TopLeftPadding.Height + _textLinesItem.BottomRightPadding.Height;
 
                     if (textHeight > height)
                     {
@@ -300,9 +285,15 @@ namespace Composite.C1Console.Drawing
                     }
                 }
 
+                if (_image != null)
+                {
+                    height = Math.Max(height, _image.GetBoxSize().Height);
+                    width = Math.Max(width, _image.GetBoxSize().Width);
+                }
+
                 if (_topRightIconItem != null)
                 {
-                    int iconHeight = _topRightIconItem.Icon.Height + _topRightIconItem.TopRightPadding.Y + _topRightIconItem.BottomLeftPadding.Y;
+                    int iconHeight = _topRightIconItem.GetBoxSize().Height;
 
                     if (iconHeight > height)
                     {
@@ -388,12 +379,12 @@ namespace Composite.C1Console.Drawing
 
             int lineBottom = lineTop + lineHeight;
 
-            int iconTop = _topRightIconItem.TopRightPadding.Y;
-            int iconBottom = iconTop + _topRightIconItem.Icon.Height + _topRightIconItem.BottomLeftPadding.Y;
+            int iconTop = _topRightIconItem.TopLeftPadding.Height;
+            int iconBottom = _topRightIconItem.GetBoxSize().Height;
 
             if ((lineTop >= iconTop) && (lineBottom <= iconBottom))
             {
-                return width - _topRightIconItem.Icon.Width - _topRightIconItem.TopRightPadding.Y - _topRightIconItem.BottomLeftPadding.X;
+                return width - _topRightIconItem.GetBoxSize().Width;
             }
 
             return width;
@@ -429,6 +420,14 @@ namespace Composite.C1Console.Drawing
             DrawVerticalSide(rightBorder, height - topBorder - bottomBorder, _bottomRightResize.X, _topLeftResize.Y, width - rightBorder, topBorder);
 
             DrawInner(width - leftBorder - rightBorder, height - topBorder - bottomBorder, _topLeftResize.X, _topLeftResize.Y, leftBorder, topBorder);
+
+            if (_image != null)
+            {
+                using (Graphics g = Graphics.FromImage(_currentBitmap))            
+                {
+                    g.DrawImage(_image.Image, new Point(_image.TopLeftPadding));
+                }
+            }
         }
 
 
@@ -482,12 +481,10 @@ namespace Composite.C1Console.Drawing
         {
             Color color = _templateBitmap.GetPixel(originalOffsetX, originalOffsetY);
 
-            for (int x = 0; x < width; ++x)
+            using (Graphics g = Graphics.FromImage(_currentBitmap))            
+            using (var solidBrush = new SolidBrush(color))
             {
-                for (int y = 0; y < height; ++y)
-                {
-                    _currentBitmap.SetPixel(x + newOffsetX, y + newOffsetY, color);
-                }
+                g.FillRectangle(solidBrush, newOffsetX, newOffsetY, width, height);
             }
         }
 
@@ -495,13 +492,12 @@ namespace Composite.C1Console.Drawing
 
 
 
-        private sealed class TitleItem
+        private sealed class TitleItem : PaddedItem
         {
-            public TitleItem(string title, Point topLeftPadding, Point bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
+            public TitleItem(string title, Size topLeftPadding, Size bottomRightPadding, 
+                Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle) : base(topLeftPadding, bottomRightPadding)
             {
                 this.Title = title;
-                this.TopLeftPadding = topLeftPadding;
-                this.BottomRightPadding = bottomRightPadding;
                 this.FontColor = fontColor;
                 this.Font = new Font(fontFamilyName, fontSize, fontStyle);
             }
@@ -535,20 +531,6 @@ namespace Composite.C1Console.Drawing
             }
 
 
-            public Point TopLeftPadding
-            {
-                get;
-                private set;
-            }
-
-
-            public Point BottomRightPadding
-            {
-                get;
-                private set;
-            }
-
-
             public Color FontColor
             {
                 get;
@@ -560,6 +542,13 @@ namespace Composite.C1Console.Drawing
             {
                 get;
                 private set;
+            }
+
+            public override Size GetInnerDimentions()
+            {
+                throw new NotImplementedException();
+                // graphics
+                //return new Size(0, Lines.Count * LineHeight + (Lines.Count - 1) * this.LinePadding;
             }
         }
 
@@ -629,7 +618,7 @@ namespace Composite.C1Console.Drawing
 
         private sealed class TextLinesItem
         {
-            public TextLinesItem(IEnumerable<string> lines, Point topLeftPadding, Point bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
+            public TextLinesItem(ICollection<string> lines, Size topLeftPadding, Size bottomRightPadding, Color fontColor, string fontFamilyName, float fontSize, FontStyle fontStyle)
             {
                 this.Lines = lines;
                 this.TopLeftPadding = topLeftPadding;
@@ -639,7 +628,7 @@ namespace Composite.C1Console.Drawing
             }
 
 
-            public IEnumerable<string> Lines
+            public ICollection<string> Lines
             {
                 get;
                 private set;
@@ -653,14 +642,14 @@ namespace Composite.C1Console.Drawing
             }
 
 
-            public Point TopLeftPadding
+            public Size TopLeftPadding
             {
                 get;
                 private set;
             }
 
 
-            public Point BottomRightPadding
+            public Size BottomRightPadding
             {
                 get;
                 private set;
@@ -681,32 +670,51 @@ namespace Composite.C1Console.Drawing
             }
         }
 
-
-        private sealed class TopRightIconItem
+        private abstract class PaddedItem
         {
-            public TopRightIconItem(Bitmap icon, Point topRightPadding, Point bottomLeftPadding)
+            public PaddedItem(Size topLeftPadding, Size bottomRightPadding)
             {
-                this.Icon = icon;
-                this.TopRightPadding = topRightPadding;
-                this.BottomLeftPadding = bottomLeftPadding;
+                this.TopLeftPadding = topLeftPadding;
+                this.BottomRightPadding = bottomRightPadding;
+            }
+            public abstract Size GetInnerDimentions();
+
+            public Size TopLeftPadding { get; private set; }
+
+            public Size BottomRightPadding { get; private set; }
+
+            public Size PaddingSize
+            {
+                get { return new Size(TopLeftPadding.Width + BottomRightPadding.Width, TopLeftPadding.Height + BottomRightPadding.Height); }
             }
 
-            public Bitmap Icon
+            public Size GetBoxSize()
+            {
+                var innerDimensions = GetInnerDimentions();
+
+                return new Size(innerDimensions.Width + TopLeftPadding.Width + BottomRightPadding.Width,
+                                innerDimensions.Height + TopLeftPadding.Height + BottomRightPadding.Height);
+            }
+        }
+
+
+        private sealed class ImageItem : PaddedItem
+        {
+            public ImageItem(Bitmap icon, Size topRightPadding, Size bottomLeftPadding)
+                : base(topRightPadding, bottomLeftPadding)
+            {
+                this.Image = icon;
+            }
+
+            public Bitmap Image
             {
                 get;
                 private set;
             }
-
-            public Point TopRightPadding
+            
+            public override Size GetInnerDimentions()
             {
-                get;
-                private set;
-            }
-
-            public Point BottomLeftPadding
-            {
-                get;
-                private set;
+                return Image.Size;
             }
         }
     }

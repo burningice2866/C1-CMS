@@ -1,4 +1,5 @@
-﻿using Composite.Functions.Foundation;
+﻿using Composite.C1Console.Events;
+using Composite.Functions.Foundation;
 
 
 namespace Composite.Functions.Plugins.FunctionProvider
@@ -22,6 +23,8 @@ namespace Composite.Functions.Plugins.FunctionProvider
         public void FunctionsUpdated()
         {
             MetaFunctionProviderRegistry.ReinitializeFunctionFromProvider(this.ProviderName);
+
+            GlobalEventSystemFacade.FireDesignChangeEvent();
         }
 
 

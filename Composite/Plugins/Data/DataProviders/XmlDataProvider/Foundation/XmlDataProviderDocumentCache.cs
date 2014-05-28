@@ -125,11 +125,14 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.Foundation
 
         private static List<XElement> ExtractElements(XDocument xDocument)
         {
-            var result = new List<XElement>(xDocument.Root.Elements());
+            IEnumerable<XElement> elements = xDocument.Root.Elements();
+
+            var result = new List<XElement>(elements.Count());
+            result.AddRange(elements);
 
             xDocument.Root.RemoveNodes();
 
-            return result;
+            return result;  
         }
 
 
@@ -137,7 +140,8 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.Foundation
         private static void SaveChanges(FileRecord fileRecord)
         {
             fileRecord.LastModified = DateTime.Now;
-            fileRecord.ReadOnlyElementsList = fileRecord.RecordSet.Index.GetValues().ToList();
+            fileRecord.ReadOnlyElementsList = fileRecord.RecordSet.Index.GetValues();
+            fileRecord.CachedTable = null;
             fileRecord.Dirty = false;
 
             XmlDataProviderDocumentWriter.Save(fileRecord);
@@ -236,7 +240,8 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.Foundation
 
                     if (_externalFileChangeActions.Any(f => f.Key == filePath))
                     {
-                        foreach (var action in _externalFileChangeActions.Where(f => f.Key == filePath).Select(f => f.Value))
+                        var actions = _externalFileChangeActions.Where(f => f.Key == filePath).Select(f => f.Value).ToList();
+                        foreach (var action in actions)
                         {
                             action.Invoke();
                         }
@@ -301,7 +306,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.Foundation
 
             List<XElement> elements = ExtractElements(dataDocument);
 
-            var index = new Hashtable<IDataId, XElement>();
+            var index = new Hashtable<IDataId, XElement>(elements.Count);
             foreach (var element in elements)
             {
                 IDataId id = keyGetter(element);

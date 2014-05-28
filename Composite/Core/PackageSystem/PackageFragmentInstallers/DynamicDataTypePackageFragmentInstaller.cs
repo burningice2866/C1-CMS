@@ -67,7 +67,9 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                 DataTypeDescriptor dataTypeDescriptor;
                 try
                 {
-                    dataTypeDescriptor = DataTypeDescriptor.FromXml(serializedDataTypeDescriptor);
+                    bool inheritedFieldsIncluded = serializedDataTypeDescriptor.Descendants().Any(e => e.Attributes("inherited").Any(a => (string) a == "true"));
+
+                    dataTypeDescriptor = DataTypeDescriptor.FromXml(serializedDataTypeDescriptor, inheritedFieldsIncluded);
                 }
                 catch (Exception e)
                 {

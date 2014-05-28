@@ -150,14 +150,17 @@ namespace Composite.Core.Routing.Pages
                     return GetRedirectRoute(urlProvider.BuildUrl(pageUrlData, UrlKind.Public, urlSpace));
                 }
 
-                // Checking casing in url, so the same page will appear as a few pages by a crawler
+                // Checking casing in url, so the same page will not appear as a few pages by a crawler
                 string correctUrl = urlProvider.BuildUrl(pageUrlData, UrlKind.Public, urlSpace);
+                Verify.IsNotNull(correctUrl, "Failed to rebuild a public url from url '{0}'", currentUrl);
 
                 string originalFilePath = new UrlBuilder(currentUrl).RelativeFilePath;
                 string correctFilePath = new UrlBuilder(correctUrl).RelativeFilePath;
 
-                if (string.Compare(originalFilePath, correctFilePath, false, CultureInfo.InvariantCulture) != 0 &&
-                    string.Compare(originalFilePath, correctFilePath, true, CultureInfo.InvariantCulture) == 0)
+                if (!urlSpace.ForceRelativeUrls 
+                    && (originalFilePath.Length != correctFilePath.Length && System.Web.HttpUtility.UrlDecode(originalFilePath) != correctFilePath)
+                    || (string.Compare(originalFilePath, correctFilePath, false, CultureInfo.InvariantCulture) != 0 
+                        && string.Compare(originalFilePath, correctFilePath, true, CultureInfo.InvariantCulture) == 0))
                 {
                     // redirect to a url with right casing
                     return GetRedirectRoute(correctUrl);

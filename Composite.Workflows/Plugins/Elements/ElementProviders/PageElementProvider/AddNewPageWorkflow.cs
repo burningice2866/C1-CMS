@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
 using System.Workflow.Activities;
 
 using Composite.C1Console.Actions;
@@ -235,11 +234,9 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         private void stepInitialize_codeActivity_ExecuteCode(object sender, EventArgs e)
         {
             Guid templateId;
-            string cultureName;
 
             if (this.EntityToken is PageElementProviderEntityToken)
             {
-                cultureName = null;
                 templateId = PageTemplateFacade.GetPageTemplates().Select(t => t.Id).FirstOrDefault();
             }
             else if (this.EntityToken is DataEntityToken)
@@ -248,7 +245,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 IPage selectedPage = (IPage)dataEntityToken.Data;
 
                 templateId = selectedPage.TemplateId;
-                cultureName = selectedPage.CultureName;
             }
             else
             {
@@ -280,7 +276,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             newPage.Id = Guid.NewGuid();
             newPage.TemplateId = templateId;
             newPage.PageTypeId = pageTypeId.Value;
-            newPage.CultureName = cultureName;
             newPage.Title = "";
             newPage.MenuTitle = "";
             newPage.UrlTitle = "";
@@ -444,7 +439,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             Guid parentId = GetParentId();
 
             IPage newPage = this.GetBinding<IPage>("NewPage");
-            newPage.CultureName = UserSettings.ActiveLocaleCultureInfo.Name;
             newPage.SourceCultureName = UserSettings.ActiveLocaleCultureInfo.Name;
 
             IPageType selectedPageType = DataFacade.GetData<IPageType>().Single(f => f.Id == newPage.PageTypeId);

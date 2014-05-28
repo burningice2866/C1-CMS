@@ -1,19 +1,33 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 
 namespace Composite.Core.Collections.Generic
 {
     /// <summary>    
+    /// Alternative to the standard Dictinary class. Allows simultaneous read operations from many threads, and add/remove/update from a single thread.
     /// </summary>
     /// <exclude />
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
 	public class Hashtable<TKey, TValue>//: Hashtable
 	{
-	    private readonly Hashtable _table = new Hashtable();
+	    private readonly Hashtable _table;
 
         private static readonly object NullValue = new object(); // A value which represents "null" value
 	    private static readonly bool IsValueType = typeof (TValue).IsValueType;
+
+        /// <exclude />
+        public Hashtable()
+        {
+            _table = new Hashtable();
+        }
+
+        /// <exclude />
+        public Hashtable(int capacity)
+        {
+            _table = new Hashtable(capacity);
+        }
 
 
         /// <exclude />
@@ -70,6 +84,32 @@ namespace Composite.Core.Collections.Generic
         }
 
 
+        /// <summary>
+        /// Thread safe way to "get or add" a value, unlike ConcurrentDictionary, valueFactory won't be called twice for the same key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="valueFactory"></param>
+        /// <returns></returns>
+        public TValue GetOrAddSync(TKey key, Func<TKey, TValue> valueFactory)
+        {
+            TValue result;
+
+            if (!TryGetValue(key, out result))
+            {
+                lock (this)
+                {
+                    if (!TryGetValue(key, out result))
+                    {
+                        result = valueFactory(key);
+
+                        Add(key, result);
+                    }
+                }
+            }
+
+            return result;
+        }
+
         /// <exclude />
         public bool ContainsKey(TKey key)
         {
@@ -103,7 +143,7 @@ namespace Composite.Core.Collections.Generic
         /// <returns></returns>
         public ICollection<TKey> GetKeys()
         {
-            var result = new List<TKey>();
+            var result = new List<TKey>(_table.Count);
 
             foreach(object key in _table.Keys)
             {
@@ -116,7 +156,7 @@ namespace Composite.Core.Collections.Generic
         /// <exclude />
         public ICollection<TValue> GetValues()
         {
-            var result = new List<TValue>();
+            var result = new List<TValue>(_table.Count);
 
             foreach (object value in _table.Values)
             {
@@ -125,7 +165,6 @@ namespace Composite.Core.Collections.Generic
 
             return result;
         }
-
 
         /// <exclude />
 	    public int Count

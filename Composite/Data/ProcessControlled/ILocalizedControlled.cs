@@ -11,21 +11,11 @@ namespace Composite.Data.ProcessControlled
     public interface ILocalizedControlled : IProcessControlled
     {
         /// <summary>
-        /// The locale of data.
-        /// </summary>
-        [StoreFieldType(PhysicalStoreFieldType.String, 16)]
-        [ImmutableFieldId("{E271D3EB-A8EB-49ea-9BB5-E5A54F88298F}")]
-        [NotNullValidator()]
-        [DefaultFieldStringValue("")] // Invariant
-        string CultureName { get; set; }
-
-
-        /// <summary>
-        /// The locale data originaled from.
+        /// The locale data originaled from. This field is automatically maintaned, do not set it unless implementing localization logic.
         /// </summary>
         [StoreFieldType(PhysicalStoreFieldType.String, 16)]
         [ImmutableFieldId("{0456EBB0-7FB1-46cd-9A23-4AE9AA3337FA}")]
-        [NotNullValidator()]
+        [NotNullValidator]
         [DefaultFieldStringValue("")] // Invariant
         string SourceCultureName { get; set; }
     }

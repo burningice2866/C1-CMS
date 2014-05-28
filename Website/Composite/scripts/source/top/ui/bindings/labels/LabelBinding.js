@@ -9,7 +9,6 @@ LabelBinding.superclass = Binding.prototype;
 LabelBinding.DIALOG_INDECATOR_SUFFIX = String.fromCharCode ( 8230 ); // "…".charCodeAt ( 0 );
 LabelBinding.DEFAULT_IMAGE = "${root}/images/blank.png";
 LabelBinding.EXPLORER_IMAGE_FILTER = "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='${url}',sizingMethod='crop');"
-LabelBinding.CLASSNAME_TEXTOVERFLOW = "textoverflow";
 LabelBinding.CLASSNAME_GRAYTEXT = "graytext";
 LabelBinding.CLASSNAME_FLIPPED = "flipped";
 
@@ -27,7 +26,7 @@ function LabelBinding () {
 	 * @type {boolean}
 	 */
 	this.hasImage = false;
-	
+
 	/**
 	 * @type {boolean}
 	 */
@@ -147,21 +146,56 @@ LabelBinding.prototype.setImage = function ( url, isNotBuildingClassName ) {
 	
 	if ( url != false ) {
 		url = url ? url : LabelBinding.DEFAULT_IMAGE;
-		this.setAlphaTransparentBackdrop ( 
-			Resolver.resolve ( url )
-		);
+		var resolverUrl = Resolver.resolve(url);
+		if (resolverUrl.classes) {
+			this.setAlphaTransparentBackdrop(false);
+			this.setImageClasses(resolverUrl.classes);
+		}
+		else {
+			this.setImageClasses();
+			this.setAlphaTransparentBackdrop(
+				resolverUrl
+			);
+		}
 		this.setProperty ( "image", url );
 		this.hasImage = true;
 		if ( !isNotBuildingClassName ) {
 			this.buildClassName ();
 		}
 	} else {
-		this.setAlphaTransparentBackdrop ( false );
+		this.setAlphaTransparentBackdrop(false);
+		this.setImageClasses();
 		this.deleteProperty ( "image" );
 		this.hasImage = false;
 		this.buildClassName ();
 	}
 }
+
+/**
+ * Set image class.
+ * @param {string} url
+ */
+LabelBinding.prototype.setImageClasses = function (classes) {
+
+	if (this.shadowTree.labelBody) {
+		if (!classes) {
+			if (this.shadowTree.icon) {
+				this.shadowTree.labelBody.removeChild(this.shadowTree.icon);
+				this.shadowTree.icon = null;
+			}
+		} else {
+			if (!this.shadowTree.icon) {
+				this.shadowTree.icon = DOMUtil.createElementNS(
+					Constants.NS_UI, "ui:icon", this.bindingDocument
+				);
+
+				this.shadowTree.labelBody.insertBefore(this.shadowTree.icon, this.shadowTree.labelBody.firstChild);
+			}
+			this.shadowTree.icon.className = classes;
+		}
+	}
+}
+
 
 /**
  * Set image.
@@ -275,10 +309,6 @@ LabelBinding.prototype.buildLabel = function () {
  */
 LabelBinding.prototype.buildClassName = function () {
 	
-	if ( Client.isMozilla ) {
-		//this._buildOverflowClassName (); TODO: VERY SLOW - ENABLE FOR SELECTORS ONLY!
-	}
-	
 	var class1 = "textonly";
 	var class2 = "imageonly";
 	var class3 = "both";
@@ -295,21 +325,6 @@ LabelBinding.prototype.buildClassName = function () {
 		this.detachClassName ( class3 );	
 		this.detachClassName ( class1 );	
 		this.attachClassName ( class2 );
-	}
-}
-
-/**
- * This will help us emulate text-overflow: ellipsis in Mozilladrengen.
- */
-LabelBinding.prototype._buildOverflowClassName = function () {
-	
-	if ( Client.isMozilla && this.isAttached && this.getLabel ()) {
-		if ( this.isAttached && this.shadowTree.labelText ) {
-			this.detachClassName ( LabelBinding.CLASSNAME_TEXTOVERFLOW );
-			if ( this.shadowTree.labelText.offsetWidth > this.shadowTree.labelBody.offsetWidth ) {
-				this.attachClassName ( LabelBinding.CLASSNAME_TEXTOVERFLOW );
-			}
-		}
 	}
 }
 

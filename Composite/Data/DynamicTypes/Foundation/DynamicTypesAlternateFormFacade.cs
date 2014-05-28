@@ -9,10 +9,14 @@ namespace Composite.Data.DynamicTypes.Foundation
     /// <summary>    
     /// </summary>
     /// <exclude />
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+    [Obsolete("User DynamicTypesCustomFormFacade instead")]
     public static class DynamicTypesAlternateFormFacade
     {
-        // returns null if no alternate form exists
+        
+        /// <summary>
+        /// Returns null if no alternate form exists.
+        /// </summary>
         /// <exclude />
         public static string GetAlternateFormMarkup(DataTypeDescriptor dataTypeDescriptor)
         {

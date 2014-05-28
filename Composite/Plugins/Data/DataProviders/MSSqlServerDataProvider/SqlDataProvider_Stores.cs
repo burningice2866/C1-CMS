@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.Linq;
 using System.IO;
 using System.Linq;
@@ -9,11 +10,13 @@ using Composite.Core;
 using Composite.Core.Collections.Generic;
 using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
+using Composite.Core.Linq;
 using Composite.Core.Sql;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
 using Composite.Data.Foundation;
+using Composite.Data.ProcessControlled;
 using Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.CodeGeneration;
 using Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundation;
 using Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Sql;
@@ -40,7 +43,17 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                     throw new InvalidOperationException(string.Format("SqlDataProvider configuration already contains a interface named '{0}'. Remove it from the configuration and restart the application.", dataTypeDescriptor.TypeManagerTypeName));
                 }
 
-                SqlStoreManipulator.CreateStoresForType(dataTypeDescriptor);
+                Action<string> existingTablesValidator = tableName =>
+                {
+                    var errors = new StringBuilder();
+                    var interfaceType = dataTypeDescriptor.GetInterfaceType();
+                    if (!ValidateTable(interfaceType, tableName, errors))
+                    {
+                        throw new InvalidOperationException("Table '{0}' already exist but isn't valid: {1}".FormatWith(tableName, errors.ToString()));
+                    }
+                };
+
+                SqlStoreManipulator.CreateStoresForType(dataTypeDescriptor, existingTablesValidator);
 
                 InterfaceConfigurationElement element = InterfaceConfigurationManipulator.AddNew(_dataProviderContext.ProviderName, dataTypeDescriptor);
                 _interfaceConfigurationElements.Add(element);
@@ -59,7 +72,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         public void AlterStore(UpdateDataTypeDescriptor updateDataTypeDescriptor, bool forceCompile)
         {
-            DataTypeChangeDescriptor dataTypeChangeDescriptor = updateDataTypeDescriptor.CreateDataTypeChangeDescriptor();
+            var dataTypeChangeDescriptor = updateDataTypeDescriptor.CreateDataTypeChangeDescriptor();
 
             using (TimerProfilerFacade.CreateTimerProfiler())
             {
@@ -82,6 +95,21 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                     Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes = BuildAllExistingDataTypeStoreDataScopes();
 
                     InitializeStoreResult initializeStoreResult = InitializeStore(newElement ?? oldElement, allSqlDataTypeStoreDataScopes, true);
+
+                    if (!updateDataTypeDescriptor.NewDataTypeDescriptor.IsCodeGenerated)
+                    {
+                        var interfaceType = updateDataTypeDescriptor.NewDataTypeDescriptor.GetInterfaceType();
+
+                        if (!DataTypeValidationRegistry.IsValidForProvider(interfaceType, _dataProviderContext.ProviderName))
+                        {
+                            // Revalidating alternated static data type
+                            _sqlDataTypeStoresContainer.RemoveKnownInterface(interfaceType);
+
+                            DataTypeValidationRegistry.ClearValidationError(interfaceType, _dataProviderContext.ProviderName);
+
+                            AddDataTypeStore(initializeStoreResult);
+                        }
+                    }
                 }
             }
         }
@@ -100,6 +128,16 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 {
                     _interfaceConfigurationElements.Remove(oldElement);
                 }
+
+                Guid dataTypeId = dataTypeDescriptor.DataTypeId;
+                int storesRemoved = _createdSqlDataTypeStoreTables.RemoveAll(item => item.DataTypeId == dataTypeId);
+
+                if (storesRemoved > 0)
+                {
+                    Type interfaceType = dataTypeDescriptor.GetInterfaceType();
+
+                    _sqlDataTypeStoresContainer.ForgetInterface(interfaceType);
+                }
             }
         }
 
@@ -112,13 +150,37 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
             Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes = BuildAllExistingDataTypeStoreDataScopes();
 
+            var initializedStores = new List<InterfaceGeneratedClassesInfo>();
+
+            bool dataContextRecompilationNeeded = false;
+
+            Type dataContextClass = TryLoadDataContext(ref dataContextRecompilationNeeded);
+
             foreach (InterfaceConfigurationElement element in _interfaceConfigurationElements)
             {
-                InitializeStoreResult initializeStoreResult = InitializeStore(element, allSqlDataTypeStoreDataScopes);
+                var generatedClassesInfo = InitializeStoreTypes(element, allSqlDataTypeStoreDataScopes, 
+                    dataContextClass, false, ref dataContextRecompilationNeeded);
 
-                if (initializeStoreResult.InterfaceType == null) continue;
+                if (generatedClassesInfo == null) continue;
 
-                AddDataTypeStore(initializeStoreResult);
+                initializedStores.Add(generatedClassesInfo);
+            }
+
+            if (dataContextRecompilationNeeded)
+            {
+                dataContextClass = DataContextAssembler.EmitDataContextClass(
+                    initializedStores
+                    .Where(s => s.Fields != null)
+                    .SelectMany(s => s.Fields.Values).Evaluate());
+            }
+
+            _sqlDataTypeStoresContainer.DataContextClass = dataContextClass;
+
+            foreach (var typeInfo in initializedStores)
+            {
+                var store = EmbedDataContextInfo(typeInfo, dataContextClass);
+
+                AddDataTypeStore(store);
             }
         }
 
@@ -127,24 +189,138 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             return new ConfigurationErrorsException(message, element.ElementInformation.Source, element.ElementInformation.LineNumber);
         }
 
-        private InitializeStoreResult InitializeStore(InterfaceConfigurationElement element, Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes, bool forceCompile = false)
-        {
-            InitializeStoreResult result = new InitializeStoreResult();
 
-            List<SqlDataTypeStoreDataScope> sqlDataTypeStoreDataScopes = new List<SqlDataTypeStoreDataScope>();
+        private InitializeStoreResult InitializeStore(InterfaceConfigurationElement element,
+            Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes,
+            bool forceCompile = false)
+        {
+            bool dataContextRecompilationNeeded = false;
+
+            Type dataContextClass = _sqlDataTypeStoresContainer.DataContextClass;
+
+            var initInfo = InitializeStoreTypes(element, allSqlDataTypeStoreDataScopes, dataContextClass, forceCompile, ref dataContextRecompilationNeeded);
+
+            if (initInfo.InterfaceType == null)
+            {
+                return new InitializeStoreResult();
+            }
+
+            if (dataContextRecompilationNeeded)
+            {
+                _createdSqlDataTypeStoreTables.RemoveAll(f => f.DataTypeId == initInfo.DataTypeDescriptor.DataTypeId);
+
+                var existingFields = _createdSqlDataTypeStoreTables.Select(
+                                      s => new Tuple<string, Type>(s.DataContextFieldName, s.DataContextFieldType));
+                var newFields = initInfo.Fields.Select(f => new Tuple<string, Type>(f.Value.FieldName, f.Value.FieldType));
+
+                dataContextClass = DataContextAssembler.EmitDataContextClass(existingFields.Concat(newFields).Evaluate());
+
+                UpdateCreatedSqlDataTypeStoreTables(dataContextClass);
+            }
+
+            _sqlDataTypeStoresContainer.DataContextClass = dataContextClass;
+
+            return EmbedDataContextInfo(initInfo, dataContextClass);
+        }
+
+
+        private Type TryLoadDataContext(ref bool forceCompile)
+        {
+            string dataContextClassFullName = NamesCreator.MakeDataContextClassFullName(_dataProviderContext.ProviderName);
+            Type dataContextClass = TryGetGeneratedType(dataContextClassFullName);
+
+            // Trying to instantiate a data context object
+            if (dataContextClass != null && !TryLoadDataContextClass(dataContextClass))
+            {
+                forceCompile = true;
+                return null;
+            }
+
+            return dataContextClass;
+        }
+
+        private InitializeStoreResult EmbedDataContextInfo(InterfaceGeneratedClassesInfo initInfo, Type dataContextType)
+        {
+            var result = new InitializeStoreResult();
+
+            if (initInfo.InterfaceType == null)
+            {
+                return result;
+            }
+
+            result.InterfaceType = initInfo.InterfaceType;
+
+            var sqlDataTypeStoreTables = new Dictionary<SqlDataTypeStoreTableKey, SqlDataTypeStoreTable>();
+            foreach (SqlDataTypeStoreDataScope storeDataScope in initInfo.DataScopes)
+            {
+                var key = new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName, storeDataScope.CultureName);
+
+                result.TableNames.Add(key, storeDataScope.TableName);
+
+                Verify.IsNotNull(initInfo.Fields, "Fields collection is null");
+
+                StoreTypeInfo fieldInfo;
+                if (!initInfo.Fields.TryGetValue(key, out fieldInfo))
+                {
+                    continue;
+                }
+
+                Verify.IsNotNull(fieldInfo, "Field info is missing");
+                
+
+                FieldInfo dataContextFieldInfo = dataContextType != null 
+                    ? dataContextType.GetField(fieldInfo.FieldName) 
+                    : fieldInfo.DataContextField;
+
+                Type sqlDataProvdierHelperType = fieldInfo.SqlHelperClass;
+
+                var sqlDataProviderHelper = (ISqlDataProviderHelper)Activator.CreateInstance(sqlDataProvdierHelperType);
+
+                var sqlDataTypeStoreTable = new SqlDataTypeStoreTable(
+                    initInfo.DataTypeDescriptor.DataTypeId,
+                    dataContextFieldInfo, 
+                    sqlDataProviderHelper,
+                    fieldInfo.FieldName,
+                    fieldInfo.FieldType);
+                _createdSqlDataTypeStoreTables.Add(sqlDataTypeStoreTable);
+
+                sqlDataTypeStoreTables.Add(key, sqlDataTypeStoreTable);
+            }
+
+
+            var sqlDataTypeStore = new SqlDataTypeStore(result.InterfaceType,
+                sqlDataTypeStoreTables,
+                initInfo.DataTypeDescriptor.IsCodeGenerated,
+                _sqlDataTypeStoresContainer);
+
+            result.SqlDataTypeStore = sqlDataTypeStore;
+
+            return result;
+        }
+
+        private InterfaceGeneratedClassesInfo InitializeStoreTypes(InterfaceConfigurationElement element, 
+            Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes, 
+            Type dataContextClass,
+            bool forceCompile,
+            ref bool dataContextRecompilationNeeded)
+        {
+            var result = new InterfaceGeneratedClassesInfo();
+
+            var dataScopes = new List<SqlDataTypeStoreDataScope>();
 
             foreach (StorageInformation storageInformation in element.Stores)
             {
-                SqlDataTypeStoreDataScope sqlDataTypeStoreDataScope = new SqlDataTypeStoreDataScope
+                var sqlDataTypeStoreDataScope = new SqlDataTypeStoreDataScope
                 {
                     DataScopeName = storageInformation.DataScope,
                     CultureName = storageInformation.CultureName,
                     TableName = storageInformation.TableName
                 };
 
-                sqlDataTypeStoreDataScopes.Add(sqlDataTypeStoreDataScope);
+                dataScopes.Add(sqlDataTypeStoreDataScope);
             }
 
+            result.DataScopes = dataScopes;
 
             if (!element.DataTypeId.HasValue)
             {
@@ -159,6 +335,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 throw NewConfigurationException(element, "Failed to get a DataTypeDescriptor by id '{0}'".FormatWith(dataTypeId));
             }
 
+            result.DataTypeDescriptor = dataTypeDescriptor;
+
             Type interfaceType = null;
 
             try
@@ -167,7 +345,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
                 if (interfaceType == null)
                 {
-                    Log.LogError("SqlDataProvider", string.Format("The data interface type '{0}' does not exists and is not code generated. It will not be unusable", dataTypeDescriptor.TypeManagerTypeName));
+                    Log.LogError(LogTitle, "The data interface type '{0}' does not exists and is not code generated. It will not be unusable", dataTypeDescriptor.TypeManagerTypeName);
                     return result;
                 }
 
@@ -177,51 +355,28 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 bool isValid = DataTypeValidationRegistry.Validate(interfaceType, dataTypeDescriptor, out validationMessage);
                 if (!isValid)
                 {
-                    Log.LogCritical("SqlDataProvider", validationMessage);
+                    Log.LogCritical(LogTitle, validationMessage);
                     throw new InvalidOperationException(validationMessage);
                 }
 
-                Type dataContextClassType; // This is the same for all stores!
+                Dictionary<SqlDataTypeStoreTableKey, StoreTypeInfo> fields;
+                EnsureNeededTypes(dataTypeDescriptor, dataScopes, allSqlDataTypeStoreDataScopes, dataContextClass, out fields, ref dataContextRecompilationNeeded, forceCompile);
 
-                Dictionary<SqlDataTypeStoreTableKey, Tuple<FieldInfo, Type>> sqlDataStoreTableTypes;
-                EnsureNeededTypes(dataTypeDescriptor, sqlDataTypeStoreDataScopes, allSqlDataTypeStoreDataScopes, out dataContextClassType, out sqlDataStoreTableTypes, forceCompile);
-
-                _sqlDataTypeStoresContainer.DataContextType = dataContextClassType;
-
-
-                Dictionary<SqlDataTypeStoreTableKey, SqlDataTypeStoreTable> sqlDataTypeStoreTables = new Dictionary<SqlDataTypeStoreTableKey, SqlDataTypeStoreTable>();
-                foreach (SqlDataTypeStoreDataScope storeDataScope in sqlDataTypeStoreDataScopes)
-                {
-                    SqlDataTypeStoreTableKey key = new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName, storeDataScope.CultureName);
-
-                    result.TableNames.Add(key, storeDataScope.TableName);
-
-                    FieldInfo dataContextFieldInfo = sqlDataStoreTableTypes[key].Item1;
-                    Type sqlDataProvdierHelperType = sqlDataStoreTableTypes[key].Item2;
-
-                    ISqlDataProviderHelper sqlDataProviderHelper = (ISqlDataProviderHelper)Activator.CreateInstance(sqlDataProvdierHelperType);
-
-                    SqlDataTypeStoreTable sqlDataTypeStoreTable = new SqlDataTypeStoreTable(dataContextFieldInfo, sqlDataProviderHelper);
-                    _createdSqlDataTypeStoreTables.Add(sqlDataTypeStoreTable);
-
-                    sqlDataTypeStoreTables.Add(key, sqlDataTypeStoreTable);
-                }
-
-
-                SqlDataTypeStore sqlDataTypeStore = new SqlDataTypeStore(interfaceType, sqlDataTypeStoreTables, dataTypeDescriptor.IsCodeGenerated, _sqlDataTypeStoresContainer);
-                result.SqlDataTypeStore = sqlDataTypeStore;
-
+                result.Fields = fields;
                 return result;
             }
             catch (Exception ex)
             {
                 if (interfaceType != null)
                 {
+                    DataProviderRegistry.RegisterDataTypeInitializationError(interfaceType, ex);
                     DataProviderRegistry.AddKnownDataType(interfaceType, _dataProviderContext.ProviderName);
 
                     Log.LogError(LogTitle, "Failed initialization for the datatype {0}", dataTypeDescriptor.TypeManagerTypeName);
                 }
                 Log.LogError(LogTitle, ex);
+
+                result.Fields = new Dictionary<SqlDataTypeStoreTableKey, StoreTypeInfo>();
 
                 return result;
             }
@@ -241,35 +396,44 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         }
 
 
+        private class InterfaceGeneratedClassesInfo
+        {
+            public Type InterfaceType { get; set; }
+            public List<SqlDataTypeStoreDataScope> DataScopes { get; set; }
+            public DataTypeDescriptor DataTypeDescriptor { get; set; }
+            public Dictionary<SqlDataTypeStoreTableKey, StoreTypeInfo> Fields { get; set; }
+        }
+
 
         private void AddDataTypeStore(InitializeStoreResult initializeStoreResult, bool doValidate = true)
         {
-            if (initializeStoreResult.SqlDataTypeStore != null)
+            if (initializeStoreResult.InterfaceType == null)
             {
-                bool isValid = true;
-                if (doValidate) isValid = ValidateTables(initializeStoreResult);
-
-                if (isValid)
-                {
-                    _sqlDataTypeStoresContainer.AddSupportedDataTypeStore(initializeStoreResult.InterfaceType, initializeStoreResult.SqlDataTypeStore);
-                    DataProviderRegistry.AddNewDataType(initializeStoreResult.InterfaceType, _dataProviderContext.ProviderName);
-                }
-                else
-                {
-                    _sqlDataTypeStoresContainer.AddKnownInterface(initializeStoreResult.InterfaceType);
-                }
+                return;
             }
-            else if (initializeStoreResult.InterfaceType != null)
+
+            bool isValid = initializeStoreResult.SqlDataTypeStore != null;
+
+            if (isValid && doValidate)
+            {
+                isValid = ValidateTables(initializeStoreResult);
+            }
+
+            if (!isValid)
             {
                 _sqlDataTypeStoresContainer.AddKnownInterface(initializeStoreResult.InterfaceType);
+                return;
             }
+
+            _sqlDataTypeStoresContainer.AddSupportedDataTypeStore(initializeStoreResult.InterfaceType, initializeStoreResult.SqlDataTypeStore);
+            DataProviderRegistry.AddNewDataType(initializeStoreResult.InterfaceType, _dataProviderContext.ProviderName);
         }
 
 
 
         private bool ValidateTables(InitializeStoreResult initializeStoreResult)
         {
-            StringBuilder errors = new StringBuilder();
+            var errors = new StringBuilder();
 
             bool isValid = true;
             foreach (string tableName in initializeStoreResult.TableNames.Values)
@@ -292,22 +456,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         private bool ValidateTable(Type interfaceType, string tableName, StringBuilder errors)
         {
-            ISqlTableInformation sqlTableInformation;
-
-            try
-            {
-                sqlTableInformation = SqlTableInformationStore.GetTableInformation(_connectionString, tableName);
-            }
-            catch (SqlException sqlException)
-            {
-                Log.LogCritical(LogTitle, sqlException);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                errors.AppendLine(ex.ToString());
-                return false;
-            }
+            ISqlTableInformation sqlTableInformation = SqlTableInformationStore.GetTableInformation(_connectionString, tableName);
 
             if (sqlTableInformation == null)
             {
@@ -315,10 +464,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 return false;
             }
 
-            int primaryKeyCount =
-                (from column in sqlTableInformation.ColumnInformations
-                 where column.IsPrimaryKey 
-                 select column).Count();
+            int primaryKeyCount = sqlTableInformation.ColumnInformations.Count(column => column.IsPrimaryKey);
 
             if (primaryKeyCount == 0)
             {
@@ -328,18 +474,20 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
 
             List<SqlColumnInformation> columns = new List<SqlColumnInformation>(sqlTableInformation.ColumnInformations);
-            foreach (PropertyInfo property in interfaceType.GetPropertiesRecursively())
+            var properties = interfaceType.GetPropertiesRecursively();
+
+            foreach (PropertyInfo property in properties)
             {
                 if (property.Name == "DataSourceId") continue;
 
                 SqlColumnInformation column = columns.Find(col => col.ColumnName == property.Name);
-                if (null == column)
+                if (column == null)
                 {
                     errors.AppendLine(string.Format("The interface property named '{0}' does not exist in the table '{1}' as a column", property.Name, sqlTableInformation.TableName));
                     return false;
                 }
 
-                if ((column.IsNullable == false) || (column.Type == typeof(string)))
+                if (!column.IsNullable || column.Type == typeof(string))
                 {
                     if (column.Type != property.PropertyType)
                     {
@@ -349,10 +497,84 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 }
             }
 
+            // Updating schema from C1 4.1, to be removed in future versions.
+            if (typeof (ILocalizedControlled).IsAssignableFrom(interfaceType)
+                && !properties.Any(p => p.Name == "CultureName")
+                && columns.Any(c => c.ColumnName == "CultureName"))
+            {
+                Log.LogInformation(LogTitle, "Removing obsolete 'CultureName' column from table '{0}'", tableName);
+
+
+                string selectConstraintName = string.Format(
+                    @"SELECT df.name 'ConstraintName'
+                    FROM sys.default_constraints df
+                    INNER JOIN sys.tables t ON df.parent_object_id = t.object_id
+                    INNER JOIN sys.columns c ON df.parent_object_id = c.object_id AND df.parent_column_id = c.column_id
+                    where t.name = '{0}'
+                    and c.name = 'CultureName'", tableName);
+
+
+                var dt = ExecuteReader(selectConstraintName);
+                List<string> constraints = (from DataRow dr in dt.Rows select dr["ConstraintName"].ToString()).ToList();
+
+                foreach (var constrainName in constraints)
+                {
+                    ExecuteSql("ALTER TABLE [{0}] DROP CONSTRAINT [{1}]".FormatWith(tableName, constrainName));
+                }
+
+                string sql = "ALTER TABLE [{0}] DROP COLUMN [CultureName]".FormatWith(tableName);
+
+                ExecuteSql(sql);
+            }
+
             return true;
         }
 
 
+        private void ExecuteSql(string sql)
+        {
+            var conn = SqlConnectionManager.GetConnection(_connectionString);
+
+            Log.LogInformation(LogTitle, sql);
+
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        private DataTable ExecuteReader(string commandText)
+        {
+            var conn = SqlConnectionManager.GetConnection(_connectionString);
+
+            using (var cmd = new SqlCommand(commandText, conn))
+            {
+                using (var dt = new DataTable())
+                {
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        if (rdr != null) dt.Load(rdr);
+                        return dt;
+                    }
+                }
+            }
+        }
+
+        internal class StoreTypeInfo
+        {
+            public StoreTypeInfo(string fieldName, Type fieldType, Type sqlHelperType)
+            {
+                FieldName = fieldName;
+                FieldType = fieldType;
+                SqlHelperClass = sqlHelperType;
+            }
+
+            public string FieldName;
+            public Type FieldType;
+            public Type SqlHelperClass;
+
+            public FieldInfo DataContextField;
+        }
 
         /// <summary>
         /// Checks that tables related to specified data type included in current DataContext class, if not - compiles a new version of DataContext that contains them
@@ -361,30 +583,20 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             DataTypeDescriptor dataTypeDescriptor, 
             IEnumerable<SqlDataTypeStoreDataScope> sqlDataTypeStoreDataScopes, 
             Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes, 
-            out Type dataContextClassType, 
-            out Dictionary<SqlDataTypeStoreTableKey, Tuple<FieldInfo, Type>> sqlDataStoreTableTypes, 
-            bool forceCompile = false)
+            Type dataContextClassType,
+            out Dictionary<SqlDataTypeStoreTableKey, StoreTypeInfo> fields,
+            ref bool dataContextRecompileNeeded, bool forceCompile = false)
         {
             lock (_lock)
             {
                 // Getting the interface (ensuring that it exists)
                 Type interfaceType = DataTypeTypesManager.GetDataType(dataTypeDescriptor);
 
-
-                string dataContextClassFullName = NamesCreator.MakeDataContextClassFullName(_dataProviderContext.ProviderName);
-                dataContextClassType = TryGetGeneratedType(dataContextClassFullName);
-
-                // Trying to instantiate a data context object
-                if (dataContextClassType != null && !TryLoadDataContextClass(dataContextClassType))
-                {
-                    dataContextClassType = null;
-                    forceCompile = true;
-                }
-
                 List<SqlDataTypeStoreDataScope> storeDataScopesToCompile = new List<SqlDataTypeStoreDataScope>();
                 List<SqlDataTypeStoreDataScope> storeDataScopesAlreadyCompiled = new List<SqlDataTypeStoreDataScope>();
 
-                sqlDataStoreTableTypes = new Dictionary<SqlDataTypeStoreTableKey, Tuple<FieldInfo, Type>>();
+                fields = new Dictionary<SqlDataTypeStoreTableKey, StoreTypeInfo>();
+
                 foreach (SqlDataTypeStoreDataScope storeDataScope in sqlDataTypeStoreDataScopes)
                 {
                     string dataContextFieldName = NamesCreator.MakeDataContextFieldName(storeDataScope.TableName);
@@ -397,18 +609,47 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
                         if (dataContextFieldInfo == null)
                         {
-                            Log.LogWarning(LogTitle, "Data context class is missing field '{0}'", dataContextFieldName);
+                            if (RuntimeInformation.IsDebugBuild)
+                            {
+                                Log.LogInformation(LogTitle, "Missing classes will be compiled for data context's field '{0}'", dataContextFieldName);
+                            }
                         }
                     }
 
 
                     string sqlDataProviderHelperClassFullName = NamesCreator.MakeSqlDataProviderHelperClassFullName(dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
-                    Type sqlDataProviderHelperClassType = TryGetGeneratedType(sqlDataProviderHelperClassFullName);
 
-                    sqlDataStoreTableTypes.Add(new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName, storeDataScope.CultureName), new Tuple<FieldInfo, Type>(dataContextFieldInfo, sqlDataProviderHelperClassType));
+                    string entityClassName = NamesCreator.MakeEntityClassFullName(dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
 
-                    bool isRecompileNeeded = CodeGenerationManager.IsRecompileNeeded(interfaceType, new[] { sqlDataProviderHelperClassType });
-                    if (isRecompileNeeded || forceCompile || dataContextFieldInfo == null)
+                    Type sqlDataProviderHelperClass = null, entityClass = null;
+
+                    try
+                    {
+                        sqlDataProviderHelperClass = TryGetGeneratedType(sqlDataProviderHelperClassFullName);
+                        entityClass = TryGetGeneratedType(entityClassName);
+
+                        forceCompile = forceCompile 
+                            || CodeGenerationManager.IsRecompileNeeded(interfaceType, new[] {sqlDataProviderHelperClass});
+                    }
+                    catch (TypeLoadException)
+                    {
+                        forceCompile = true;
+                    }
+
+                    if (!forceCompile)
+                    {
+                        var storeTypeInfo = new StoreTypeInfo(dataContextFieldName, entityClass, sqlDataProviderHelperClass);
+                        storeTypeInfo.DataContextField = dataContextFieldInfo;
+
+                        fields.Add(new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName, storeDataScope.CultureName), storeTypeInfo);
+                    }
+
+                    if (dataContextFieldInfo == null)
+                    {
+                        dataContextRecompileNeeded = true;
+                    }
+
+                    if (forceCompile)
                     {
                         storeDataScopesToCompile.Add(storeDataScope);
                     }
@@ -421,8 +662,16 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
                 if (storeDataScopesToCompile.Any())
                 {
-                    CompileMissingClasses(dataTypeDescriptor, allSqlDataTypeStoreDataScopes, sqlDataStoreTableTypes, 
-                        storeDataScopesToCompile, storeDataScopesAlreadyCompiled, dataContextClassFullName, out dataContextClassType);
+                    dataContextRecompileNeeded = true;
+
+                    if (!dataTypeDescriptor.IsCodeGenerated)
+                    {
+                        // Building a new descriptor so generated classes take in account field changes
+                        dataTypeDescriptor = DynamicTypeManager.BuildNewDataTypeDescriptor(interfaceType);
+                    }
+
+                    CompileMissingClasses(dataTypeDescriptor, allSqlDataTypeStoreDataScopes, fields, 
+                        storeDataScopesToCompile, storeDataScopesAlreadyCompiled);
                 }
             }
         }
@@ -475,13 +724,11 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         private void CompileMissingClasses(DataTypeDescriptor dataTypeDescriptor, Dictionary<DataTypeDescriptor, 
                                            IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes,
-                                           Dictionary<SqlDataTypeStoreTableKey, Tuple<FieldInfo, Type>> sqlDataStoreTableTypes,
+                                           Dictionary<SqlDataTypeStoreTableKey, StoreTypeInfo> fields,
                                            List<SqlDataTypeStoreDataScope> storeDataScopesToCompile, 
-                                           List<SqlDataTypeStoreDataScope> storeDataScopesAlreadyCompiled,
-                                           string dataContextClassFullName, 
-                                           out Type dataContextClassType)
+                                           List<SqlDataTypeStoreDataScope> storeDataScopesAlreadyCompiled)
         {
-            CodeGenerationBuilder codeGenerationBuilder = new CodeGenerationBuilder(_dataProviderContext.ProviderName + ":" + dataTypeDescriptor.Name);
+            var codeGenerationBuilder = new CodeGenerationBuilder(_dataProviderContext.ProviderName + ":" + dataTypeDescriptor.Name);
 
             SqlDataProviderCodeBuilder sqlDataProviderCodeBuilder =
                 new SqlDataProviderCodeBuilder(_dataProviderContext.ProviderName, codeGenerationBuilder);
@@ -494,44 +741,39 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 sqlDataProviderCodeBuilder.AddExistingDataType(kvp.Key, kvp.Value);
             }
 
-            sqlDataProviderCodeBuilder.AddDataContext();
-
             IEnumerable<Type> types = CodeGenerationManager.CompileRuntimeTempTypes(codeGenerationBuilder, false);
-
-            dataContextClassType = types.Single(f => f.FullName == dataContextClassFullName);
 
             foreach (SqlDataTypeStoreDataScope storeDataScope in storeDataScopesToCompile)
             {
-                string dataContextFieldNames = NamesCreator.MakeDataContextFieldName(storeDataScope.TableName);
-                FieldInfo dataContextFieldInfo = dataContextClassType
-                    .GetFields(BindingFlags.Public | BindingFlags.Instance)
-                    .Single(f => f.Name == dataContextFieldNames);
+                string dataContextFieldName = NamesCreator.MakeDataContextFieldName(storeDataScope.TableName);
 
-                string sqlDataProviderHelperClassFullName = NamesCreator.MakeSqlDataProviderHelperClassFullName(
+                string helperClassFullName = NamesCreator.MakeSqlDataProviderHelperClassFullName(
                     dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
-                Type sqlDataProviderHelperClassType = types.Single(f => f.FullName == sqlDataProviderHelperClassFullName);
+                Type helperClass = types.Single(f => f.FullName == helperClassFullName);
+
+                string entityClassFullName = NamesCreator.MakeEntityClassFullName(
+                    dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
+                Type entityClass = types.Single(f => f.FullName == entityClassFullName);
 
                 var storeTableKey = new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName,storeDataScope.CultureName);
-                sqlDataStoreTableTypes[storeTableKey] = new Tuple<FieldInfo, Type>(dataContextFieldInfo, sqlDataProviderHelperClassType);
+                fields[storeTableKey] = new StoreTypeInfo(dataContextFieldName, entityClass, helperClass); 
             }
 
             foreach (SqlDataTypeStoreDataScope storeDataScope in storeDataScopesAlreadyCompiled)
             {
-                string dataContextFieldNames = NamesCreator.MakeDataContextFieldName(storeDataScope.TableName);
-                FieldInfo dataContextFieldInfo =
-                    dataContextClassType.GetFields(BindingFlags.Public | BindingFlags.Instance)
-                                        .Single(f => f.Name == dataContextFieldNames);
+                string dataContextFieldName = NamesCreator.MakeDataContextFieldName(storeDataScope.TableName);
 
-                string sqlDataProviderHelperClassFullName = NamesCreator.MakeSqlDataProviderHelperClassFullName(
+                string helperClassFullName = NamesCreator.MakeSqlDataProviderHelperClassFullName(
                     dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
+                Type helperClass = TryGetGeneratedType(helperClassFullName);
 
-                Type sqlDataProviderHelperClassType = TryGetGeneratedType(sqlDataProviderHelperClassFullName);
+                string entityClassFullName = NamesCreator.MakeEntityClassFullName(
+                    dataTypeDescriptor, storeDataScope.DataScopeName, storeDataScope.CultureName, _dataProviderContext.ProviderName);
+                Type entityClass = TryGetGeneratedType(entityClassFullName);
 
                 var storeTableKey = new SqlDataTypeStoreTableKey(storeDataScope.DataScopeName, storeDataScope.CultureName);
-                sqlDataStoreTableTypes[storeTableKey] = new Tuple<FieldInfo, Type>(dataContextFieldInfo, sqlDataProviderHelperClassType);
+                fields[storeTableKey] = new StoreTypeInfo(dataContextFieldName, entityClass, helperClass); 
             }
-
-            UpdateCreatedSqlDataTypeStoreTables(dataContextClassType);
         }
 
         private Type TryGetGeneratedType(string typeName)
@@ -582,7 +824,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         private Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> BuildAllExistingDataTypeStoreDataScopes()
         {
-            Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>> allSqlDataTypeStoreDataScopes = new Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>>();
+            var allSqlDataTypeStoreDataScopes = new Dictionary<DataTypeDescriptor, IEnumerable<SqlDataTypeStoreDataScope>>();
 
             foreach (InterfaceConfigurationElement element in _interfaceConfigurationElements)
             {

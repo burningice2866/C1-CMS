@@ -5,9 +5,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
+using Composite.Core;
 using Composite.Core.Extensions;
-using Composite.Core.Logging;
 using Composite.Core.Types;
+using Composite.Data.DynamicTypes.Configuration;
 using Composite.Data.DynamicTypes.Foundation;
 using Composite.Data.ProcessControlled;
 using Composite.Data.Types;
@@ -27,6 +28,7 @@ namespace Composite.Data.DynamicTypes
         private string _labelFieldName;
         private List<Type> _superInterfaces = new List<Type>();
         private List<DataTypeAssociationDescriptor> _dataTypeAssociationDescriptors = new List<DataTypeAssociationDescriptor>();
+        private IReadOnlyCollection<DataTypeIndex> _indexes = new DataTypeIndex[0];
 
 
         /// <summary>
@@ -164,6 +166,27 @@ namespace Composite.Data.DynamicTypes
             }
         }
 
+        /// <summary>
+        /// Indexes.
+        /// </summary>
+        public IReadOnlyCollection<DataTypeIndex> Indexes
+        {
+            get { return _indexes; }
+            set
+            {
+                Verify.That(value.Count(idx => idx.Clustered) < 2, "It is not allowed to have more than one clustered index");
+
+                _indexes = value;
+            }
+        }
+
+        internal bool PrimaryKeyIsClusteredIndex
+        {
+            get
+            {
+                return !HasCustomPhysicalSortOrder && !Indexes.Any(i => i.Clustered);
+            }
+        }
 
         /// <summary>The short name of the type, without namespace and assembly info</summary>
         public string Name
@@ -269,62 +292,75 @@ namespace Composite.Data.DynamicTypes
             set;
         }
 
-
         /// <summary>
         /// Adds an interface the data type should inherit from
         /// </summary>
         /// <param name="interfaceType"></param>
         public void AddSuperInterface(Type interfaceType)
         {
-            if ((_superInterfaces.Contains(interfaceType) == false) && (interfaceType != typeof(IData)))
-            {
-                _superInterfaces.Add(interfaceType);
+            AddSuperInterface(interfaceType, true);
+        }
 
+        /// <summary>
+        /// Adds an interface the data type should inherit from
+        /// </summary>
+        /// <param name="interfaceType"></param>
+        /// <param name="addInheritedFields"></param>
+        internal void AddSuperInterface(Type interfaceType, bool addInheritedFields)
+        {
+            if (_superInterfaces.Contains(interfaceType) || interfaceType == typeof (IData))
+            {
+                return;
+            }
+
+            _superInterfaces.Add(interfaceType);
+
+            if (addInheritedFields)
+            {
                 foreach (PropertyInfo propertyInfo in interfaceType.GetProperties())
                 {
                     DataFieldDescriptor dataFieldDescriptor = ReflectionBasedDescriptorBuilder.BuildFieldDescriptor(propertyInfo, true);
 
                     this.Fields.Add(dataFieldDescriptor);
                 }
+            }
 
+            foreach (string propertyName in interfaceType.GetKeyPropertyNames())
+            {
+                if (KeyPropertyNames.Contains(propertyName)) continue;
 
-                foreach (string propertyName in interfaceType.GetKeyPropertyNames())
+                PropertyInfo property = interfaceType.GetProperty(propertyName);
+                if (property == null)
                 {
-                    if (KeyPropertyNames.Contains(propertyName)) continue;
+                    List<Type> superInterfaces = interfaceType.GetInterfacesRecursively(t => typeof(IData).IsAssignableFrom(t) && t != typeof(IData));
 
-                    PropertyInfo property = interfaceType.GetProperty(propertyName);
-                    if (property == null)
+                    foreach (Type superInterface in superInterfaces)
                     {
-                        List<Type> superInterfaces = interfaceType.GetInterfacesRecursively(t => typeof(IData).IsAssignableFrom(t) && t != typeof(IData));
-
-                        foreach (Type superInterface in superInterfaces)
-                        {
-                            property = superInterface.GetProperty(propertyName);
-                            if (property != null) break;
-                        }
-                    }
-
-                    Verify.IsNotNull(property, "Missing property '{0}' on type '{1}' or one of its interfaces".FormatWith(propertyName, interfaceType));
-
-                    if (DynamicTypeReflectionFacade.IsKeyField(property))
-                    {
-                        this.KeyPropertyNames.Add(propertyName, false);
+                        property = superInterface.GetProperty(propertyName);
+                        if (property != null) break;
                     }
                 }
 
-                foreach (DataScopeIdentifier dataScopeIdentifier in DynamicTypeReflectionFacade.GetDataScopes(interfaceType))
+                Verify.IsNotNull(property, "Missing property '{0}' on type '{1}' or one of its interfaces".FormatWith(propertyName, interfaceType));
+
+                if (DynamicTypeReflectionFacade.IsKeyField(property))
                 {
-                    if (this.DataScopes.Contains(dataScopeIdentifier) == false)
-                    {
-                        this.DataScopes.Add(dataScopeIdentifier);
-                    }
+                    this.KeyPropertyNames.Add(propertyName, false);
                 }
+            }
+
+            foreach (DataScopeIdentifier dataScopeIdentifier in DynamicTypeReflectionFacade.GetDataScopes(interfaceType))
+            {
+                if (!this.DataScopes.Contains(dataScopeIdentifier))
+                {
+                    this.DataScopes.Add(dataScopeIdentifier);
+                }
+            }
 
 
-                foreach (Type superSuperInterfaceType in interfaceType.GetInterfaces().Where(t => typeof(IData).IsAssignableFrom(t)))
-                {
-                    AddSuperInterface(superSuperInterfaceType);
-                }
+            foreach (Type superSuperInterfaceType in interfaceType.GetInterfaces().Where(t => typeof(IData).IsAssignableFrom(t)))
+            {
+                AddSuperInterface(superSuperInterfaceType, addInheritedFields);
             }
         }
 
@@ -518,7 +554,7 @@ namespace Composite.Data.DynamicTypes
         /// <returns>A clone</returns>
         public DataTypeDescriptor Clone()
         {
-            DataTypeDescriptor dataTypeDescriptor = new DataTypeDescriptor(this.DataTypeId, this.Namespace, this.Name, this.TypeManagerTypeName, this.IsCodeGenerated);
+            var dataTypeDescriptor = new DataTypeDescriptor(this.DataTypeId, this.Namespace, this.Name, this.TypeManagerTypeName, this.IsCodeGenerated);
 
             foreach (DataTypeAssociationDescriptor dataTypeAssociationDescriptor in this.DataAssociations)
             {
@@ -597,14 +633,15 @@ namespace Composite.Data.DynamicTypes
                                      SuperInterfaces.Select(su => new XElement("SuperInterface", new XAttribute("type", TypeManager.SerializeType(su))))));
 
 
-            element.Add(new XElement("Fields",
-                                     Fields
-                                         .Where(f => f.Inherited == false)
-                                         .Select(dataFieldDescriptor => dataFieldDescriptor.ToXml())));
+            element.Add(new XElement("Fields", Fields.Select(f => f.ToXml())));
+
+            if (Indexes.Any())
+            {
+                element.Add(new XElement("Indexes", Indexes.Select(i => i.ToXml())));   
+            }
 
             return element;
         }
-
 
 
         /// <summary>
@@ -614,74 +651,66 @@ namespace Composite.Data.DynamicTypes
         /// <returns>De-serialized data type descriptor</returns>
         public static DataTypeDescriptor FromXml(XElement element)
         {
-            if (element == null) throw new ArgumentNullException("element");
-            if (element.Name != "DataTypeDescriptor") throw new ArgumentException("The xml is not correctly formattet");
+            return FromXml(element, true);
+        }
 
-            XAttribute dataTypeIdAttribute = element.Attribute("dataTypeId");
-            XAttribute nameAttribute = element.Attribute("name");
-            XAttribute namespaceAttribute = element.Attribute("namespace");
-            XAttribute hasCustomPhysicalSortOrderAttribute = element.Attribute("hasCustomPhysicalSortOrder");
-            XAttribute isCodeGeneratedAttribute = element.Attribute("isCodeGenerated");
+        internal static DataTypeDescriptor FromXml(XElement element, bool inheritedFieldsIncluded)
+        {
+            Verify.ArgumentNotNull(element, "element");
+            if (element.Name != "DataTypeDescriptor") throw new ArgumentException("The xml is not correctly formatted.");
+
+
+            Guid dataTypeId = (Guid) element.GetRequiredAttribute("dataTypeId");
+            string name = element.GetRequiredAttributeValue("name");
+            string @namespace = element.GetRequiredAttributeValue("namespace");
+
+            // TODO: check why "hasCustomPhysicalSortOrder"  is not used
+            bool hasCustomPhysicalSortOrder = (bool) element.GetRequiredAttribute("hasCustomPhysicalSortOrder");
+
+            bool isCodeGenerated = (bool) element.GetRequiredAttribute("isCodeGenerated");
             XAttribute cachableAttribute = element.Attribute("cachable");
             XAttribute buildNewHandlerTypeNameAttribute = element.Attribute("buildNewHandlerTypeName");
-            XElement dataAssociationsElement = element.Element("DataAssociations");
-            XElement dataScopesElement = element.Element("DataScopes");
-            XElement keyPropertyNamesElement = element.Element("KeyPropertyNames");
+            XElement dataAssociationsElement = element.GetRequiredElement("DataAssociations");
+            XElement dataScopesElement = element.GetRequiredElement("DataScopes");
+            XElement keyPropertyNamesElement = element.GetRequiredElement("KeyPropertyNames");
             // TODO: check why "superInterfaceKeyPropertyNamesElement" is not used
             // XElement superInterfaceKeyPropertyNamesElement = element.Element("SuperInterfaceKeyPropertyNames");
-            XElement superInterfacesElement = element.Element("SuperInterfaces");
-            XElement fieldsElement = element.Element("Fields");
-
-            if ((dataTypeIdAttribute == null) || (nameAttribute == null) || (namespaceAttribute == null) || (hasCustomPhysicalSortOrderAttribute == null) || (isCodeGeneratedAttribute == null) ||
-                (dataAssociationsElement == null) || (dataScopesElement == null) || (keyPropertyNamesElement == null) || (superInterfacesElement == null) || (fieldsElement == null)) throw new ArgumentException("The xml is not correctly formattet");
+            XElement superInterfacesElement = element.GetRequiredElement("SuperInterfaces");
+            XElement fieldsElement = element.GetRequiredElement("Fields");
+            XElement indexesElement = element.Element("Indexes");
 
             XAttribute titleAttribute = element.Attribute("title");
             XAttribute labelFieldNameAttribute = element.Attribute("labelFieldName");
-            XAttribute typeManagerTypeNameAttribute = element.Attribute("typeManagerTypeName");
+            string typeManagerTypeName = (string) element.Attribute("typeManagerTypeName");
 
-            Guid dataTypeId = (Guid)dataTypeIdAttribute;
-            string name = nameAttribute.Value;
-            string namespaceName = namespaceAttribute.Value;
-            bool isCodeGeneretaed = (bool)isCodeGeneratedAttribute;
-            bool cachable = false;
-            if (cachableAttribute != null)
-            {
-                cachable = (bool)cachableAttribute;
-            }
+            bool cachable = cachableAttribute != null && (bool)cachableAttribute;
 
-            // TODO: check why "hasCustomPhysicalSortOrder"  is not used
-            bool hasCustomPhysicalSortOrder = (bool)hasCustomPhysicalSortOrderAttribute;
-
-            DataTypeDescriptor dataTypeDescriptor = new DataTypeDescriptor(dataTypeId, namespaceName, name, isCodeGeneretaed);
+            DataTypeDescriptor dataTypeDescriptor = new DataTypeDescriptor(dataTypeId, @namespace, name, isCodeGenerated);
             dataTypeDescriptor.Cachable = cachable;
 
             if (titleAttribute != null) dataTypeDescriptor.Title = titleAttribute.Value;
             if (labelFieldNameAttribute != null) dataTypeDescriptor.LabelFieldName = labelFieldNameAttribute.Value;
-            if (typeManagerTypeNameAttribute != null)
+            if (typeManagerTypeName != null)
             {
-                dataTypeDescriptor.TypeManagerTypeName = TypeManager.FixLegasyTypeName(typeManagerTypeNameAttribute.Value);
+                typeManagerTypeName = TypeManager.FixLegasyTypeName(typeManagerTypeName);
+                dataTypeDescriptor.TypeManagerTypeName = typeManagerTypeName;
             }
             if (buildNewHandlerTypeNameAttribute != null) dataTypeDescriptor.BuildNewHandlerTypeName = buildNewHandlerTypeNameAttribute.Value;
 
 
             foreach (XElement elm in dataAssociationsElement.Elements())
             {
-                DataTypeAssociationDescriptor dataTypeAssociationDescriptor = DataTypeAssociationDescriptor.FromXml(elm);
+                var dataTypeAssociationDescriptor = DataTypeAssociationDescriptor.FromXml(elm);
 
                 dataTypeDescriptor.DataAssociations.Add(dataTypeAssociationDescriptor);
             }
 
             foreach (XElement elm in dataScopesElement.Elements("DataScopeIdentifier"))
             {
-                XAttribute dataScopeIdentifierNameAttribute = elm.Attribute("name");
-
-                if (dataScopeIdentifierNameAttribute == null) throw new ArgumentException("The xml is not correctly formattet");
-
-                string dataScopeName = dataScopeIdentifierNameAttribute.Value;
-
+                string dataScopeName = elm.GetRequiredAttributeValue("name");
                 if (DataScopeIdentifier.IsLegasyDataScope(dataScopeName))
                 {
-                    LoggingService.LogWarning("DataTypeDescriptor", "Ignored legacy data scope '{0}' on type '{1}.{2}' while deserializing DataTypeDescriptor. The '{0}' data scope is no longer supported.".FormatWith(dataScopeName, namespaceName, name));
+                    Log.LogWarning("DataTypeDescriptor", "Ignored legacy data scope '{0}' on type '{1}.{2}' while deserializing DataTypeDescriptor. The '{0}' data scope is no longer supported.".FormatWith(dataScopeName, @namespace, name));
                     continue;
                 }
 
@@ -692,36 +721,37 @@ namespace Composite.Data.DynamicTypes
 
             foreach (XElement elm in superInterfacesElement.Elements("SuperInterface"))
             {
-                XAttribute superInterfaceTypeAttribute = elm.Attribute("type");
+                string superInterfaceTypeName = elm.GetRequiredAttributeValue("type");
 
-                if (superInterfaceTypeAttribute == null) throw new ArgumentException("The xml is not correctly formattet");
-
-                if (superInterfaceTypeAttribute.Value.StartsWith("Composite.Data.ProcessControlled.IDeleteControlled") == false)
+                if (!superInterfaceTypeName.StartsWith("Composite.Data.ProcessControlled.IDeleteControlled"))
                 {
-                    Type type = TypeManager.GetType(superInterfaceTypeAttribute.Value);
+                    Type superInterface = TypeManager.GetType(superInterfaceTypeName);
 
-                    dataTypeDescriptor.AddSuperInterface(type);
+                    dataTypeDescriptor.AddSuperInterface(superInterface, !inheritedFieldsIncluded);
                 }
                 else
                 {
-                    LoggingService.LogWarning("DataTypeDescriptor", string.Format("Ignored legacy super interface '{0}' on type '{1}.{2}' while deserializing DataTypeDescriptor. This super interface is no longer supported.", superInterfaceTypeAttribute.Value, namespaceName, name));
+                    Log.LogWarning("DataTypeDescriptor", string.Format("Ignored legacy super interface '{0}' on type '{1}.{2}' while deserializing DataTypeDescriptor. This super interface is no longer supported.", superInterfaceTypeName, @namespace, name));
                 }
             }
 
             foreach (XElement elm in fieldsElement.Elements())
             {
-                DataFieldDescriptor dataFieldDescriptor = DataFieldDescriptor.FromXml(elm);
+                var dataFieldDescriptor = DataFieldDescriptor.FromXml(elm);
 
-                dataTypeDescriptor.Fields.Add(dataFieldDescriptor);
+                try
+                {
+                    dataTypeDescriptor.Fields.Add(dataFieldDescriptor);
+                }
+                catch (Exception ex)
+                {
+                    XmlConfigurationExtensionMethods.ThrowConfiguraitonError("Failed to add a data field: " + ex.Message, ex, elm);
+                }
             }
 
             foreach (XElement elm in keyPropertyNamesElement.Elements("KeyPropertyName"))
             {
-                XAttribute keyPropertyNameAttribute = elm.Attribute("name");
-
-                if (keyPropertyNameAttribute == null) throw new ArgumentException("The xml is not correctly formattet");
-
-                string propertyName = keyPropertyNameAttribute.Value;
+                var propertyName = elm.GetRequiredAttributeValue("name");
 
                 bool isDefinedOnSuperInterface = dataTypeDescriptor.SuperInterfaces.Any(f => f.GetProperty(propertyName) != null);
                 if (!isDefinedOnSuperInterface)
@@ -730,10 +760,36 @@ namespace Composite.Data.DynamicTypes
                 }
             }
 
+            if (indexesElement != null)
+            {
+                dataTypeDescriptor.Indexes = indexesElement.Elements("Index").Select(DataTypeIndex.FromXml).ToList();
+            }
+
+            // Loading field rendering profiles for static data types
+            if (!isCodeGenerated && typeManagerTypeName != null)
+            {
+                Type type = Type.GetType(typeManagerTypeName);
+                if (type != null)
+                {
+                    foreach (var fieldDescriptor in dataTypeDescriptor.Fields)
+                    {
+                        var property = type.GetProperty(fieldDescriptor.Name);
+
+                        if (property != null)
+                        {
+                            var formRenderingProfile = DynamicTypeReflectionFacade.GetFormRenderingProfile(property);
+                            if (formRenderingProfile != null)
+                            {
+                                fieldDescriptor.FormRenderingProfile = formRenderingProfile;
+                            }
+                        }
+                    }
+                }
+            }
+            
+
             return dataTypeDescriptor;
         }
-
-
 
         /// <exclude />
         public override int GetHashCode()
@@ -769,7 +825,7 @@ namespace Composite.Data.DynamicTypes
                 return this.Name;
             }
 
-            return string.Format("{0}.{1}", this.Namespace, this.Name);
+            return this.Namespace + "." + this.Name;
         }
     }
 

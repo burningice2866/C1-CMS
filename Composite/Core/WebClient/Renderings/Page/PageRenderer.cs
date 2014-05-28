@@ -7,12 +7,12 @@ using System.Web.UI.HtmlControls;
 using System.Xml.Linq;
 using Composite.Core.Caching;
 using Composite.Core.Extensions;
+using Composite.Core.Routing;
 using Composite.Data;
 using Composite.Data.Types;
 using Composite.Functions;
 using Composite.Core.Instrumentation;
 using Composite.Core.Localization;
-using Composite.Core.Parallelization;
 using Composite.Core.WebClient.Renderings.Template;
 using Composite.Core.Xml;
 using Composite.C1Console.Security;
@@ -56,13 +56,11 @@ namespace Composite.Core.WebClient.Renderings.Page
 
             using (GlobalInitializerFacade.CoreIsInitializedScope)
             {
-                string url;
-
-                PageStructureInfo.TryGetPageUrl(page.Id, out url);
+                string url = PageUrls.BuildUrl(page);
 
                 using (TimerProfilerFacade.CreateTimerProfiler(url ?? "(no url)"))
                 {
-                    var cultureInfo = new CultureInfo(page.CultureName);
+                    var cultureInfo = page.DataSourceId.LocaleScope;
                     System.Threading.Thread.CurrentThread.CurrentCulture = cultureInfo;
                     System.Threading.Thread.CurrentThread.CurrentUICulture = cultureInfo;
 
@@ -167,6 +165,20 @@ namespace Composite.Core.WebClient.Renderings.Page
         }
 
 
+        /// <summary>
+        /// Returns <value>true</value> if the page is rendered in a "Preview" mode
+        /// </summary>
+        public static RenderingReason RenderingReason
+        {
+            get
+            {
+                return  RequestLifetimeCache.TryGet<RenderingReason>("PageRenderer.RenderingReason");
+            }
+            set
+            {
+                RequestLifetimeCache.Add("PageRenderer.RenderingReason", value);
+            }
+        }
 
         /// <exclude />
         public static IPage CurrentPage
@@ -201,14 +213,13 @@ namespace Composite.Core.WebClient.Renderings.Page
         {
             get
             {
-                if (RequestLifetimeCache.HasKey("PageRenderer.IPage"))
-                {
-                    return CultureInfo.CreateSpecificCulture(RequestLifetimeCache.TryGet<IPage>("PageRenderer.IPage").CultureName);
-                }
-                else
+                if (!RequestLifetimeCache.HasKey("PageRenderer.IPage"))
                 {
                     return null;
                 }
+
+                var page = RequestLifetimeCache.TryGet<IPage>("PageRenderer.IPage");
+                return page.DataSourceId.LocaleScope;
             }
         }
 
@@ -397,7 +408,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
                 object[] functionExecutionResults = new object[functionCalls.Count];
 
-                ParallelFacade.For("PageRenderer. Embedded function execution", 0, functionCalls.Count, i =>
+                for(int i=0; i<functionCalls.Count; i++)
                 {
                     XElement functionCallDefinition = functionCalls[i];
                     string functionName = null;
@@ -454,7 +465,7 @@ namespace Composite.Core.WebClient.Renderings.Page
                     }
 
                     functionExecutionResults[i] = functionResult;
-                });
+                };
 
                 // Applying changes
                 for(int i=0; i < functionCalls.Count; i++)

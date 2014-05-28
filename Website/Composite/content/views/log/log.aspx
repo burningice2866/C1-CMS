@@ -8,7 +8,7 @@
 	<head>
 		<title>Composite.Management.ServerLog</title>
 		<control:styleloader runat="server" />
-		<control:scriptloader type="sub" runat="server" />
+		<control:scriptloader type="sub" runat="server" updateManagerDisabled="True"/>
 		<link rel="stylesheet" type="text/css" href="log.css.aspx" />
 		<script type="text/javascript">
 		    DocumentManager.isDocumentSelectable = true;
@@ -16,7 +16,7 @@
 	</head>
 	<body>
 		<form id="Form1" runat="server">
-			<ui:page label="${string:ServerLog.LabelTitle}" image="${icon:log-showlog}">
+			<ui:page label="${string:ServerLog.LabelTitle}" image="${icon:log-viewlog}">
 				<ui:toolbar id="toolbar">
 					<ui:toolbarbody>
 						<ui:toolbargroup>
@@ -27,19 +27,19 @@
 						<ui:toolbargroup>
 						    
                             <div class="left">
-                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Critical}" ID="chkCritical" Checked="True" />
+                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Critical}" ID="chkCritical" Checked="True" AutoPostBack="true" />
                             </div>
                             <div class="left">
-                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Error}" ID="chkError" Checked="True" />
+                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Error}" ID="chkError" Checked="True" AutoPostBack="true" />
                             </div>
                             <div class="left">
-                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Warning}" ID="chkWarning" Checked="True" />
+                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Warning}" ID="chkWarning" Checked="True" AutoPostBack="true" />
                             </div>
                             <div class="left">
-                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Information}" ID="chkInformation" Checked="True" />
+                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Information}" ID="chkInformation" Checked="True" AutoPostBack="true" />
                             </div>
                             <div class="left">
-                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Verbose}" ID="chkVerbose" Checked="False" />
+                                <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Verbose}" ID="chkVerbose" Checked="False" AutoPostBack="true" />
                             </div>
                             
 						</ui:toolbargroup>

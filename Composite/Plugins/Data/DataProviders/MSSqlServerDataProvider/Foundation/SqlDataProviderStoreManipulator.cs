@@ -7,11 +7,13 @@ using System.Linq;
 using System.Text;
 using Composite.Core;
 using Composite.Core.Extensions;
+using Composite.Core.Linq;
 using Composite.Core.Sql;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
 using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
+using Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Sql;
 
 
 namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundation
@@ -32,7 +34,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             _generatedInterfaces = generatedInterfaces;
         }
 
-        internal void CreateStoresForType(DataTypeDescriptor typeDescriptor)
+        internal void CreateStoresForType(DataTypeDescriptor typeDescriptor, Action<string> existingTablesValidator)
         {
             lock (_lock)
             {
@@ -40,7 +42,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                 {
                     foreach (var culture in GetCultures(typeDescriptor))
                     {
-                        CreateStore(typeDescriptor, dataScope, culture);
+                        CreateStore(typeDescriptor, dataScope, culture, existingTablesValidator);
                     }
                 }
             }
@@ -85,22 +87,28 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             }
         }
 
-        internal void CreateStore(DataTypeDescriptor typeDescriptor, DataScopeIdentifier dataScope, CultureInfo cultureInfo)
+        internal void CreateStore(DataTypeDescriptor typeDescriptor, DataScopeIdentifier dataScope, CultureInfo cultureInfo,
+                                  Action<string> existingTablesValidator = null)
         {
             string tableName = DynamicTypesCommon.GenerateTableName(typeDescriptor, dataScope, cultureInfo);
             var tables = GetTablesList();
 
             if (tables.Contains(tableName))
             {
-                throw new InvalidOperationException(
-                    "Database already contains a table named {0}".FormatWith(tableName));
+                if (existingTablesValidator != null)
+                {
+                    existingTablesValidator(tableName);
+                    return;
+                }
+
+                throw new InvalidOperationException("Database already contains a table named {0}".FormatWith(tableName));
             }
 
             var sql = new StringBuilder();
             var sqlColumns = typeDescriptor.Fields.Select(fieldDescriptor => GetColumnInfo(tableName, fieldDescriptor.Name, fieldDescriptor, true, false)).ToList();
 
             sql.AppendFormat("CREATE TABLE dbo.[{0}]({1});", tableName, string.Join(",", sqlColumns));
-            sql.Append(SetPrimaryKey(tableName, typeDescriptor.KeyPropertyNames, (typeDescriptor.HasCustomPhysicalSortOrder == false)));
+            sql.Append(SetPrimaryKey(tableName, typeDescriptor.KeyPropertyNames, typeDescriptor.PrimaryKeyIsClusteredIndex));
 
             try
             {
@@ -110,6 +118,13 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             {
                 throw MakeVerboseException(ex);
             }
+
+            foreach (var index in typeDescriptor.Indexes)
+            {
+                CreateIndex(tableName, index);
+            }
+
+            SqlTableInformationStore.ClearCache(_connectionString, tableName);
         }
 
         internal List<string> GetTablesList()
@@ -314,8 +329,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             var culturesToDelete = new List<CultureInfo>();
             var culturesToChange = new List<CultureInfo>();
 
-            var oldCultures = GetCultures(changeDescriptor.OriginalType);
-            var newCultures = GetCultures(changeDescriptor.AlteredType);
+            var oldCultures = GetCultures(changeDescriptor.OriginalType).Evaluate();
+            var newCultures = GetCultures(changeDescriptor.AlteredType).Evaluate();
 
             foreach (var culture in oldCultures)
             {
@@ -351,7 +366,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                             FROM [{1}];", toTableName, fromTableName, fieldList);
                     ExecuteNonQuery(copyCommandText);
 
-                    string updateCommandTesxt = string.Format("UPDATE [{0}] SET [{1}] = '{2}', [{3}] = '{4}'", toTableName, "CultureName", locale.Name, "SourceCultureName", locale.Name);
+                    string updateCommandTesxt = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", toTableName, "SourceCultureName", locale.Name);
                     ExecuteNonQuery(updateCommandTesxt);
                 }
 
@@ -404,7 +419,10 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                 }
 
 
-                bool primaryKeyChanged = changeDescriptor.AddedKeyFields.Any() || changeDescriptor.DeletedKeyFields.Any() || changeDescriptor.KeyFieldsOrderChanged;
+                bool primaryKeyChanged = changeDescriptor.AddedKeyFields.Any() 
+                                         || changeDescriptor.DeletedKeyFields.Any() 
+                                         || changeDescriptor.KeyFieldsOrderChanged
+                                         || changeDescriptor.OriginalType.PrimaryKeyIsClusteredIndex != changeDescriptor.AlteredType.PrimaryKeyIsClusteredIndex;
 
                 DropConstraints(originalTableName, primaryKeyChanged);
 
@@ -416,6 +434,16 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                                           alteredTableName));
                     RenameTable(originalTableName, alteredTableName);
                 }
+
+                var newIndexes = changeDescriptor.AlteredType.Indexes.Select(i => i.ToString()).ToList();
+                foreach (var oldIndex in changeDescriptor.OriginalType.Indexes)
+                {
+                    if (!newIndexes.Contains(oldIndex.ToString()))
+                    {
+                        DropIndex(alteredTableName, oldIndex);
+                    }
+                }
+
                 DropFields(alteredTableName, changeDescriptor.DeletedFields, changeDescriptor.OriginalType.Fields);
                 ImplementFieldChanges(alteredTableName, changeDescriptor.ExistingFields);
 
@@ -429,10 +457,39 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
 
                 AppendFields(alteredTableName, changeDescriptor.AddedFields, defaultValues);
 
+                // Clustered index has to be created first.
+                var createIndexActions = new List<Tuple<bool, Action>>();
+                
                 if (primaryKeyChanged)
                 {
-                    ExecuteNonQuery(SetPrimaryKey(alteredTableName, changeDescriptor.AlteredType.KeyPropertyNames, !changeDescriptor.AlteredType.HasCustomPhysicalSortOrder));
+                    bool isClusteredIndex = changeDescriptor.AlteredType.PrimaryKeyIsClusteredIndex;
+
+                    createIndexActions.Add(new Tuple<bool, Action>(isClusteredIndex,
+                        () => ExecuteNonQuery(SetPrimaryKey(alteredTableName, changeDescriptor.AlteredType.KeyPropertyNames, isClusteredIndex))
+                    ));
                 }
+
+                var oldIndexes = changeDescriptor.OriginalType.Indexes.Select(i => i.ToString()).ToList();
+                foreach (var newIndex in changeDescriptor.AlteredType.Indexes)
+                {
+                    if (!oldIndexes.Contains(newIndex.ToString()))
+                    {
+                        var index = newIndex;
+
+                        createIndexActions.Add(new Tuple<bool, Action>(newIndex.Clustered, 
+                            () => CreateIndex(alteredTableName, index)));
+                    }
+                }
+
+                createIndexActions.Sort((a, b) => b.Item1.CompareTo(a.Item1));
+
+                foreach (var createIndex in createIndexActions)
+                {
+                    createIndex.Item2();
+                }
+
+                SqlTableInformationStore.ClearCache(_connectionString, originalTableName);
+                SqlTableInformationStore.ClearCache(_connectionString, alteredTableName);
             }
             catch (Exception ex)
             {
@@ -473,16 +530,20 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
         {
             string tableName = GetConfiguredTableName(dataTypeDescriptor, dataScope, cultureInfo.Name);
 
+            if (string.IsNullOrEmpty(tableName))
+            {
+                return;
+            }
+
             try
             {
-                if (!string.IsNullOrEmpty(tableName))
-                {
-                    var tables = GetTablesList();
+                var tables = GetTablesList();
 
-                    if (tables.Contains(tableName))
-                    {
-                        ExecuteNonQuery(string.Format("DROP TABLE [{0}];", tableName));
-                    }
+                if (tables.Contains(tableName))
+                {
+                    ExecuteNonQuery(string.Format("DROP TABLE [{0}];", tableName));
+
+                    SqlTableInformationStore.ClearCache(_connectionString, tableName);
                 }
             }
             catch (Exception ex)
@@ -606,7 +667,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             string primaryKeyIndexName = GeneratePrimaryKeyContraintName(tableName);
 
             return string.Format("ALTER TABLE [{0}] ADD CONSTRAINT [{1}] PRIMARY KEY{2}({3});", tableName, primaryKeyIndexName,
-                                    createAsClustered ? " CLUSTERED " : string.Empty, string.Join(",", fieldNames.Distinct().Select(field => "[" + field + "]")));
+                                    createAsClustered ? " CLUSTERED " : " NONCLUSTERED ", string.Join(",", fieldNames.Distinct().Select(field => "[" + field + "]")));
         }
 
         private Exception MakeVerboseException(Exception ex)
@@ -783,6 +844,52 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
 
             throw new NotImplementedException("Supplied DefaultValue contains an unsupported DefaultValueType '{0}'."
                                               .FormatWith(defaultValue.ValueType));
+        }
+
+        private void CreateIndex(string tableName, DataTypeIndex index)
+        {
+            string indexName = GetIndexName(index);
+
+            var fields = new StringBuilder();
+            foreach (var field in index.Fields)
+            {
+                if (fields.Length > 0)
+                {
+                    fields.Append(", ");
+                }
+                fields.Append('[').Append(field.Item1).Append(']');
+                if (field.Item2 == IndexDirection.Descending)
+                {
+                    fields.Append(" DESC");
+                }
+            }
+
+            var sql = string.Format("CREATE {0}CLUSTERED INDEX [{1}] ON [{2}] ({3})",
+                            !index.Clustered ? "NON" : "",
+                            indexName, 
+                            tableName, 
+                            fields);
+
+            ExecuteNonQuery(sql);
+        }
+
+        private void DropIndex(string tableName, DataTypeIndex index)
+        {
+             string indexName = GetIndexName(index);
+
+            var sql = string.Format("DROP INDEX [{0}] ON [{1}]", indexName,  tableName);
+
+            ExecuteNonQuery(sql);
+        }
+
+        private string GetIndexName(DataTypeIndex index)
+        {
+            var result = new StringBuilder().Append("IX_");
+            foreach (var field in index.Fields)
+            {
+                result.Append('_').Append(field.Item1);
+            }
+            return result.ToString();
         }
 
         private string SqlQuoted(object obj)

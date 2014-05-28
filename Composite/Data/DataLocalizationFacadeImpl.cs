@@ -356,25 +356,28 @@ namespace Composite.Data
             foreach (DataFieldDescriptor dataFieldDescriptor in requiredDataFieldDescriptors)
             {
                 Type referencedType = TypeManager.GetType(dataFieldDescriptor.ForeignKeyReferenceTypeName);
-                if (DataLocalizationFacade.IsLocalized(referencedType) == false) continue; // No speciel handling for non localized datas.
+                if (!DataLocalizationFacade.IsLocalized(referencedType)) continue; // No special handling for not localized data.
 
                 IData referencedData = data.GetReferenced(dataFieldDescriptor.Name);
                 if (referencedData != null) continue; // Data has already been localized               
 
-
                 bool optionalReferenceWithValue = false;
                 if (dataFieldDescriptor.IsNullable)
                 {
-                    PropertyInfo propertyInfo = data.DataSourceId.InterfaceType.GetPropertiesRecursively().Where(f => f.Name == dataFieldDescriptor.Name).Single();
+                    PropertyInfo propertyInfo = data.DataSourceId.InterfaceType.GetPropertiesRecursively().Single(f => f.Name == dataFieldDescriptor.Name);
                     object value = propertyInfo.GetValue(data, null);
 
-                    if (value == null) continue; // Optional reference is null;
-                    if (object.Equals(value, dataFieldDescriptor.DefaultValue)) continue; // Optional reference is null;
+                    if (value == null || object.Equals(value, dataFieldDescriptor.DefaultValue))
+                    {
+                        continue; // Optional reference is null;
+                    }
 
                     optionalReferenceWithValue = true;
                 }
 
-                using (new DataScope(CultureInfo.CreateSpecificCulture(data.CultureName)))
+                CultureInfo locale = data.DataSourceId.LocaleScope;
+
+                using (new DataScope(locale))
                 {
                     referencedData = data.GetReferenced(dataFieldDescriptor.Name);
                 }

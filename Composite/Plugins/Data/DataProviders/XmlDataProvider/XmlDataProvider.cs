@@ -32,7 +32,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         private static readonly string LogTitle = typeof(XmlDataProvider).Name;
 
         private readonly string _fileStoreDirectory;
-        private readonly IEnumerable<XmlProviderInterfaceConfigurationElement> _dataTypeConfigurationElements;
+        private IEnumerable<XmlProviderInterfaceConfigurationElement> _dataTypeConfigurationElements;
         private XmlDataTypeStoresContainer _xmlDataTypeStoresContainer;
         private DataProviderContext _dataProviderContext;        
         private readonly object _lock = new object();
@@ -113,7 +113,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
 
                 if (!dataTypeDescriptor.ValidateRuntimeType())
                 {
-                    Log.LogError(LogTitle, "The non code generated interface type '{0}' was not found, skipping code generation for that type", dataTypeDescriptor.TypeManagerTypeName);
+                    Log.LogError(LogTitle, "The non code generated interface type '{0}' was not found, skipping code generation for that type", dataTypeDescriptor);
                     continue;
                 }
 
@@ -163,9 +163,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
 
             ReplaceTypeNamesWithTypeIDs(dataTypeConfigurationElements);
 
-            XmlDataProvider provider = new XmlDataProvider(PathUtil.Resolve(data.StoreDirectory), dataTypeConfigurationElements);
-
-            return provider;
+            return new XmlDataProvider(PathUtil.Resolve(data.StoreDirectory), dataTypeConfigurationElements);
         }
 
 
@@ -323,12 +321,12 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         {
             get
             {
-                Dictionary<string, Dictionary<string, DataScopeConfigurationElement>> scopes = new Dictionary<string, Dictionary<string, DataScopeConfigurationElement>>();
+                var scopes = new Dictionary<string, Dictionary<string, DataScopeConfigurationElement>>();
 
                 foreach (DataScopeConfigurationElement scopeElement in this.ConfigurationStores)
                 {
                     Dictionary<string, DataScopeConfigurationElement> dic;
-                    if (scopes.TryGetValue(scopeElement.DataScope, out dic) == false)
+                    if (!scopes.TryGetValue(scopeElement.DataScope, out dic))
                     {
                         dic = new Dictionary<string, DataScopeConfigurationElement>();
                         scopes.Add(scopeElement.DataScope, dic);
@@ -347,14 +345,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         {
             get
             {
-                Dictionary<string, Type> dic = new Dictionary<string, Type>();
-
-                foreach (SimpleNameTypeConfigurationElement element in ConfigurationDataIdProperties)
-                {
-                    dic.Add(element.Name, element.Type);
-                }
-
-                return dic;
+                return ConfigurationDataIdProperties.ToDictionary(e => e.Name, e => e.Type);
             }
         }
 
@@ -364,14 +355,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         {
             get
             {
-                Dictionary<string, string> dic = new Dictionary<string, string>();
-
-                foreach (PropertyNameMappingConfigurationElement element in ConfigurationPropertyNameMappings)
-                {
-                    dic.Add(element.PropertyName, element.SourcePropertyName);
-                }
-
-                return dic;
+                return ConfigurationPropertyNameMappings.ToDictionary(e => e.PropertyName, e => e.SourcePropertyName);
             }
         }
 
@@ -381,14 +365,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         {
             get
             {
-                Dictionary<string, Type> dic = new Dictionary<string, Type>();
-
-                foreach (SimpleNameTypeConfigurationElement element in ConfigurationPropertyInitializers)
-                {
-                    dic.Add(element.Name, element.Type);
-                }
-
-                return dic;
+                return ConfigurationPropertyInitializers.ToDictionary(e => e.Name, e => e.Type);
             }
         }
 
@@ -429,7 +406,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
 
 
         private const string _storesPropertyName = "Stores";
-        [System.Configuration.ConfigurationProperty(_storesPropertyName, IsRequired = true)]
+        [System.Configuration.ConfigurationProperty(_storesPropertyName, IsRequired = false)]
         public DataScopeConfigurationElementCollection ConfigurationStores
         {
             get { return (DataScopeConfigurationElementCollection)base[_storesPropertyName]; }
@@ -507,7 +484,7 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
 
 
 
-    internal sealed class DataScopeConfigurationElementCollection : System.Configuration.ConfigurationElementCollection
+    internal sealed class DataScopeConfigurationElementCollection : System.Configuration.ConfigurationElementCollection, IEnumerable<DataScopeConfigurationElement>
     {
         internal void Add(DataScopeConfigurationElement element)
         {
@@ -523,6 +500,11 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
         {
             DataScopeConfigurationElement castedElement = (DataScopeConfigurationElement)element;
             return string.Format("{0}.{1}", castedElement.DataScope, castedElement.CultureName);
+        }
+
+        IEnumerator<DataScopeConfigurationElement> IEnumerable<DataScopeConfigurationElement>.GetEnumerator()
+        {
+            return this.OfType<DataScopeConfigurationElement>().GetEnumerator();
         }
     }
 }

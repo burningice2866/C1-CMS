@@ -5,11 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Web;
 using System.Web.Services;
 using System.Web.Services.Protocols;
 using System.Xml.Linq;
+using Composite.C1Console.Security;
+using Composite.C1Console.Users;
 using Composite.Core.Extensions;
+using Composite.Core.Linq;
+using Composite.Core.WebClient.Renderings;
 using Composite.Data.DynamicTypes;
 using Composite.Functions;
 using Composite.Core.Logging;
@@ -42,6 +47,7 @@ namespace Composite.Services
     [SoapDocumentService(RoutingStyle = SoapServiceRoutingStyle.RequestElement)]
     public class XhtmlTransformations : System.Web.Services.WebService
     {
+		private const string _markupWysiwygRepresentationAlt = "\n\n\n\n\n\n                              "; // like this so IE will make loading images have some width and height
 
         [WebMethod]
         public XhtmlTransformationResult TinyContentToStructuredContent(string htmlFragment)
@@ -69,7 +75,7 @@ namespace Composite.Services
 
                 List<XElement> htmlWysiwygImages = structuredResult
                     .Descendants(Namespaces.Xhtml + "img")
-                    .Where(e => e.Attribute("alt") != null 
+                    .Where(e => e.Attribute("data-markup") != null 
                                 && e.Attribute("class") != null
                                 && e.Attribute("class").Value.Contains("compositeHtmlWysiwygRepresentation")).ToList();
 
@@ -77,7 +83,7 @@ namespace Composite.Services
                 {
                     try
                     {
-                        string html = htmlWysiwygImageElement.Attribute("alt").Value;
+                        string html = htmlWysiwygImageElement.Attribute("data-markup").Value;
                         XElement functionElement = XElement.Parse(html);
 
                         if (IsFunctionAloneInParagraph(htmlWysiwygImageElement))
@@ -101,7 +107,7 @@ namespace Composite.Services
                     structuredResult
                     .Descendants()
                     .Where(e => e.Name.LocalName == "img"
-                            && e.Attribute("alt") != null
+                            && e.Attribute("data-markup") != null
                            && e.Attribute("class") != null
                            && e.Attribute("class").Value.Contains("compositeFunctionWysiwygRepresentation")).ToList();
                 
@@ -123,7 +129,7 @@ namespace Composite.Services
                     // Replacing function call images with function markup
                     try
                     {
-                        string functionMarkup = functionImageElement.Attribute("alt").Value;
+                        string functionMarkup = functionImageElement.Attribute("data-markup").Value;
                         XElement functionElement = XElement.Parse(functionMarkup);
 
                         if (IsFunctionAloneInParagraph(functionImageElement))
@@ -151,7 +157,7 @@ namespace Composite.Services
                 {
                     try
                     {
-                        string[] parts = HttpUtility.UrlDecode(referenceImageElement.Attribute("alt").Value).Split('\\');
+                        string[] parts = HttpUtility.UrlDecode(referenceImageElement.Attribute("data-markup").Value).Split('\\');
                         string typeName = parts[0];
                         string fieldName = parts[1];
 
@@ -214,9 +220,9 @@ namespace Composite.Services
             foreach (XAttribute urlAttribute in urlAttributes)
             {
                 string url = urlAttribute.Value;
-                string urlWithoutProtocol = url.Substring(url.IndexOf("//") + 2);
-                string urlHostWithPort = (urlWithoutProtocol.Contains("/") ? urlWithoutProtocol.Substring(0, urlWithoutProtocol.IndexOf("/")) : urlWithoutProtocol);
-                string urlHost = (urlHostWithPort.Contains(":") ? urlHostWithPort.Substring(0, urlHostWithPort.IndexOf(":")) : urlHostWithPort);
+                string urlWithoutProtocol = url.Substring(url.IndexOf("//", StringComparison.Ordinal) + 2);
+                string urlHostWithPort = (urlWithoutProtocol.Contains("/") ? urlWithoutProtocol.Substring(0, urlWithoutProtocol.IndexOf('/')) : urlWithoutProtocol);
+                string urlHost = (urlHostWithPort.Contains(":") ? urlHostWithPort.Substring(0, urlHostWithPort.IndexOf(':')) : urlHostWithPort);
                 if (urlHost != HttpUtility.UrlDecode(urlHost))
                 {
                     urlAttribute.Value = urlAttribute.Value.Replace(urlHost, HttpUtility.UrlDecode(urlHost));
@@ -225,9 +231,15 @@ namespace Composite.Services
         }
 
 
-
         [WebMethod]
         public XhtmlTransformationResult StructuredContentToTinyContent(string htmlFragment)
+        {
+            return StructuredContentToTinyContentMultiTemplate(htmlFragment, Guid.Empty, Guid.Empty, null, 0);
+        }
+        
+
+        [WebMethod]
+        public XhtmlTransformationResult StructuredContentToTinyContentMultiTemplate(string htmlFragment, Guid pageId, Guid pageTemplateId, string functionPreviewPlaceholderName, int width)
         {
             try
             {
@@ -244,7 +256,9 @@ namespace Composite.Services
 
                 foreach (var functionElement in functionRoots.ToList())
                 {
-                    functionElement.ReplaceWith(GetImageTagForFunctionCall(functionElement));
+                    string cssSelecor = BuildAncestorCssSelector(functionElement);
+
+                    functionElement.ReplaceWith(GetImageTagForFunctionCall(functionElement, pageId, pageTemplateId, functionPreviewPlaceholderName, cssSelecor, width));
                 }
 
                 IEnumerable<XElement> dataFieldReferences = xml.Descendants(Namespaces.DynamicData10 + "fieldreference");
@@ -298,8 +312,39 @@ namespace Composite.Services
             }
         }
 
+        private string BuildAncestorCssSelector(XElement element)
+        {
+            var sb = new StringBuilder();
+
+            foreach (var ancestor in element.Ancestors().Reverse())
+            {
+                if(ancestor.Name.LocalName == "html" || ancestor.Name.LocalName == "body") continue;
+
+                if (sb.Length > 0)
+                {
+                    sb.Append(" ");
+                }
+
+                sb.Append(ancestor.Name.LocalName);
+                string cssClasses = (string) ancestor.Attribute("class") ?? "";
+
+                foreach (var cssClass in cssClasses.Split(new [] {" "}, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    sb.Append(".").Append(cssClass);
+                }
+            }
+
+            return sb.ToString();
+        }
+
         [WebMethod]
         public string GetImageTagForFunctionCall(string functionMarkup)
+        {
+            return GetImageTagForFunctionCall2(functionMarkup, Guid.Empty, Guid.Empty, null, 0);
+        }
+        
+        [WebMethod]
+        public string GetImageTagForFunctionCall2(string functionMarkup, Guid functionPreviewPageId, Guid functionPreviewTemplateId, string functionPreviewPlaceholderName, int width)
         {
             XElement functionElement;
 
@@ -312,7 +357,8 @@ namespace Composite.Services
                 throw new ArgumentException("Unable to parse functionMarkup as XML", ex);
             }
 
-            return GetImageTagForFunctionCall(functionElement).ToString(SaveOptions.DisableFormatting);
+            return GetImageTagForFunctionCall(functionElement, functionPreviewPageId, functionPreviewTemplateId, functionPreviewPlaceholderName, null, width)
+                  .ToString(SaveOptions.DisableFormatting);
         }
 
 
@@ -373,9 +419,10 @@ namespace Composite.Services
             string imageUrl = GetFunctionBoxImageUrl("html", title, description);
 
             return new XElement(Namespaces.Xhtml + "img",
+				new XAttribute("alt", _markupWysiwygRepresentationAlt),
                 new XAttribute("src", imageUrl),
                 new XAttribute("class", "compositeHtmlWysiwygRepresentation"),
-                new XAttribute("alt", element.ToString())
+                new XAttribute("data-markup", element.ToString())
                 );
         }
 
@@ -445,19 +492,74 @@ namespace Composite.Services
             string imageUrl = GetFunctionBoxImageUrl("html", title, description.ToString());
 
             return new XElement(Namespaces.Xhtml + "img",
-                new XAttribute("src", imageUrl),
+				new XAttribute("alt", _markupWysiwygRepresentationAlt),
+				new XAttribute("src", imageUrl),
                 new XAttribute("class", "compositeHtmlWysiwygRepresentation"),
-                new XAttribute("alt", element.ToString())
+                new XAttribute("data-markup", element.ToString())
                 );
         }
 
 
         private static string GetFunctionBoxImageUrl(string type, string title, string description)
         {
-            string imageUrl = "~/Renderers/FunctionBox?type={0}&title={1}&description={2}".FormatWith(
+            string imageUrl = "~/Renderers/FunctionBox?type={0}&title={1}&description={2}&lang={3}&hash={4}".FormatWith(
 				HttpUtility.UrlEncode(type, Encoding.UTF8),
 				HttpUtility.UrlEncode(title, Encoding.UTF8),
-                UrlUtils.ZipContent(description.Trim())); // ZIPping description as it may contain xml tags f.e. <iframe />
+                UrlUtils.ZipContent(description.Trim()),
+                Thread.CurrentThread.CurrentUICulture.Name,
+                FunctionPreview.GetFunctionPreviewHash()); // ZIPping description as it may contain xml tags f.e. <iframe />
+
+            return UrlUtils.ResolvePublicUrl(imageUrl);
+        }
+
+        private static string GetFunctionBoxImageUrl_Markup(
+            string type, 
+            string title, 
+            string description,
+            string markup,
+            Guid functionPreviewPageId,
+            Guid functionPreviewTemplatePageId, 
+            string functionPreviewPlaceholderName,
+            string functionPreviewCssSelector,
+			int viewWidth,
+            bool editable)
+        {
+            string imageUrl = "~/Renderers/FunctionBox?type={0}&title={1}&description={2}&markup={3}&lang={4}&hash={5}".FormatWith(
+                HttpUtility.UrlEncode(type, Encoding.UTF8),
+                HttpUtility.UrlEncode(title, Encoding.UTF8),
+                UrlUtils.ZipContent(description.Trim()), // ZIPping description as it may contain xml tags f.e. <iframe />
+                UrlUtils.ZipContent(markup.Trim()),
+                UserSettings.GetCurrentActiveLocaleCultureInfo(UserValidationFacade.GetUsername()),
+                FunctionPreview.GetFunctionPreviewHash()); 
+
+            if (functionPreviewPageId != Guid.Empty)
+            {
+                imageUrl += "&p=" + functionPreviewPageId;
+            }
+
+            if (functionPreviewTemplatePageId != Guid.Empty)
+            {
+                imageUrl += "&t=" + functionPreviewTemplatePageId;
+            }
+
+            if (!string.IsNullOrEmpty(functionPreviewPlaceholderName))
+            {
+                imageUrl += "&ph=" + functionPreviewPlaceholderName;
+            }
+
+            if (!string.IsNullOrEmpty(functionPreviewCssSelector))
+            {
+                imageUrl += "&css=" + functionPreviewCssSelector;
+            }
+			if (viewWidth > 0)
+			{
+				imageUrl += "&width=" + viewWidth;
+			}
+
+            if (editable)
+            {
+                imageUrl += "&editable=true";
+            }
 
             return UrlUtils.ResolvePublicUrl(imageUrl);
         }
@@ -482,22 +584,30 @@ namespace Composite.Services
 				HttpUtility.UrlEncode(typeName, Encoding.UTF8));
 
             return new XElement(Namespaces.Xhtml + "img",
-                new XAttribute("src", Composite.Core.WebClient.UrlUtils.ResolveAdminUrl(imageUrl)),
+				new XAttribute("alt", string.Format("{0}", fieldName)),
+				new XAttribute("src", Composite.Core.WebClient.UrlUtils.ResolveAdminUrl(imageUrl)),
                 new XAttribute("class", "compositeFieldReferenceWysiwygRepresentation"),
-				new XAttribute("alt", HttpUtility.UrlEncode(string.Format("{0}\\{1}", uiFriendlyTypeName, fieldName), Encoding.UTF8))
+				new XAttribute("data-markup", HttpUtility.UrlEncode(string.Format("{0}\\{1}", uiFriendlyTypeName, fieldName), Encoding.UTF8))
                 );
         }
 
 
 
-        private XElement GetImageTagForFunctionCall(XElement functionElement)
+        private XElement GetImageTagForFunctionCall(
+            XElement functionElement, 
+            Guid pageId, 
+            Guid pageTemplateId, 
+            string functionPreviewPlaceholderName,
+            string functionPreviewCssSelector,
+			int viewWidth)
         {
             string title;
             StringBuilder description = new StringBuilder();
             string compactMarkup = functionElement.ToString(SaveOptions.DisableFormatting);
 
             bool error = false;
-
+            bool hasParameters = false;
+            
             try
             {
                 FunctionRuntimeTreeNode functionNode = (FunctionRuntimeTreeNode)FunctionFacade.BuildTree(functionElement);
@@ -516,13 +626,15 @@ namespace Composite.Services
                 var setParams = functionNode.GetSetParameters().ToList();
                 if (setParams.Any()) description.Append("\n");
 
-                IEnumerable<ParameterProfile> parameterProfiles = FunctionFacade.GetFunction(functionName).ParameterProfiles;
+                ICollection<ParameterProfile> parameterProfiles = FunctionFacade.GetFunction(functionName).ParameterProfiles.Evaluate();
 
                 foreach (var setParam in setParams.Take(10))
                 {
                     AddParameterInformation(description, setParam, parameterProfiles);
                 }
-                
+
+                hasParameters = parameterProfiles.Any();
+                    
                 if (setParams.Count > 10)
                 {
                     description.AppendLine("....");
@@ -536,12 +648,21 @@ namespace Composite.Services
                 error = true;
             }
 
-            string functionBoxUrl = GetFunctionBoxImageUrl(error ? "warning" : "function", title, description.ToString());
+            string functionBoxUrl = error ? GetFunctionBoxImageUrl("warning", title, description.ToString())
+                                          : GetFunctionBoxImageUrl_Markup("function", title, description.ToString(), functionElement.ToString(), 
+                                                                           pageId, 
+                                                                           pageTemplateId, 
+                                                                           functionPreviewPlaceholderName, 
+                                                                           functionPreviewCssSelector, 
+                                                                           viewWidth,
+                                                                           hasParameters);
 
             XElement imagetag = new XElement(Namespaces.Xhtml + "img"
-                , new XAttribute("alt", compactMarkup)
+				, new XAttribute("alt", _markupWysiwygRepresentationAlt)
+				, new XAttribute("data-markup", compactMarkup)
                 , new XAttribute("src", functionBoxUrl)
-                , new XAttribute("class", "compositeFunctionWysiwygRepresentation")
+                , new XAttribute("onload", "this.className += ' loaded';")
+				, new XAttribute("class", "compositeFunctionWysiwygRepresentation" + (hasParameters ? " editable" : ""))
                 );
 
             return imagetag;
@@ -603,16 +724,15 @@ namespace Composite.Services
                     paramValue = "[error]";
                 }
 
-                if (!paramValue.IsNullOrEmpty() && paramValue.Length > 35)
+                Guid tempGuid;
+                if (!paramValue.IsNullOrEmpty() && Guid.TryParse(paramValue, out tempGuid))
                 {
-                    if (paramValue.IndexOf(' ') == -1)
-                    {
-                        paramValue = "...";
-                    }
-                    else
-                    {
-                        paramValue = paramValue.Substring(0, 35) + "...";
-                    }
+                    paramValue = "...";
+                }
+                
+                if(paramValue.Length > 45)
+                {
+                    paramValue = paramValue.Substring(0, 42) + "...";
                 }
                         
                 description.AppendLine("{0} = {1}".FormatWith(paramLabel, paramValue));

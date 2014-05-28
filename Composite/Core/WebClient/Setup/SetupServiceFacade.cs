@@ -78,7 +78,7 @@ namespace Composite.Core.WebClient.Setup
 
 
         /// <exclude />
-        public static void SetUp(string setupDescriptionXml, string username, string password, string email, string language, string consoleLanguage, bool newsletter)
+        public static bool SetUp(string setupDescriptionXml, string username, string password, string email, string language, string consoleLanguage, bool newsletter)
         {
             ApplicationOnlineHandlerFacade.TurnApplicationOffline(false);
 
@@ -93,27 +93,11 @@ namespace Composite.Core.WebClient.Setup
                 new XElement("user_websitelanguage", language),
                 setupDescription);
 
+            bool success = false;
+
             try
             {
-                Log.LogVerbose(VerboseLogTitle, "Setting up the system for the first time");
-
-                CultureInfo locale = new CultureInfo(language);
-                CultureInfo userCulture = new CultureInfo(consoleLanguage);
-
-                ApplicationLevelEventHandlers.ApplicationStartInitialize();
-
-                Log.LogVerbose(VerboseLogTitle, "Creating first locale: " + language);
-                LocalizationFacade.AddLocale(locale, "", true, false);
-                LocalizationFacade.SetDefaultLocale(locale);
-
-
-                Log.LogVerbose(VerboseLogTitle, "Creating first user: " + username);
-                AdministratorAutoCreator.AutoCreatedAdministrator(username, password, email, false);
-                UserValidationFacade.FormValidateUser(username, password);
-
-                UserSettings.SetUserCultureInfo(username, userCulture);
-
-                Log.LogVerbose(VerboseLogTitle, "Packages to install:");
+                Log.LogInformation(VerboseLogTitle, "Downloading packages");
 
                 string[] packageUrls = GetPackageUrls(setupDescription).ToArray();
                 MemoryStream[] packages = new MemoryStream[packageUrls.Length];
@@ -123,19 +107,43 @@ namespace Composite.Core.WebClient.Setup
                     packages[i] = DownloadPackage(packageUrls[i]);
                 });
 
+                Log.LogInformation(VerboseLogTitle, "Setting up the system for the first time");
+
+                CultureInfo locale = new CultureInfo(language);
+                CultureInfo userCulture = new CultureInfo(consoleLanguage);
+
+                ApplicationLevelEventHandlers.ApplicationStartInitialize();
+
+                Log.LogInformation(VerboseLogTitle, "Creating first locale: " + language);
+                LocalizationFacade.AddLocale(locale, "", true, false);
+                LocalizationFacade.SetDefaultLocale(locale);
+
+
+                Log.LogInformation(VerboseLogTitle, "Creating first user: " + username);
+                AdministratorAutoCreator.AutoCreatedAdministrator(username, password, email, false);
+                UserValidationFacade.FormValidateUser(username, password);
+
+                UserSettings.SetUserCultureInfo(username, userCulture);
+
                 for (int i = 0; i < packageUrls.Length; i++)
                 {
-                    Log.LogVerbose(VerboseLogTitle, "Installing package: " + packageUrls[i]);
-                    InstallPackage(packageUrls[i], packages[i]);
+                    Log.LogVerbose(VerboseLogTitle, "Installing package from url " + packageUrls[i]);
+                    bool packageValidationSucceded = InstallPackage(packageUrls[i], packages[i]);
+
+                    // Releasing a reference to reduce memory usage
+                    packages[i].Dispose();
+                    packages[i] = null;
                 }
 
-                bool translationExists = InstallLanguagePackage(userCulture);
+                CultureInfo installedLanguagePackageCulture = InstallLanguagePackage(userCulture);
 
-                UserSettings.SetUserC1ConsoleUiLanguage(username, (translationExists ? userCulture : StringResourceSystemFacade.GetDefaultStringCulture()));
+                UserSettings.SetUserC1ConsoleUiLanguage(username, installedLanguagePackageCulture ?? StringResourceSystemFacade.GetDefaultStringCulture());
 
                 RegisterSetup(setupRegisrtatoinDescription.ToString(), "");
 
-                Log.LogVerbose(VerboseLogTitle, "Done settingup the system for the first time! Enjoy!");
+                Log.LogInformation(VerboseLogTitle, "Done setting up the system for the first time! Enjoy!");
+
+                success = true;
             }
             catch (Exception ex)
             {
@@ -152,6 +160,7 @@ namespace Composite.Core.WebClient.Setup
             }
 
             ApplicationOnlineHandlerFacade.TurnApplicationOnline();
+            return success;
         }
 
 
@@ -191,13 +200,13 @@ namespace Composite.Core.WebClient.Setup
 
 
         /// <exclude />
-        public static XElement GetLanguagePackages()
+        public static Dictionary<CultureInfo, string> GetLanguagePackages()
         {
             SetupSoapClient client = CreateClient();
 
             XElement xml = client.GetLanguagePackages(RuntimeInformation.ProductVersion.ToString(), InstallationInformationFacade.InstallationId.ToString());
 
-            return xml;
+            return xml.Descendants("Language").ToDictionary(f => new CultureInfo(f.Attribute("key").Value), f =>f.Attribute("url").Value);
         }
 
 
@@ -228,32 +237,28 @@ namespace Composite.Core.WebClient.Setup
 
 
 
-        private static bool InstallLanguagePackage(CultureInfo userCulture)
+        private static CultureInfo InstallLanguagePackage(CultureInfo userCulture)
         {
-            string userCultureString = userCulture.Name;
+            Dictionary<CultureInfo, string> languagePackages = GetLanguagePackages();
 
-            XElement languagePackagesXml = GetLanguagePackages();
+            CultureInfo installLanguagePackageCulture = 
+                languagePackages.ContainsKey(userCulture) ? 
+                userCulture : 
+                languagePackages.Keys.FirstOrDefault(f => f.TwoLetterISOLanguageName == userCulture.TwoLetterISOLanguageName);
 
-            string url = languagePackagesXml.
-                Descendants("Language").
-                Where(f => f.Attribute("key") != null && f.Attribute("key").Value == userCultureString).
-                Select(f => f.Attribute("url").Value).
-                FirstOrDefault();
-
-
-            if (url == null)
+            if (installLanguagePackageCulture != null)
             {
-                return false;
+                string url = languagePackages[installLanguagePackageCulture];
+
+                string packageUrl = string.Format(PackageUrlFormat, PackageServerUrl, url);
+
+                Log.LogInformation(VerboseLogTitle, "Installing package: " + packageUrl);
+
+                var packageStream = DownloadPackage(packageUrl);
+                InstallPackage(packageUrl, packageStream);
             }
 
-            string packageUrl = string.Format(PackageUrlFormat, PackageServerUrl, url);
-
-            Log.LogVerbose(VerboseLogTitle, "Installing package: " + packageUrl);
-
-            var packageStream = DownloadPackage(packageUrl);
-            InstallPackage(packageUrl, packageStream);
-
-            return true;
+            return installLanguagePackageCulture;
         }
 
 
@@ -350,12 +355,9 @@ namespace Composite.Core.WebClient.Setup
 
             basicHttpBinding.MaxReceivedMessageSize = int.MaxValue;
 
-            string url = PackageServerUrl;
             if (PackageServerUrl.StartsWith("https://"))
             {
                 basicHttpBinding.Security.Mode = BasicHttpSecurityMode.Transport;
-
-                url = url.Remove(0, 8);
             }           
 
             SetupSoapClient client = new SetupSoapClient(basicHttpBinding, new EndpointAddress(string.Format(SetupServiceUrl, PackageServerUrl)));

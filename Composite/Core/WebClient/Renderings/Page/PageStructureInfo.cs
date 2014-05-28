@@ -40,7 +40,9 @@ namespace Composite.Core.WebClient.Renderings.Page
             public Dictionary<string, Guid> UrlToIdLookup;
             public Dictionary<string, Guid> LowerCaseUrlToIdLookup;
             public Dictionary<Guid, string> IdToUrlLookup;
+#pragma warning disable 612
             public IPageUrlBuilder PageUrlBuilder;
+#pragma warning restore 612
         }
 
         private static readonly Hashtable<MapKey, Map> _generatedMaps = new Hashtable<MapKey, Map>();
@@ -48,7 +50,7 @@ namespace Composite.Core.WebClient.Renderings.Page
         private static readonly object _updatingLock = new object();
         private static readonly object[] _buildingLock = new[] { new object(), new object() }; // Separated objects for 'Public' and 'Administrated' scopes
 
-        private static XName PageElementName = "Page";
+        private static readonly XName PageElementName = "Page";
 
         private static readonly string LogTitle = "PageStructureInfo";
 
@@ -67,6 +69,7 @@ namespace Composite.Core.WebClient.Renderings.Page
         /// The items in the list is returned in document order and the labels are indented with one space for each depth level
         /// of the page.
         /// </summary>
+        [Obsolete]
         public static IEnumerable<KeyValuePair<Guid, string>> PageListInDocumentOrder()
         {
             return PageListInDocumentOrder(GetSiteMap(), 0);
@@ -145,15 +148,130 @@ namespace Composite.Core.WebClient.Renderings.Page
             }
         }
 
+        private static IEnumerable<Guid> GetDescendants(Guid pageId)
+        {
+            foreach (var childId in PageManager.GetChildrenIDs(pageId))
+            {
+                foreach (var descendantOrSelf in GetDescendantsAndSelf(childId))
+                {
+                    yield return descendantOrSelf;
+                }
+            }
+        }
 
+        private static IEnumerable<Guid> GetDescendantsAndSelf(Guid pageId)
+        {
+            yield return pageId;
+
+            foreach (var childId in PageManager.GetChildrenIDs(pageId))
+            {
+                foreach (var descendantOrSelf in GetDescendantsAndSelf(childId))
+                {
+                    yield return descendantOrSelf;
+                }
+            }
+        }
+
+        private static List<Guid> GetAncestors(Guid pageId, bool andSelf)
+        {
+            var result = new List<Guid>();
+
+            if (andSelf)
+            {
+                result.Add(pageId);
+            }
+
+            pageId = PageManager.GetParentId(pageId);
+
+            while (pageId != Guid.Empty)
+            {
+                result.Add(pageId);
+
+                pageId = PageManager.GetParentId(pageId);
+            }
+
+            return result;
+        }
 
         /// <exclude />
         public static IEnumerable<Guid> GetAssociatedPageIds(Guid pageId, SitemapScope associationScope)
         {
-            return GetAssociatedPageIds(pageId, associationScope, PageStructureInfo.GetSiteMap());
+            switch (associationScope)
+            {
+                case SitemapScope.Current:
+                    return new[] {pageId};
+                case SitemapScope.All:
+                    return DataFacade.GetData<IPage>().Select(p => p.Id).ToList();
+                case SitemapScope.Descendants:
+                    return GetDescendants(pageId);
+                case SitemapScope.DescendantsAndCurrent:
+                    return GetDescendantsAndSelf(pageId);
+                case SitemapScope.Children:
+                    return PageManager.GetChildrenIDs(pageId);
+                case SitemapScope.Siblings:
+                    Guid parentId = PageManager.GetParentId(pageId);
+                    return PageManager.GetChildrenIDs(parentId).Where(i => i != pageId);
+                case SitemapScope.SiblingsAndSelf:
+                    parentId = PageManager.GetParentId(pageId);
+                    return PageManager.GetChildrenIDs(parentId);
+                case SitemapScope.Ancestors:
+                    return GetAncestors(pageId, false);
+                case SitemapScope.AncestorsAndCurrent:
+                    return GetAncestors(pageId, true);
+                case SitemapScope.Parent:
+                    parentId = PageManager.GetParentId(pageId);
+                    return parentId != Guid.Empty ? new[] {parentId} : new Guid[0];
+                case SitemapScope.Level1:
+                case SitemapScope.Level2:
+                case SitemapScope.Level3:
+                case SitemapScope.Level4:
+                case SitemapScope.Level1AndDescendants:
+                case SitemapScope.Level2AndDescendants:
+                case SitemapScope.Level3AndDescendants:
+                case SitemapScope.Level4AndDescendants:
+                case SitemapScope.Level1AndSiblings:
+                case SitemapScope.Level2AndSiblings:
+                case SitemapScope.Level3AndSiblings:
+                case SitemapScope.Level4AndSiblings:
+                    int level = int.Parse(associationScope.ToString().Substring(5, 1));
+
+                    var ancestors = GetAncestors(pageId, true);
+
+                    ancestors.Reverse();
+
+                    bool andSiblings = associationScope.ToString().EndsWith("AndSiblings");
+                    if (andSiblings)
+                    {
+                        if (ancestors.Count < level - 1)
+                        {
+                            return new Guid[0];
+                        }
+
+                        Guid parentPageId = level == 1 ? Guid.Empty : ancestors[level - 2];
+                        return GetAssociatedPageIds(parentPageId, SitemapScope.Children);
+                    }
+
+                    if (ancestors.Count < level)
+                    {
+                        return new Guid[0];
+                    }
+
+                    Guid levelPageId = ancestors[level - 1];
+
+                    bool andDescendants = associationScope.ToString().EndsWith("AndDescendants");
+                    if (andDescendants)
+                    {
+                        return GetDescendantsAndSelf(levelPageId);
+                    }
+
+                    
+
+                    return new[] {levelPageId};
+                default:
+                    throw new NotImplementedException("Unhandled SitemapScope type: " + associationScope);
+            }
         }
-
-
+        
 
         /// <exclude />
         public static IEnumerable<Guid> GetAssociatedPageIds(Guid pageId, SitemapScope associationScope, IEnumerable<XElement> sitemaps)
@@ -164,7 +282,9 @@ namespace Composite.Core.WebClient.Renderings.Page
                     yield return pageId;
                     break;
                 case SitemapScope.All:
+#pragma warning disable 618
                     foreach (Guid id in GetIdToUrlLookup().Keys)
+#pragma warning restore 618
                     {
                         yield return id;
                     }
@@ -189,7 +309,7 @@ namespace Composite.Core.WebClient.Renderings.Page
                 case SitemapScope.Level3AndSiblings:
                 case SitemapScope.Level4AndSiblings:
                     string pageIdString = pageId.ToString();
-                    XAttribute idMatchAttrib = sitemaps.DescendantsAndSelf().Attributes("Id").Where(id => id.Value == pageIdString).FirstOrDefault();
+                    XAttribute idMatchAttrib = sitemaps.DescendantsAndSelf().Attributes("Id").FirstOrDefault(id => id.Value == pageIdString);
                     if (idMatchAttrib != null)
                     {
                         XElement currentPageElement = idMatchAttrib.Parent;
@@ -205,7 +325,6 @@ namespace Composite.Core.WebClient.Renderings.Page
                     throw new NotImplementedException("Unhandled SitemapScope type: " + associationScope);
             }
         }
-
 
         private static Map GetMap()
         {
@@ -293,6 +412,7 @@ namespace Composite.Core.WebClient.Renderings.Page
         }
 
         /// <exclude />
+        [Obsolete("Use Composite.Core.Routing namespace to work with URLs")]
         public static bool TryGetPageUrl(Guid guid, out string pageUrl)
         {
             return GetMap().IdToUrlLookup.TryGetValue(guid, out pageUrl);
@@ -332,6 +452,7 @@ namespace Composite.Core.WebClient.Renderings.Page
         }
 
         /// <exclude />
+        [Obsolete("Use Composite.Core.Routing namespace to work with URLs")]
         public static IPageUrlBuilder GetPageUrlBuilder(PublicationScope publicationScope, CultureInfo localizationScope, UrlSpace urlSpace)
         {
             return GetMap(publicationScope, localizationScope, urlSpace).PageUrlBuilder;
@@ -339,6 +460,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
 
         /// <exclude />
+        [Obsolete("Use Composite.Core.Routing namespace to work with URLs")]
         public static Dictionary<Guid, string> GetIdToUrlLookup()
         {
             return GetIdToUrlLookup(DataScopeManager.CurrentDataScope.Name, LocalizationScopeManager.CurrentLocalizationScope);
@@ -347,6 +469,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
 
         /// <exclude />
+        [Obsolete("Use Composite.Core.Routing namespace to work with URLs")]
         public static Dictionary<Guid, string> GetIdToUrlLookup(string dataScopeIdentifier, CultureInfo culture)
         {
             using (new DataScope(DataScopeIdentifier.Deserialize(dataScopeIdentifier), culture))
@@ -504,10 +627,10 @@ namespace Composite.Core.WebClient.Renderings.Page
                 var publicationScope = DataScopeManager.CurrentDataScope.ToPublicationScope();
                 var localizationScope = LocalizationScopeManager.CurrentLocalizationScope;
 
-                LoggingService.LogVerbose(LogTitle, string.Format("Building page structure in the publication scope '{0}' with the localization scope '{1}'", publicationScope, localizationScope));
+                Log.LogVerbose(LogTitle, string.Format("Building page structure in the publication scope '{0}' with the localization scope '{1}'", publicationScope, localizationScope));
 
-                Dictionary<string, Guid> urlToIdLookup = new Dictionary<string, Guid>();
-                Dictionary<Guid, string> idToUrlLookup = new Dictionary<Guid, string>();
+                var urlToIdLookup = new Dictionary<string, Guid>();
+                var idToUrlLookup = new Dictionary<Guid, string>();
 
                 var pagesData = new SitemapBuildingData();
 
@@ -518,7 +641,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
                     if (pageStructure == null)
                     {
-                        LoggingService.LogWarning(LogTitle, "Failed to find PageStructure data. Page ID is '{0}'".FormatWith(page.Id));
+                        Log.LogWarning(LogTitle, "Failed to find PageStructure data. Page ID is '{0}'".FormatWith(page.Id));
                         continue;
                     }
 
@@ -553,8 +676,10 @@ namespace Composite.Core.WebClient.Renderings.Page
 
                 BuildXmlStructure(root, Guid.Empty, pageToToChildElementsTable, 100);
 
+#pragma warning disable 612
                 var pageUrlBuilder = PageUrls.UrlProvider.CreateUrlBuilder(publicationScope, localizationScope, urlSpace);
                 BuildFolderPaths(pagesData, root.Elements(), pageUrlBuilder, urlToIdLookup);
+#pragma warning restore 612
 
                 foreach (var urlLookupEntry in urlToIdLookup)
                 {
@@ -569,7 +694,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
                     if (lowerCaseUrlToIdLookup.ContainsKey(loweredUrl))
                     {
-                        LoggingService.LogError(LogTitle, "Multiple pages share the same path '{0}'. Page ID: '{1}'. Duplicates are ignored.".FormatWith(loweredUrl, keyValuePair.Value));
+                        Log.LogError(LogTitle, "Multiple pages share the same path '{0}'. Page ID: '{1}'. Duplicates are ignored.".FormatWith(loweredUrl, keyValuePair.Value));
                         continue;
                     }
 
@@ -605,11 +730,13 @@ namespace Composite.Core.WebClient.Renderings.Page
             }
         }
 
+        [Obsolete("Use Composite.Core.Routing namespace to work with URLs")]
         private static void BuildFolderPaths(SitemapBuildingData pagesData, IEnumerable<XElement> roots, IPageUrlBuilder pageUrlBuilder, IDictionary<string, Guid> urlToIdLookup)
         {
             BuildFolderPaths(pagesData, roots, urlToIdLookup, pageUrlBuilder);
         }
 
+        [Obsolete("Use Composite.Core.Routing namespace to work with URLs")]
         private static void BuildFolderPaths(SitemapBuildingData pagesData, IEnumerable<XElement> elements, IDictionary<string, Guid> urlToIdLookup, IPageUrlBuilder builder)
         {
             foreach (XElement element in elements)

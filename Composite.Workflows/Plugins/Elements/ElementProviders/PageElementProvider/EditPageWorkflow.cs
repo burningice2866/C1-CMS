@@ -215,7 +215,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                     ILocalizedControlled localizedData = metaData as ILocalizedControlled;
                     if (localizedData != null)
                     {
-                        localizedData.CultureName = UserSettings.ActiveLocaleCultureInfo.Name;
                         localizedData.SourceCultureName = UserSettings.ActiveLocaleCultureInfo.Name;
                     }
 
@@ -436,7 +435,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                         originalPage.FriendlyUrl = selectedPage.FriendlyUrl;
                         originalPage.Description = selectedPage.Description;
                         originalPage.PublicationStatus = selectedPage.PublicationStatus;
-                        originalPage.CultureName = selectedPage.CultureName;
                         originalPage.SourceCultureName = selectedPage.SourceCultureName;
                         DataFacade.Update(originalPage);
 
@@ -463,7 +461,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                             newContent.PageId = selectedPage.Id;
                             newContent.PlaceHolderId = contentDictionaryElement.Key;
                             newContent.Content = contentDictionaryElement.Value;
-                            newContent.CultureName = UserSettings.ActiveLocaleCultureInfo.Name;
                             newContent.SourceCultureName = UserSettings.ActiveLocaleCultureInfo.Name;
                             newContent.PublicationStatus = GenericPublishProcessController.Draft;
 
@@ -488,13 +485,25 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
                 if (_doPublish)
                 {
-                    GenericPublishProcessController.PublishActionToken actionToken = new GenericPublishProcessController.PublishActionToken();
+                    if (publishWorkflowInstance==null || this.PublishDate < DateTime.Now)
+                    {
+                        GenericPublishProcessController.PublishActionToken actionToken = new GenericPublishProcessController.PublishActionToken();
 
-                    FlowControllerServicesContainer serviceContainer = WorkflowFacade.GetFlowControllerServicesContainer(WorkflowEnvironment.WorkflowInstanceId);
+                        FlowControllerServicesContainer serviceContainer = WorkflowFacade.GetFlowControllerServicesContainer(WorkflowEnvironment.WorkflowInstanceId);
 
-                    ActionExecutorFacade.Execute(EntityToken, actionToken, serviceContainer);
+                        ActionExecutorFacade.Execute(EntityToken, actionToken, serviceContainer);
+
+                        treeviewRequiresRefreshing = false;
+                    }
+                    else
+                    {
+                        string title = StringResourceSystemFacade.GetString("Composite.Management", "Website.Forms.Administrative.EditPage.PublishDatePreventPublishTitle");
+                        string message = StringResourceSystemFacade.GetString("Composite.Management", "Website.Forms.Administrative.EditPage.PublishDatePreventPublish");
+                        this.ShowMessage(DialogType.Warning, title, message);
+                    }
                 }
-                else if (treeviewRequiresRefreshing)
+                
+                if (treeviewRequiresRefreshing)
                 {
                     updateTreeRefresher.PostRefreshMesseges(selectedPage.GetDataEntityToken());
                 }
@@ -544,7 +553,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                     ILocalizedControlled localizedData = newData as ILocalizedControlled;
                     if (localizedData != null)
                     {
-                        localizedData.CultureName = UserSettings.ActiveLocaleCultureInfo.Name;
                         localizedData.SourceCultureName = UserSettings.ActiveLocaleCultureInfo.Name;
                     }
 
@@ -594,11 +602,22 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         }
 
 
+        private DateTime? PublishDate 
+        {
+            get { return this.GetBinding<DateTime?>("PublishDate"); }
+        }
+
+        private DateTime? UnpublishDate
+        {
+            get { return this.GetBinding<DateTime?>("UnpublishDate"); }
+        }
+
+
 
         private void HandlePublishUnpublishWorkflows(IPage selectedPage, ref WorkflowInstance publishWorkflowInstance, ref WorkflowInstance unpublishWorkflowInstance)
         {
-            DateTime? publishDateTime = this.GetBinding<DateTime?>("PublishDate");
-            DateTime? unpublishDateTime = this.GetBinding<DateTime?>("UnpublishDate");
+            DateTime? publishDateTime = this.PublishDate;
+            DateTime? unpublishDateTime = this.UnpublishDate;
 
             IPagePublishSchedule existingPagePublishSchedule =
                 (from ps in DataFacade.GetData<IPagePublishSchedule>()

@@ -12,6 +12,7 @@ using Composite.Core.Types;
 using Composite.Functions;
 using Composite.Functions.Plugins.FunctionProvider;
 using Composite.Core.Application;
+using Composite.Core.Configuration;
 
 namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvider
 {
@@ -52,7 +53,7 @@ namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvide
 			{
                 var returnList = new List<IFunction>();
 
-                if(!C1Directory.Exists(PhysicalPath))
+                if (!C1Directory.Exists(PhysicalPath) || !(SystemSetupFacade.IsSystemFirstTimeInitialized && !SystemSetupFacade.SetupIsRunning))
                 {
                     return returnList;
                 }
@@ -120,7 +121,7 @@ namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvide
                         // supressing error messages while in offline mode - we are installing stuff here.
                         if (ApplicationOnlineHandlerFacade.IsApplicationOnline && !HostingEnvironment.ApplicationHost.ShutdownInitiated())
                         {
-                            Log.LogError(LogTitle, "Error instantiating {0} function", name);
+                            Log.LogError(LogTitle, "Error instantiating function {0} ", @namespace + "." + name);
                             Log.LogError(LogTitle, ex);
                         }
 

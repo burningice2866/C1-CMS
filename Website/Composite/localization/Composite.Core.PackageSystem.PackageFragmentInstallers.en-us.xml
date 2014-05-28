@@ -36,7 +36,9 @@
   <string key="DataPackageFragmentInstaller.ReferencedDataMissing" value="Referenced data missing. Type: {0}, {1}: '{2}'" />
   <string key="DataPackageFragmentUninstaller.OnlyOneElement" value="Only one 'Types' element allowed" />
   <string key="DataPackageFragmentUninstaller.MissingAttribute" value="Missing {0} attribute in the configuration" />
-  <string key="DataPackageFragmentUninstaller.MissingKeyProperty" value="The data type '{0}' does not contain a key property named '{1}" />
+  <string key="DataPackageFragmentUninstaller.MissingKeyProperty" value="The data type '{0}' does not contain a key property named '{1}'" />
+  <string key="DataPackageFragmentUninstaller.DataIsReferenced" value="Data item '{0}' of type {1} is referenced from a data item '{2}' of type '{3}'" />
+  <string key="DataPackageFragmentUninstaller.PageTypeIsReferenced" value="Page type '{0}' is referenced by page '{1}'" />
   <string key="DataTypePackageFragmentInstaller.OnlyOneElement" value="Only one 'Types' element allowed" />
   <string key="DataTypePackageFragmentInstaller.MissingElement" value="Missing 'Types' element" />
   <string key="DataTypePackageFragmentInstaller.MissingAttribute" value="Missing {0} attribute in the configuration" />
@@ -90,6 +92,8 @@
   <string key="PackageVersionBumberFragmentUninstaller.PackageIdDuplicate" value="The package id duplicate: '{0}'" />
   <string key="PackageVersionBumberFragmentUninstaller.WrongAttributeVersionFormat" value="Wrong attribute value format, Version value expected (x.y.z)" />
   <string key="PackageLicenseFragmentInstaller.MissingPublicKeyElement" value="A public RSA key is missing in the package configuration" />
+
+  <string key="FileModifyPackageFragmentInstaller.FileDoesNotExist" value="File '{0}' does not exist." />
 
   <string key="License.InvalidKeyTitle" value="Invalid license key" />
   <string key="License.InvalidKeyMessage" value="The license key is invalid. You need to obtain a valid license key." />

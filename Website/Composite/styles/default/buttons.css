@@ -15,31 +15,25 @@ ui|toolbarlabel {
 	margin-right: 2px;
 	overflow: hidden !important; /* contain added stuff */
 }
-ui|clickbutton table.matrix td.c {
-	padding: 3px 6px 2px 6px; /*5px 8px 4px 8px;*/
-	#moz: padding-bottom: 3px;
-	#region vista
-		padding: 3px 6px 4px 6px;
-		_padding: 3px 6px 2px 6px;
-	#endregion
+ui|clickbutton {
+	padding: 0;
+	
 }
-ui|toolbar ui|clickbutton table.matrix td.c {
-	padding: 0 2px 0 2px;
+
+ui|clickbutton ui|labelbox {
+	float: none;
+	overflow: hidden;
+	padding: 6px 9px 7px;
 }
+
+ui|toolbar ui|clickbutton ui|labelbox {
+	padding: 3px 5px;
+}
+
+ui|toolbar ui|selector ui|clickbutton ui|labelbox{
+	padding: 3px 24px 3px 3px;
+}
+
 ui|checkbutton {
     margin-top: 2px;
 }
-
-/*
-produce a pressed-down effect - unfortunately, 
-this will crop images on small buttons!
-ui|toolbarbutton.active ui|labelbox,
-ui|clickbutton.active ui|labelbox {
-	position: relative;
-	top: 1px;
-	left: 1px;
-	#region osx
-		position: static;
-	#endregion
-}
-*/

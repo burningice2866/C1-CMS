@@ -37,10 +37,11 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
     private static readonly XName ParameterNodeXName = Namespaces.Function10 + "param";
     private static readonly XName FunctionNodeXName = Namespaces.Function10 + "function";
     private static readonly XName WidgetFunctionNodeXName = Namespaces.Function10 + "widgetfunction";
-    private static readonly XName ParameterValueElementXName = Namespaces.Function10 + "paramelement";
 
     private static readonly string SessionStateProviderQueryKey = "StateProvider";
     private static readonly string StateIdQueryKey = "Handle";
+
+    private static readonly string SelectedInputParameter_AttributeName = "inputParameter";
 
     private static readonly string GetInputParameterFunctionName = "Composite.Utils.GetInputParameter";
     private static readonly string GetInputParameterFunctionParameterName = "InputParameterName";
@@ -944,7 +945,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
 
         IMetaFunction function = TreeHelper.GetFunction(functionNode);
         ParameterProfile parameterProfile = function.ParameterProfiles.FirstOrDefault(p => p.Name == parameterName);
-        var selectedParameter = _state.Parameters.First(ip => InputParameterCanBeAssigned(parameterProfile.Type, ip.Type));
+        var selectedParameter = _state.Parameters.FirstOrDefault(ip => InputParameterCanBeAssigned(parameterProfile.Type, ip.Type));
         string selectedParameterName = selectedParameter != null ? selectedParameter.Name : string.Empty;
 
 
@@ -1096,7 +1097,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
             return;
         }
 
-        if (parameterNode.Attribute("inputParameter") != null)
+        if (parameterNode.Attribute(SelectedInputParameter_AttributeName) != null)
         {
             ShowInputParameterSelector(parameterProfile, parameterNode);
             mlvWidget.Visible = true;
@@ -1116,7 +1117,12 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
         btnConstant.Attributes["isdisabled"] = "true";
         btnConstant.Attributes["image"] = "${icon:accept}";
 
-        object parameterValue = GetParameterValue(parameterNode, parameterProfile);
+        object parameterValue = FunctionMarkupHelper.GetParameterValue(parameterNode, parameterProfile);
+
+        if (parameterProfile.Type.IsLazyGenericType() && parameterValue != null)
+        {
+            parameterValue = parameterProfile.Type.GetProperty("Value").GetGetMethod().Invoke(parameterValue, null);
+        }
 
         // Adding a widget
         var bindings = new Dictionary<string, object> { { parameterProfile.Name, parameterValue } };
@@ -1157,51 +1163,12 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
         WidgetIsShown = true;
     }
 
-    private object GetParameterValue(XElement parameterNode, ParameterProfile parameterProfile)
-    {
-        List<XElement> parameterElements = parameterNode.Elements(ParameterValueElementXName).ToList();
-        if (parameterElements.Any())
-        {
-            return parameterElements.Select(element => element.Attribute("value").Value).ToList();
-        }
-        
-        var valueAttr = parameterNode.Attribute("value");
-        if (valueAttr != null)
-        {
-            try
-            {
-                return ValueTypeConverter.Convert(valueAttr.Value, parameterProfile.Type);
-            }
-            catch (Exception ex)
-            {
-                Log.LogError(LogTitle, ex);
-
-                return parameterProfile.GetDefaultValue();
-            }
-        }
-
-        if (parameterNode.Elements().Any())
-        {
-            Type paramType = parameterProfile.Type;
-                
-            if (paramType.IsSubclassOf(typeof (XContainer))
-                || (paramType.IsGenericType
-                    && paramType.GetGenericTypeDefinition() == typeof(Lazy<>)
-                    && paramType.GetGenericArguments()[0].IsSubclassOf(typeof(XContainer))))
-            {
-                return ValueTypeConverter.Convert(parameterNode.Elements().First(), parameterProfile.Type);
-            }
-            
-            throw new NotImplementedException("Not supported type of function parameter element node: '{0}'".FormatWith(paramType.FullName));
-        }
-
-        return parameterProfile.GetDefaultValue();
-    }
 
     private static bool FunctionIsOnTopLevel(XElement functionNode)
     {
         return functionNode.Parent.Name.LocalName == "functions";
     }
+
 
     private void ShowInputParameterSelector(ParameterProfile parameterProfile, XElement parameterName)
     {
@@ -1222,7 +1189,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
             }
         }
 
-        lstInputParameterName.SelectedValue = parameterName.Attribute("inputParameter").Value;
+        lstInputParameterName.SelectedValue = parameterName.Attribute(SelectedInputParameter_AttributeName).Value;
 
         InputParameterSelectorIsShown = true;
     }
@@ -1435,7 +1402,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
     /// <param name="root"></param>
     private static void CollapseGetInputParamaterFunctionCalls(XElement root, HashSet<string> inputParameterNodeIDs)
     {
-        Func<XElement, bool> isUnnestedFunction10 = f => f.Ancestors().All(g => g.Name.Namespace == Namespaces.Function10);
+        Func<XElement, bool> isUnnestedFunction10 = f => f.Ancestors().All(g => g.Name.Namespace == Namespaces.Function10 || g.Parent == null);
         List<XElement> parameterNodes = root.Descendants(ParameterNodeXName).Where(isUnnestedFunction10).ToList();
 
         var toBeRemoved = new List<XElement>();
@@ -1447,8 +1414,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
 
             XElement functionNode = parameterElement.Elements().FirstOrDefault();
             if (functionNode == null
-                || functionNode.Attribute("name") == null
-                || functionNode.Attribute("name").Value != GetInputParameterFunctionName) continue;
+                || (string) functionNode.Attribute("name") != GetInputParameterFunctionName) continue;
 
             XAttribute parameterNameAttr = functionNode.Elements().First().Attribute("value");
 
@@ -1458,7 +1424,7 @@ public partial class functioneditor : Composite.Core.WebClient.XhtmlPage
             string parameterName = parameterNameAttr.Value;
 
             toBeRemoved.Add(functionNode);
-            parameterElement.Add(new XAttribute("inputParameter", parameterName));
+            parameterElement.Add(new XAttribute(SelectedInputParameter_AttributeName, parameterName));
         }
 
         toBeRemoved.ForEach(element => element.Remove());

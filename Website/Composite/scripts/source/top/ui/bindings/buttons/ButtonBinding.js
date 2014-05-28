@@ -1,6 +1,6 @@
-ButtonBinding.prototype = new MatrixBinding;
+ButtonBinding.prototype = new Binding;
 ButtonBinding.prototype.constructor = ButtonBinding;
-ButtonBinding.superclass = MatrixBinding.prototype;
+ButtonBinding.superclass = Binding.prototype;
 
 ButtonBinding.ACTION_COMMAND = "buttoncommand";
 ButtonBinding.ACTION_RADIOBUTTON_ATTACHED = "radiobutton attached";
@@ -628,7 +628,7 @@ ButtonBinding.prototype._check = function ( isStateManager ) {
 ButtonBinding.prototype.uncheck = function ( isDisableCommand ) {
 
 	if (( this.isCheckButton || this.isRadioButton ) && this.isChecked ) {
-		if ( this.isAttached == true ) {
+		if (this.isAttached == true && !this.isDisposed) {
 			this._uncheck ();
 			if ( !isDisableCommand == true ) {
 				this.fireCommand ();
@@ -782,8 +782,8 @@ ButtonBinding.prototype.getEqualSizeWidth = function () {
 
 	var result = null;
 	if ( this.isAttached == true ) {
-		this.labelBinding.bindingElement.style.marginLeft = "0";
-		this.labelBinding.bindingElement.style.marginRight = "0";
+		this.labelBinding.shadowTree.labelBody.style.marginLeft = "0";
+		this.labelBinding.shadowTree.labelBody.style.marginRight = "0";
 		result = this.labelBinding.bindingElement.offsetWidth;
 	} else {
 		throw "ButtonBinding: getEqualSizeWidth failed for non-attached button.";
@@ -805,8 +805,8 @@ ButtonBinding.prototype.setEqualSizeWidth = function ( goal ) {
 		if ( goal > width ) {
 			var diff = goal - width;
 			var marg = Math.floor ( diff * 0.5 );
-			this.labelBinding.bindingElement.style.marginLeft = marg + "px";
-			this.labelBinding.bindingElement.style.marginRight = marg + "px";
+			this.labelBinding.shadowTree.labelBody.style.setProperty("margin-left", marg + "px", "important");
+			this.labelBinding.shadowTree.labelBody.style.setProperty("margin-right", marg + "px", "important");
 		}
 	}
 }
@@ -818,20 +818,7 @@ ButtonBinding.prototype.setEqualSizeWidth = function ( goal ) {
 ButtonBinding.prototype.getWidth = function () {
 	
 	var result = null;
-	if ( this.isAttached == true ) {
-	
-		var padding = CSSComputer.getPadding ( this.bindingElement );
-		var border = CSSComputer.getPadding ( this.bindingElement );
-	
-		result = this.shadowTree.c.offsetWidth + this.shadowTree.e.offsetWidth + this.shadowTree.w.offsetWidth;
-		result = result + padding.left + padding.right;
-		result = result + border.left + border.right;
-		
-	} else {
-		throw "ButtonBinding: getWidth failed for non-attached button."
-	}
-	return result;
-	
+	return this.bindingElement.offsetWidth;
 }
 
 /**
@@ -840,20 +827,11 @@ ButtonBinding.prototype.getWidth = function () {
  */
 ButtonBinding.prototype.setWidth = function ( width ) {
 	
-	if ( this.isAttached == true ) {
-		
-		var minus = this.shadowTree.e.offsetWidth + this.shadowTree.w.offsetWidth;
-		var padding = CSSComputer.getPadding ( this.shadowTree.c );
-		
-		var center = width - minus;
-		center = center - padding.left - padding.right;
-		this.shadowTree.c.style.width = String ( center ) + "px";
-		
-		if ( this.getProperty ( "centered" )) { // only relevant on splash for now...
-			this.labelBinding.bindingElement.style.marginLeft = String ( 0.5 * ( center - this.labelBinding.bindingElement.offsetWidth )) + "px";
-		}
+
+	if (width >= 0) {
+		this.bindingElement.style.width = new String(width + "px");
 	}
-	
+
 	this.setProperty ( "width", width );
 }
 

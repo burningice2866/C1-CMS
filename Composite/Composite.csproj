@@ -45,8 +45,7 @@
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <DocumentationFile>bin\Debug\Composite.xml</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <NoWarn>
-    </NoWarn>
+    <NoWarn>618</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -92,7 +91,6 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Drawing.Design" />
     <Reference Include="System.EnterpriseServices" />
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
@@ -131,9 +129,7 @@
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Data.Linq" />
-    <Reference Include="System.Design" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.XML" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="TidyNet">
@@ -147,7 +143,6 @@
     <Compile Include="AspNet\BrowserOverrideStores.cs" />
     <Compile Include="AspNet\CompositeC1SiteMapProvider.cs" />
     <Compile Include="AspNet\CookieBrowserOverrideStore.cs" />
-    <Compile Include="AspNet\Razor\CustomHttpContextWrapper.cs" />
     <Compile Include="AspNet\Razor\RazorFunction.cs" />
     <Compile Include="AspNet\Razor\RazorHelper.cs" />
     <Compile Include="AspNet\Razor\RazorPageTemplate.cs" />
@@ -158,15 +153,22 @@
     <Compile Include="AspNet\SiteMapContext.cs" />
     <Compile Include="AspNet\SiteMapHandler.cs" />
     <Compile Include="AspNet\SiteMapNodeChangeFrequency.cs" />
-    <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="AspNet\UserControlFunction.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="C1Console\Drawing\FunctionPresentation.cs" />
+    <Compile Include="C1Console\Elements\ElementProviderHelpers\DataGroupingProviderHelper\ElipsisEntityToken.cs" />
+    <Compile Include="C1Console\Forms\CoreUiControls\FontIconSelectorUiControl.cs" />
     <Compile Include="C1Console\Trees\SortDirection.cs" />
+    <Compile Include="Core\Application\Job.cs" />
+    <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="Core\Caching\FileRelatedDataCache.cs" />
     <Compile Include="Core\Instrumentation\LogExecutionTime.cs" />
+    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\FileModifyPackageFragmentInstaller.cs" />
+    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\FileModifyPackageFragmentUninstaller.cs" />
     <Compile Include="Core\PageTemplates\ISharedCodePageTemplateProvider.cs" />
     <Compile Include="Core\PageTemplates\SharedFile.cs" />
+    <Compile Include="Core\Parallelization\AsyncLock.cs" />
     <Compile Include="Core\ResourceSystem\LocalizationFiles.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -176,27 +178,43 @@
     <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectHttpHandler.cs" />
     <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectRouteHandler.cs" />
     <Compile Include="Core\Threading\ThreadCultureScope.cs" />
+    <Compile Include="Core\WebClient\BrowserRender.cs" />
     <Compile Include="Core\WebClient\BuildManagerHelper.cs" />
     <Compile Include="Core\WebClient\Captcha\CaptchaConfiguration.cs" />
+    <Compile Include="Core\WebClient\Renderings\FunctionPreview.cs" />
+    <Compile Include="Core\WebClient\Renderings\Page\RenderingReason.cs" />
+    <Compile Include="Core\WebClient\TemplatePreviewRouteHandler.cs" />
     <Compile Include="Core\WebClient\FunctionBoxRouteHandler.cs" />
+    <Compile Include="Core\WebClient\FunctionCallEditor\FunctionMarkupHelper.cs" />
     <Compile Include="Core\WebClient\Media\ImageSizeReader.cs" />
     <Compile Include="Core\WebClient\Presentation\ViewServices.cs" />
     <Compile Include="Core\WebClient\Renderings\Template\PageTemplateFeatureFacade.cs" />
     <Compile Include="Core\WebClient\ScriptLoader.cs" />
+    <Compile Include="Core\WebClient\Services\WysiwygEditor\PageTemplatePreview.cs" />
     <Compile Include="Core\WebClient\StyleLoader.cs" />
+    <Compile Include="Core\Xml\XmlSerializationHelper.cs" />
+    <Compile Include="Data\DynamicTypes\Configuration\XmlConfigurationExtensionMethods.cs" />
     <Compile Include="Data\DynamicTypes\DataFieldTreeOrderingProfile.cs" />
+    <Compile Include="Data\DynamicTypes\DataTypeIndex.cs" />
+    <Compile Include="Data\DynamicTypes\Foundation\DynamicTypesCustomFormFacade.cs" />
+    <Compile Include="Data\DynamicTypes\ParseDefinitionFileException.cs" />
+    <Compile Include="Data\FormRenderingProfileAttribute.cs" />
+    <Compile Include="Data\IndexAttribute.cs" />
+    <Compile Include="Data\IndexDirection.cs" />
     <Compile Include="Data\TreeOrderingProfileAttribute.cs" />
     <Compile Include="Data\Foundation\ProcessControllerSettings.cs" />
     <Compile Include="Data\StoreEventHandler.cs" />
     <Compile Include="Data\StoreEventArgs.cs" />
     <Compile Include="Data\Types\ICustomFunctionCallEditorMapping.cs" />
     <Compile Include="Data\Types\TypeVersionAttribute.cs" />
+    <Compile Include="Data\Validation\Validators\NullDateTimeRangeValidatorAttribute.cs" />
     <Compile Include="Functions\ContentFilterFacade.cs" />
-    <Compile Include="Functions\IContentFilter.cs" />
     <Compile Include="Functions\FunctionParameterIgnoreAttribute.cs" />
     <Compile Include="Functions\DynamicMethodHelper.cs" />
     <Compile Include="Functions\FunctionCallEditorManager.cs" />
     <Compile Include="Functions\FunctionCallEditorSettings.cs" />
+    <Compile Include="Functions\IContentFilter.cs" />
+    <Compile Include="Plugins\Data\DataProviders\MSSqlServerDataProvider\CodeGeneration\DataContextAssembler.cs" />
     <Compile Include="Plugins\Data\DataProviders\VirtualImageFileProvider\VirtualImageFileQueryable.cs" />
     <Compile Include="Plugins\Data\DataProviders\VirtualImageFileProvider\VirtualImageFileQueryableVisitor.cs" />
     <Compile Include="Plugins\Data\DataProviders\XmlDataProvider\Foundation\FileRecord.cs" />
@@ -210,6 +228,9 @@
     <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\AttachProviderVirtualElement.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\SimpleVirtualElement.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\VirtualElementConfigurationElement.cs" />
+    <Compile Include="Plugins\Forms\WebChannel\UiControlFactories\TemplatedFontIconSelectorUiControlFactory.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\FileBasedFunction.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\FileBasedFunctionProvider.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\FunctionBasedFunctionProviderHelper.cs" />
@@ -687,6 +708,7 @@
     <Compile Include="Plugins\Functions\FunctionProviders\UserControlFunctionProvider\UserControlFunctionProvider.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\UserControlFunctionProvider\UserControlFunctionProviderAssembler.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\UserControlFunctionProvider\UserControlFunctionProviderData.cs" />
+    <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\String\FontIconSelectorWidgetFuntion.cs" />
     <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\String\UrlComboBoxWidgetFunction.cs" />
     <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\Utils\FormMarkupWidgetFuntion.cs" />
     <Compile Include="Plugins\Logging\LogTraceListeners\FileLogTraceListener\CurrentFileReader.cs" />
@@ -1356,7 +1378,7 @@
     <Compile Include="Core\WebClient\Services\TreeServiceObjects\ExtensionMethods\ElementExtensionMethods.cs" />
     <Compile Include="Core\WebClient\Services\TreeServiceObjects\RefreshChildrenInfo.cs" />
     <Compile Include="Core\WebClient\Services\TreeServiceObjects\RefreshChildrenParams.cs" />
-    <Compile Include="Core\WebClient\Services\WysiwygEditor\HtmlTransformationServices.cs" />
+    <Compile Include="Core\WebClient\Services\WysiwygEditor\MarkupTransformationServices.cs" />
     <Compile Include="Core\WebClient\Setup\SetupServiceFacade.cs" />
     <Compile Include="Core\WebClient\Setup\WebServiceClient\Reference.cs" />
     <Compile Include="Core\WebClient\StandardPlugins\SessionStateProviders\DefaultSessionStateProvider\DefaultSessionStateProvider.cs" />
@@ -1537,10 +1559,6 @@
     <Compile Include="Data\ProcessControlled\ProcessControllers\GenericPublishProcessController\GenericPublishProcessControllerActionType.cs" />
     <Compile Include="Data\ProcessControlled\IActionTokenProvider.cs" />
     <Compile Include="Data\ProcessControlled\IgnoreActionAttribute.cs" />
-    <Compile Include="Plugins\Elements\ElementProviders\LogElementProvider\LogElementProvider.cs" />
-    <Compile Include="Plugins\Elements\ElementProviders\LogElementProvider\LogElementProviderActionExecutor.cs" />
-    <Compile Include="Plugins\Elements\ElementProviders\LogElementProvider\LogElementProviderEntityToken.cs" />
-    <Compile Include="Plugins\Elements\ElementProviders\LogElementProvider\ShowLogActionToken.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\MethodBasedFunctionProviderElementProvider\MethodBasedFunctionAttribute.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\LocalOrdering\DisplayLocalOrderingActionExecutor.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\LocalOrdering\DisplayLocalOrderingActionToken.cs" />
@@ -2168,7 +2186,6 @@
     <Compile Include="Core\Linq\ExpressionVisitors\FindFirstParameterExpressionVisitor.cs" />
     <Compile Include="Core\Linq\Extensions.cs" />
     <Compile Include="Core\Linq\TypeHelpers.cs" />
-    <Compile Include="Compare.cs" />
     <Compile Include="Core\WebClient\Renderings\Page\PageRenderer.cs" />
     <Compile Include="Core\ResourceSystem\IconResourceSystemFacadeImpl.cs" />
     <Compile Include="Core\ResourceSystem\Icons\CommonCommandIcons.cs" />

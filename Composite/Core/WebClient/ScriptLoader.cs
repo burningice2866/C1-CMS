@@ -8,7 +8,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Web.Hosting;
 using System.Xml.Linq;
+using Composite.Core.IO;
 using Composite.Core.Xml;
 
 namespace Composite.Core.WebClient
@@ -24,16 +26,18 @@ namespace Composite.Core.WebClient
 
         private readonly HttpContext _ctx;        
         private readonly string _type;
+        private readonly bool _updateManagerDisabled;
         private readonly CompositeScriptMode _mode;
 
         private readonly IEnumerable<string> _defaultscripts;
 
 
         /// <exclude />
-        public ScriptLoader(string type, string directive = null)
+        public ScriptLoader(string type, string directive = null, bool updateManagerDisabled = false)
         {
             _ctx = HttpContext.Current;
             _type = type;
+            _updateManagerDisabled = updateManagerDisabled;
 
             if (directive == "compile")
             {
@@ -169,9 +173,12 @@ namespace Composite.Core.WebClient
             }
             else
             {
-                builder.AppendLine(@"<script type=""text/javascript"">");
-                builder.AppendLine(@"UpdateManager.xhtml = null;");
-                builder.AppendLine(@"</script>");
+                if (!_updateManagerDisabled)
+                {
+                    builder.AppendLine(@"<script type=""text/javascript"">");
+                    builder.AppendLine(@"UpdateManager.xhtml = null;");
+                    builder.AppendLine(@"</script>");
+                }
             }
         }
 
@@ -217,6 +224,14 @@ namespace Composite.Core.WebClient
             }
             catch (Exception) { }
             return result;
+        }
+
+        /// <exclude />
+        public static bool UnbundledScriptsAvailable()
+        {
+            var filePath = HostingEnvironment.MapPath(UrlUtils.AdminRootPath + "/scripts/source/top/interfaces/IAcceptable.js");
+
+            return C1File.Exists(filePath);
         }
 
         [DebuggerStepThrough]

@@ -89,7 +89,11 @@
 										flip="true"
                                         />
 								</ui:toolbargroup>
+								<ui:toolbargroup id="basicgroup">
+									<ui:toolbarbutton id="basicbutton" label="${string:Website.Dialogs.EditFunction.BasicView}" image="${icon:editor-plainedit}" flip="true" />
+									</ui:toolbargroup>
 							</ui:toolbarbody>
+							
 							
 						</ui:toolbar>
 						

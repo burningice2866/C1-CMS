@@ -1,9 +1,8 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Xml.Linq;
+using Composite.Core.Xml;
 using Composite.Functions.Foundation;
-using Composite.Core.Types;
 
 
 namespace Composite.Functions
@@ -14,7 +13,7 @@ namespace Composite.Functions
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
 	public sealed class ConstantObjectParameterRuntimeTreeNode : BaseParameterRuntimeTreeNode
     {
-        private object _constantValue;
+        private readonly object _constantValue;
 
 
 
@@ -29,8 +28,6 @@ namespace Composite.Functions
         /// <exclude />
         public override object GetValue(FunctionContextContainer contextContainer)
         {
-            if (contextContainer == null) throw new ArgumentNullException("contextContainer");
-
             return _constantValue;
         }
 
@@ -38,7 +35,7 @@ namespace Composite.Functions
         /// <exclude />
         public override IEnumerable<string> GetAllSubFunctionNames()
         {
-            return new string[] { };
+            return new string[0];
         }
 
 
@@ -55,55 +52,42 @@ namespace Composite.Functions
         /// <exclude />
         public override XElement Serialize()
         {
-            if (_constantValue is IEnumerable && (_constantValue is string) == false)
-            {
-                XElement element =
-                    new XElement(XName.Get(FunctionTreeConfigurationNames.ParamTagName, FunctionTreeConfigurationNames.NamespaceName),
-                        new XAttribute(FunctionTreeConfigurationNames.NameAttributeName, this.Name)
-                    );
+            var element = new XElement(FunctionTreeConfigurationNames.ParamTag, 
+                new XAttribute(FunctionTreeConfigurationNames.NameAttribute, this.Name));
 
+            if (_constantValue is IEnumerable && !(_constantValue is string))
+            {
                 foreach (object obj in (IEnumerable)_constantValue)
                 {
-                    element.Add(new XElement(
-                            XName.Get(FunctionTreeConfigurationNames.ParamElementTagName, FunctionTreeConfigurationNames.NamespaceName),
-                            new XAttribute(FunctionTreeConfigurationNames.ValueAttributeName, ValueTypeConverter.Convert<string>( obj ))                            
-                        ));
+                    element.Add(new XElement(FunctionTreeConfigurationNames.ParamElementTag,
+                            new XAttribute(FunctionTreeConfigurationNames.ValueAttribute, 
+                                           XmlSerializationHelper.GetSerializableObject(obj))));
                 }
 
                 return element;
             }
-            else
+
+            object xValue;
+            if (_constantValue is XNode)
             {
-                if (_constantValue is XNode)
+                if (_constantValue is XDocument)
                 {
-                    if (_constantValue is XDocument)
-                    {
-                        XElement element =
-                            new XElement(XName.Get(FunctionTreeConfigurationNames.ParamTagName, FunctionTreeConfigurationNames.NamespaceName),
-                                new XAttribute(FunctionTreeConfigurationNames.NameAttributeName, this.Name),
-                                ((XDocument)_constantValue).Root);
-                        return element;
-                    }
-                    else
-                    {
-                        XElement element =
-                            new XElement(XName.Get(FunctionTreeConfigurationNames.ParamTagName, FunctionTreeConfigurationNames.NamespaceName),
-                                new XAttribute(FunctionTreeConfigurationNames.NameAttributeName, this.Name),
-                                _constantValue);
-                        return element;
-                    }
+                    xValue = ((XDocument) _constantValue).Root;
                 }
                 else
                 {
-                    XElement element =
-                        new XElement(XName.Get(FunctionTreeConfigurationNames.ParamTagName, FunctionTreeConfigurationNames.NamespaceName),
-                            new XAttribute(FunctionTreeConfigurationNames.NameAttributeName, this.Name),
-                            new XAttribute(FunctionTreeConfigurationNames.ValueAttributeName, ValueTypeConverter.Convert<string>(_constantValue) ?? string.Empty)
-                        );
-
-                    return element;
+                    xValue = _constantValue;
                 }
             }
+            else
+            {
+                xValue = new XAttribute(FunctionTreeConfigurationNames.ValueAttributeName, 
+                        XmlSerializationHelper.GetSerializableObject(_constantValue) ?? string.Empty);
+            }
+
+            element.Add(xValue);
+
+            return element;
         }
     }
 }

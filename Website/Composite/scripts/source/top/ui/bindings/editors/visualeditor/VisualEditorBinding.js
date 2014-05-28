@@ -65,7 +65,7 @@ VisualEditorBinding.getTinyContent = function ( content, binding ) {
 	/*
 	 * Some content seems to be needed for the webservice to return valid fragment.
 	 */
-	if ( content == null || content == "" ) {
+	if (content == null || !content.replace(/\s*/gm, '').length) {
 		content = VisualEditorBinding.DEFAULT_CONTENT;
 	}
 	
@@ -74,7 +74,7 @@ VisualEditorBinding.getTinyContent = function ( content, binding ) {
 	 * a dialog will be presented and null will be returned.
 	 */
 	WebServiceProxy.isFaultHandler = false;
-	var soap = XhtmlTransformationsService.StructuredContentToTinyContent ( content );
+	var soap = binding.getSoapTinyContent ( content );
 	if ( soap instanceof SOAPFault ) {
 		var dialogArgument = soap;
 		var dialogHandler = {
@@ -96,11 +96,15 @@ VisualEditorBinding.getTinyContent = function ( content, binding ) {
 		if ( result == null ) { // always return a string!
 			result = new String ( "" );
 		}
+
+		//whitespaces beatween li ignore TAB/Shift+TAB event
+		//TODO: check this at next version tinyMCE
+		//Delete spaces between LI
+		result = result.replace(/\s+<li>/g, '<li>');
 	}
 	WebServiceProxy.isFaultHandler = true;
 	return result;
 };
-
 
 /**
  * Is image?
@@ -225,39 +229,29 @@ function VisualEditorBinding () {
 	this.embedableFieldConfiguration = null;
 
 	/**
-	 * OLD STUFF HERE!
-	 * 
-	 * 
-	 * @type {VisualEditorFormattingConfiguration}
-	 *
-	this.formattingConfiguration = null;
-	*/
-	
-	/**
-	 * TinyMCE internal stylesheet. Externalized  
-	 * so that an TinyMCE upgrade won't overwrite.
-	 *
-	this.defaultStylesheet = VisualEditorBinding.DEFAULT_STYLESHEET;
-	
-	/**
-	 * Editor configuration stylesheet URL.
-	 * @type {string}
-	 *
-	this.configurationStylesheet = null;
-	
-	/**
-	 * Editor presentation stylesheet URL.
-	 * @type {string}
-	 *
-	this.presentationStylesheet = null;
-	*/
-	
-	/**
 	 * Stores xhtml without body.
 	 * @type {string}
 	 */
 	this._xhtml = null;
+
+    /**
+	 * Preview page id.
+	 * @type {string}
+	 */
+	this._previewPageId = null;
+
+    /**
+	 * Preview template id.
+	 * @type {string}
+	 */
+	this._previewTemplateId = null;
 	
+    /**
+	 * Preview placeholder.
+	 * @type {string}
+	 */
+    this._previewPlaceholder = null;
+
 	/*
 	 * Returnable.
 	 */
@@ -298,11 +292,23 @@ VisualEditorBinding.prototype.onBindingAttach = function () {
 		this._url += "?config=" + config;
 	}
 	
+	this._previewPageId = this.getProperty ("previewpageid");
+	if (this._previewPageId == null) {
+	    this._previewPageId = '00000000-0000-0000-0000-000000000000';
+	}
+
+	this._previewTemplateId = this.getProperty("previewtemplateid");
+	if (this._previewTemplateId == null) {
+	    this._previewTemplateId = '00000000-0000-0000-0000-000000000000';
+	}
+
+	this._previewPlaceholder = this.getProperty("previewplaceholder");
+
 	VisualEditorBinding.superclass.onBindingAttach.call ( this );
 	
 	this.subscribe ( BroadcastMessages.TINYMCE_INITIALIZED );
-	
-	// this._parseDOMProperties ();
+	this.subscribe ( this.bindingWindow.WindowManager.WINDOW_RESIZED_BROADCAST);
+
 };
 
 /**
@@ -312,38 +318,6 @@ VisualEditorBinding.prototype.toString = function () {
 
 	return "[VisualEditorBinding]";
 };
-
-/**
- * Parse DOM properties.
- *
-VisualEditorBinding.prototype._parseDOMProperties = function () {
-
-	var presentation = this.getProperty ( "presentationstylesheet" );
-	if ( presentation != null ) {
-		this.presentationStylesheet = presentation;
-	}
-	
-	var configuration = this.getProperty ( "configurationstylesheet" );
-	if ( configuration != null ) {
-		this.configurationStylesheet = configuration;
-	}
-	
-	var classconfig = this.getProperty ( "elementclassconfiguration" );
-	if ( classconfig != null ) {
-		this.elementClassConfiguration = VisualEditorElementClassConfiguration.getConfiguration ( classconfig );
-	}
-	
-	var formatconfig = this.getProperty ( "formattingconfiguration" );
-	if ( formatconfig != null ) {
-		this.formattingConfiguration = VisualEditorFormattingConfiguration.getConfiguration ( formatconfig );
-	}
-
-	var fieldsconfig = this.getProperty ( "embedablefieldstypenames" );
-	if ( fieldsconfig != null ) {
-		this.embedableFieldConfiguration = VisualEditorFieldGroupConfiguration.getConfiguration ( fieldsconfig );
-	}
-};
-*/
 
 /**
  * @implements {IBroadcastListener}
@@ -376,34 +350,15 @@ VisualEditorBinding.prototype.handleBroadcast = function ( broadcast, arg ) {
 					this._tinyInstance
 				);
 
-				/*
-				* Some kind of devilry going on with the server...
-				*/
-				if (this._startContent == " ") {
-					this._startContent = VisualEditorBinding.DEFAULT_CONTENT;
-				}
-
-				/*
-				* Normalize start content and extract HEAD and BODY section before we 
-				* feed it to TinyMCE. Normalization is required while old solutions 
-				* are upgraded to the new setup (with HEAD and BODY sections). 
-				*/
-				this._startContent = this.normalizeToDocument(this._startContent);
-				this._startContent = this.extractBody(this._startContent);
-
-				/*
-				* Inject BODY markup into TinyMCE. From now on, injection  
-				* is handled by the VisualEditorPageBinding.
-				*/
-				arg.tinyInstance.setContent(VisualEditorBinding.getTinyContent(this._startContent), { format: 'raw' });
-
-
-
 				this.initializeEditorComponents ( windowBinding );
 				this._initialize ();
 				
 				this.unsubscribe ( BroadcastMessages.TINYMCE_INITIALIZED );
 			}
+			break;
+
+		case this.bindingWindow.WindowManager.WINDOW_RESIZED_BROADCAST:
+			this.handleCommand("CompositeUpdateLayout", false, null);
 			break;
 	}
 };
@@ -430,7 +385,30 @@ VisualEditorBinding.prototype.initializeEditorComponent = function ( binding ) {
 VisualEditorBinding.prototype._finalize = function () {
 	
 	VisualEditorBinding.superclass._finalize.call ( this );
-	this._maybeShowEditor ();
+	this._maybeShowEditor();
+
+	/*
+	* Normalize start content and extract HEAD and BODY section before we 
+	* feed it to TinyMCE. Normalization is required while old solutions 
+	* are upgraded to the new setup (with HEAD and BODY sections). 
+	*/
+	this._startContent = this.normalizeToDocument(this._startContent);
+	this._startContent = this.extractBody(this._startContent);
+
+	/*
+	* Inject BODY markup into TinyMCE. From now on, injection  
+	* is handled by the VisualEditorPageBinding.
+	*/
+	var tinyContent = VisualEditorBinding.getTinyContent(this._startContent, this);
+	if (tinyContent.replace(/\s*/gm, '').length == 0)
+	{
+		tinyContent = VisualEditorBinding.DEFAULT_CONTENT;
+	}
+
+	this._tinyInstance.setContent(tinyContent, { format: 'raw' });
+
+	this.updateBodyWidth();
+
 };
 
 /**
@@ -727,6 +705,63 @@ VisualEditorBinding.prototype.clean = function () {
 	}
 }
 
+/**
+ * Convert structured content to tiny content on server.
+ * @param {string} content Structured markup
+ * @return {SOAP}
+ */
+VisualEditorBinding.prototype.getSoapTinyContent = function (content) {
+	var width = this.getEffectiveWidth();
+    return XhtmlTransformationsService.StructuredContentToTinyContentMultiTemplate(content, this._previewPageId, this._previewTemplateId, this._previewPlaceholder, width);
+}
+
+/**
+ * Convert structured content to tiny content on server.
+ * @param {string} content Structured markup
+ * @return {SOAP}
+ */
+VisualEditorBinding.prototype.getImageTagForFunctionCall = function (markup) {
+	var width = this.getEffectiveWidth();
+	return XhtmlTransformationsService.GetImageTagForFunctionCall2(markup, this._previewPageId, this._previewTemplateId, this._previewPlaceholder, width);
+}
+
+/**
+ * Get effective width 
+ * @return {int}
+ */
+
+VisualEditorBinding.prototype.getEffectiveWidth = function () {
+	var body = this._tinyInstance.getBody();
+	var padding = CSSComputer.getPadding(body);
+	var editorsplitpanel = this.getContentWindow().bindingMap.editorsplitpanel;
+	var width = editorsplitpanel.bindingElement.offsetWidth - 52; //Hack for "- padding.right - padding.left";
+	return Math.floor(width / 32) * 32;
+}
+
+/**
+ * Get placeholder width 
+ * @return {int}
+ */
+VisualEditorBinding.prototype.getPlaceholderWidth = function () {
+	
+	return StageBinding.placeholderWidth;
+}
+
+/**
+ * Update TinyMCE body width
+ * @param {int} content Structured markup
+  */
+VisualEditorBinding.prototype.updateBodyWidth = function (width) {
+
+	if (width == undefined) {
+		width = this.getPlaceholderWidth();
+	}
+	if (width) {
+		this._tinyInstance.getBody().style.maxWidth = (width + 52) + "px";
+	} else {
+		this._tinyInstance.getBody().style.maxWidth = "";
+	}
+}
 
 /**
 * Focus

@@ -461,7 +461,12 @@ StageDialogBinding.prototype._parsePageBinding = function ( pageBinding ) {
 			nev.w = old.w;
 		}
 		nev.h = ( height != null && height != "auto" ) ? height : old.h; // never set height on autoheight dialogs!
-				
+		
+		if (this._isResizable) {
+			nev.h = (top.window.innerHeight < nev.h) ? top.window.innerHeight : nev.h;
+			nev.w = ( top.window.innerWidth < nev.w) ? top.window.innerWidth : nev.w;
+		}
+
 		this.setDimension ( nev );
 	}
 	if ( controls ) {
@@ -509,6 +514,7 @@ StageDialogBinding.prototype._fixAutoHeight = function ( pageBinding ) {
 	}
 	height = pageBinding.bindingElement.offsetHeight;
 	height += this._titlebar.bindingElement.offsetHeight;
+	height += 4; // HARDCODE WARNING! Compensates for border thickness
 	height += 4; // HARDCODE WARNING! Compensates for border thickness
 	
 	if ( height < dim.h ) { // never shrink the dialog - only expand it.

@@ -7,11 +7,11 @@ using Composite.C1Console.Security;
 using Composite.Core.Application;
 using Composite.Core.Configuration;
 using Composite.Core.IO;
-using Composite.Core.Logging;
 using Composite.Core.PackageSystem.Foundation;
 using Composite.Core.ResourceSystem;
 using Composite.Core.Xml;
 
+using Texts = Composite.Core.ResourceSystem.LocalizationFiles.Composite_Core_PackageSystem_PackageFragmentInstallers;
 
 namespace Composite.Core.PackageSystem
 {
@@ -27,14 +27,14 @@ namespace Composite.Core.PackageSystem
         {
             string baseDirectory = PathUtil.Resolve(GlobalSettingsFacade.PackageDirectory);
 
-            if (C1Directory.Exists(baseDirectory) == false) yield break;
+            if (!C1Directory.Exists(baseDirectory)) yield break;
 
             string[] packageDirectories = C1Directory.GetDirectories(baseDirectory);
-            foreach (string packageDirecoty in packageDirectories)
+            foreach (string packageDirectory in packageDirectories)
             {
-                if (C1File.Exists(Path.Combine(packageDirecoty, PackageSystemSettings.InstalledFilename)))
+                if (C1File.Exists(Path.Combine(packageDirectory, PackageSystemSettings.InstalledFilename)))
                 {
-                    string filename = Path.Combine(packageDirecoty, PackageSystemSettings.PackageInformationFilename);
+                    string filename = Path.Combine(packageDirectory, PackageSystemSettings.PackageInformationFilename);
 
                     if (C1File.Exists(filename))
                     {
@@ -63,15 +63,21 @@ namespace Composite.Core.PackageSystem
                         SystemLockingType systemLockingType;
                         if (systemLockingAttribute.TryDeserialize(out systemLockingType) == false) throw new InvalidOperationException("The systemLocking attibute value is wrong");
 
-                        string path = packageDirecoty.Remove(0, baseDirectory.Length);
+                        string path = packageDirectory.Remove(0, baseDirectory.Length);
                         if (path.StartsWith("\\"))
                         {
                             path = path.Remove(0, 1);
                         }
 
+                        Guid packageId;
+                        if (!Guid.TryParse(path, out packageId))
+                        {
+                            continue;
+                        }
+
                         yield return new InstalledPackageInformation
                         {
-                            Id = new Guid(path),
+                            Id = packageId,
                             Name = nameAttribute.Value,
                             GroupName = groupNameAttribute.Value,
                             Version = versionAttribute.Value,
@@ -86,7 +92,7 @@ namespace Composite.Core.PackageSystem
                             ReloadConsoleOnCompletion = (bool)reloadConsoleOnCompletionAttribute,
                             SystemLockingType = systemLockingType,
                             PackageServerAddress = packageServerAddressAttribute != null ? packageServerAddressAttribute.Value : null,
-                            PackageInstallPath = packageDirecoty
+                            PackageInstallPath = packageDirectory
                         };
                     }
                     else
@@ -158,14 +164,13 @@ namespace Composite.Core.PackageSystem
         /// <exclude />
         public static PackageManagerInstallProcess Install(Stream zipFileStream, bool isLocalInstall, string packageServerAddress)
         {
-            if ((isLocalInstall == false) && (string.IsNullOrEmpty(packageServerAddress))) throw new ArgumentException("Non local install needs a packageServerAddress");
+            if (!isLocalInstall && string.IsNullOrEmpty(packageServerAddress)) throw new ArgumentException("Non local install needs a packageServerAddress");
 
             string zipFilename = null;
 
-            PackageFragmentValidationResult packageFragmentValidationResult;
             try
             {
-                packageFragmentValidationResult = SaveZipFile(zipFileStream, out zipFilename);
+                PackageFragmentValidationResult packageFragmentValidationResult = SaveZipFile(zipFileStream, out zipFilename);
                 if (packageFragmentValidationResult != null) return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult> { packageFragmentValidationResult }, null);
 
                 XElement installContent;
@@ -176,9 +181,16 @@ namespace Composite.Core.PackageSystem
                 packageFragmentValidationResult = ValidatePackageInformation(installContent, out packageInformation);
                 if (packageFragmentValidationResult != null) return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult> { packageFragmentValidationResult }, zipFilename);
 
-                if ((RuntimeInformation.ProductVersion < packageInformation.MinCompositeVersionSupported) ||
-                    (RuntimeInformation.ProductVersion > packageInformation.MaxCompositeVersionSupported)) return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult> { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, GetText("PackageManager.CompositeVersionMisMatch")) }, zipFilename);
+                if (RuntimeInformation.ProductVersion < packageInformation.MinCompositeVersionSupported
+                    || RuntimeInformation.ProductVersion > packageInformation.MaxCompositeVersionSupported)
+                {
+                    return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult>
+                    {
+                        new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, 
+                            GetText("PackageManager.CompositeVersionMisMatch")) }, zipFilename);
+                }
 
+                bool updatingInstalledPackage = false;
                 if (IsInstalled(packageInformation.Id))
                 {
                     string currentVersionString = GetCurrentVersion(packageInformation.Id);
@@ -188,8 +200,9 @@ namespace Composite.Core.PackageSystem
 
                     if (newVersion <= currentVersion)
                     {
-                        string messageKey = (newVersion == currentVersion) ? "PackageManager.PackageAlreadyInstalled" : "PackageManager.NewerVersionInstalled";
-                        string validationError = GetText(messageKey);
+                        string validationError = newVersion == currentVersion 
+                                    ? Texts.PackageManager_PackageAlreadyInstalled 
+                                    : Texts.PackageManager_NewerVersionInstalled;
 
                         return new PackageManagerInstallProcess(
                             new List<PackageFragmentValidationResult>
@@ -197,9 +210,19 @@ namespace Composite.Core.PackageSystem
                                     new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, validationError)
                                 }, zipFilename);
                     }
+
+                    updatingInstalledPackage = true;
                 }
 
+                string originalInstallDirectory = null;
                 string packageInstallDirectory = CreatePackageDirectoryName(packageInformation);
+
+                if (updatingInstalledPackage)
+                {
+                    originalInstallDirectory = packageInstallDirectory;
+                    packageInstallDirectory += "-" + packageInformation.Version;
+                }
+
                 C1Directory.CreateDirectory(packageInstallDirectory);
 
                 string packageZipFilename = Path.Combine(packageInstallDirectory, Path.GetFileName(zipFilename));
@@ -211,23 +234,25 @@ namespace Composite.Core.PackageSystem
                     username = UserValidationFacade.GetUsername();
                 }
 
-                XDocument doc = new XDocument();
+                var doc = new XDocument();
                 XElement packageInfoElement = new XElement(XmlUtils.GetXName(PackageSystemSettings.XmlNamespace, PackageSystemSettings.PackageInfoElementName));
                 doc.Add(packageInfoElement);
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_NameAttributeName, packageInformation.Name));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_GroupNameAttributeName, packageInformation.GroupName));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_VersionAttributeName, packageInformation.Version));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_AuthorAttributeName, packageInformation.Author));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_WebsiteAttributeName, packageInformation.Website));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_DescriptionAttributeName, packageInformation.Description));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_InstallDateAttributeName, DateTime.Now));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_InstalledByAttributeName, username));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_IsLocalInstalledAttributeName, isLocalInstall));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_CanBeUninstalledAttributeName, packageInformation.CanBeUninstalled));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_FlushOnCompletionAttributeName, packageInformation.FlushOnCompletion));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_ReloadConsoleOnCompletionAttributeName, packageInformation.ReloadConsoleOnCompletion));
-                packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_SystemLockingAttributeName, packageInformation.SystemLockingType.Serialize()));
-                if (string.IsNullOrEmpty(packageServerAddress) == false)
+                packageInfoElement.Add(
+                    new XAttribute(PackageSystemSettings.PackageInfo_NameAttributeName, packageInformation.Name),
+                    new XAttribute(PackageSystemSettings.PackageInfo_GroupNameAttributeName, packageInformation.GroupName),
+                    new XAttribute(PackageSystemSettings.PackageInfo_VersionAttributeName, packageInformation.Version),
+                    new XAttribute(PackageSystemSettings.PackageInfo_AuthorAttributeName, packageInformation.Author),
+                    new XAttribute(PackageSystemSettings.PackageInfo_WebsiteAttributeName, packageInformation.Website),
+                    new XAttribute(PackageSystemSettings.PackageInfo_DescriptionAttributeName, packageInformation.Description),
+                    new XAttribute(PackageSystemSettings.PackageInfo_InstallDateAttributeName, DateTime.Now),
+                    new XAttribute(PackageSystemSettings.PackageInfo_InstalledByAttributeName, username),
+                    new XAttribute(PackageSystemSettings.PackageInfo_IsLocalInstalledAttributeName, isLocalInstall),
+                    new XAttribute(PackageSystemSettings.PackageInfo_CanBeUninstalledAttributeName, packageInformation.CanBeUninstalled),
+                    new XAttribute(PackageSystemSettings.PackageInfo_FlushOnCompletionAttributeName, packageInformation.FlushOnCompletion),
+                    new XAttribute(PackageSystemSettings.PackageInfo_ReloadConsoleOnCompletionAttributeName, packageInformation.ReloadConsoleOnCompletion),
+                    new XAttribute(PackageSystemSettings.PackageInfo_SystemLockingAttributeName, packageInformation.SystemLockingType.Serialize()));
+
+                if (!string.IsNullOrEmpty(packageServerAddress))
                 {
                     packageInfoElement.Add(new XAttribute(PackageSystemSettings.PackageInfo_PackageServerAddressAttributeName, packageServerAddress));
                 }
@@ -235,14 +260,23 @@ namespace Composite.Core.PackageSystem
                 string infoFilename = Path.Combine(packageInstallDirectory, PackageSystemSettings.PackageInformationFilename);
                 doc.SaveToFile(infoFilename);
 
-                PackageInstaller packageInstaller = new PackageInstaller(new PackageInstallerUninstallerFactory(), packageZipFilename, packageInstallDirectory, TempDirectoryFacade.CreateTempDirectory(), packageInformation);
+                var packageInstaller = new PackageInstaller(new PackageInstallerUninstallerFactory(), packageZipFilename, packageInstallDirectory, TempDirectoryFacade.CreateTempDirectory(), packageInformation);
 
-                PackageManagerInstallProcess packageManagerInstallProcess = new PackageManagerInstallProcess(packageInstaller, packageInformation.SystemLockingType, zipFilename, packageInstallDirectory, packageInformation.Name, packageInformation.Id);
-                return packageManagerInstallProcess;
+                return new PackageManagerInstallProcess(
+                    packageInstaller, 
+                    packageInformation.SystemLockingType, 
+                    zipFilename, 
+                    packageInstallDirectory, 
+                    packageInformation.Name, 
+                    packageInformation.Id,
+                    originalInstallDirectory);
             }
             catch (Exception ex)
             {
-                return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult> { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, ex) }, zipFilename);
+                return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult>
+                {
+                    new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, ex)
+                }, zipFilename);
             }
         }
 
@@ -262,7 +296,7 @@ namespace Composite.Core.PackageSystem
 
                 if (installedPackageInformation == null) return new PackageManagerUninstallProcess(new List<PackageFragmentValidationResult> { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, string.Format(GetText("PackageManager.MissingPackageDirectory"), absolutePath)) });
 
-                LoggingService.LogVerbose("PackageManager", string.Format("Uninstalling package: {0}, Id = {1}", installedPackageInformation.Name, installedPackageInformation.Id));
+                Log.LogVerbose("PackageManager", "Uninstalling package: {0}, Id = {1}", installedPackageInformation.Name, installedPackageInformation.Id);
 
                 if (installedPackageInformation.CanBeUninstalled == false) return new PackageManagerUninstallProcess(new List<PackageFragmentValidationResult> { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, GetText("PackageManager.Uninstallable")) });
 

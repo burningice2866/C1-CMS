@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Web.UI;
 using System.Xml.Linq;
@@ -56,16 +57,33 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
         }
 
         selectedDate = selectedDate.Date;
-        LogEntry[] logEntries = LogManager.GetLogEntries(selectedDate, selectedDate.AddDays(1.0), includeVerbose, 0);
 
+        var logEntries = new List<LogEntry>();
 
-        logEntries = logEntries.Where(entry => (includeVerbose && entry.Severity == "Verbose")
-                                              || (includeInformation && entry.Severity == "Information")
-                                              || (includeWarning && entry.Severity == "Warning")
-                                              || (includeError && entry.Severity == "Error")
-                                              || (includeCritical && entry.Severity == "Critical")).ToArray();
+        DateTime fromDate = selectedDate;
 
-        if (logEntries.Length > 0)
+        const int bulkSize = 5000;
+
+        while (true)
+        {
+            LogEntry[] entriesPart = LogManager.GetLogEntries(fromDate, selectedDate.AddDays(1.0), includeVerbose, bulkSize);
+
+            logEntries.AddRange(entriesPart.Where(entry => (includeVerbose && entry.Severity == "Verbose")
+                                                          || (includeInformation && entry.Severity == "Information")
+                                                          || (includeWarning && entry.Severity == "Warning")
+                                                          || (includeError && entry.Severity == "Error")
+                                                          || (includeCritical && entry.Severity == "Critical")));
+
+            if (entriesPart.Length < bulkSize)
+            {
+                break;
+            }
+
+            fromDate = entriesPart[entriesPart.Length - 1].TimeStamp.AddMilliseconds(0.5);
+        }
+        
+
+        if (logEntries.Count > 0)
         {
             BuildLogTable(logEntries);
             
@@ -80,7 +98,7 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
     }
 
 
-    private void BuildLogTable(LogEntry[] entries)
+    private void BuildLogTable(IEnumerable<LogEntry> entries)
     {
         XElement table = new XElement("table");
 
@@ -95,6 +113,7 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
 
         table.Add(tableHeader);
 
+        int index = 0;
         foreach (LogEntry logEntry in entries.Reverse())
         {
             TraceEventType eventType;
@@ -113,9 +132,9 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
                                {
                                    new Tuple<TraceEventType, string>(TraceEventType.Information, "lime"),
                                    new Tuple<TraceEventType, string>(TraceEventType.Verbose, "white"),
-                                   new Tuple<TraceEventType, string>(TraceEventType.Warning, "yellow"),
-                                   new Tuple<TraceEventType, string>(TraceEventType.Error, "orange"),
-                                   new Tuple<TraceEventType, string>(TraceEventType.Critical, "red")
+                                   new Tuple<TraceEventType, string>(TraceEventType.Warning, "orange"),
+                                   new Tuple<TraceEventType, string>(TraceEventType.Error, "red"),
+                                   new Tuple<TraceEventType, string>(TraceEventType.Critical, "darkred")
                                };
 
             string colorName = colors.Where(c => c.Item1 == eventType).Select(c => c.Item2).FirstOrDefault() ?? "orange";
@@ -127,7 +146,7 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
             row.Add(
                 new XElement("td", color, " "),
                 new XElement("td", logEntry.TimeStamp.ToString(View_DateTimeFormat)),
-                new XElement("td", new XElement("pre", EncodeXml10InvalidCharacters(logEntry.Message.Replace("\n", "")))),
+                new XElement("td", MessageMarkup(logEntry, index++)),
                 new XElement("td", EncodeXml10InvalidCharacters(logEntry.Title)),
                 new XElement("td", logEntry.Severity)
             );
@@ -136,6 +155,52 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
         }
 
         LogHolder.Controls.Add(new LiteralControl(table.ToString()));
+    }
+
+    public object[] MessageMarkup(LogEntry logEntry, int index)
+    {
+        if (!logEntry.Message.Contains("\n"))
+        {
+            string encodedMessage = EncodeXml10InvalidCharacters(logEntry.Message);
+            return new object[] { encodedMessage };
+        }
+
+        string[] lines = EncodeXml10InvalidCharacters(logEntry.Message).Trim().Split('\n');
+
+        if (lines.Length < 7)
+        {
+            return new object[]
+            {
+                new XElement("pre", EncodeXml10InvalidCharacters(logEntry.Message.Replace("\n", "")))
+            };
+        }
+
+        return new object[]
+        {
+            PreTag(lines, 0, 2),
+            new XElement("a", 
+                new XAttribute("id", "a" + index),
+                new XAttribute("href", "#"),
+                new XAttribute("onclick", string.Format("document.getElementById('log{0}').style.display = 'block';document.getElementById('a{0}').style.display = 'none'", index)),
+                new XAttribute("class", "expandCode"),
+                ". . ."),
+            PreTag(lines, 2, lines.Length - 4, 
+                new XAttribute("id", "log" + index),
+                new XAttribute("style", "display:none;")),
+            PreTag(lines, lines.Length - 2, 2)
+        };
+    }
+
+    private XElement PreTag(string[] lines, int startIndex, int count, params object[] content)
+    {
+        var text = string.Join("\n", lines.Skip(startIndex).Take(count));
+        var result = new XElement("pre", text);
+        if (content != null)
+        {
+            result.Add(content);
+        }
+
+        return result;
     }
 
 

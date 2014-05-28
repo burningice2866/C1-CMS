@@ -13,33 +13,6 @@ namespace CompositeEditFunctionCall {
     public partial class EditFunctionCall {
         
         /// <summary>
-        /// Httpheaders1 control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::HttpHeadersControl Httpheaders1;
-        
-        /// <summary>
-        /// Styleloader1 control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::StyleLoaderControl Styleloader1;
-        
-        /// <summary>
-        /// Scriptloader1 control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::ScriptLoaderControl Scriptloader1;
-        
-        /// <summary>
         /// HeaderPlaceHolder control.
         /// </summary>
         /// <remarks>
@@ -74,6 +47,60 @@ namespace CompositeEditFunctionCall {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.PlaceHolder DialogDoAcceptPlaceHolder;
+        
+        /// <summary>
+        /// hdnActiveTab control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnActiveTab;
+        
+        /// <summary>
+        /// BasicPanel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.PlaceHolder BasicPanel;
+        
+        /// <summary>
+        /// BasicContentPanel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.PlaceHolder BasicContentPanel;
+        
+        /// <summary>
+        /// plhNoParameters control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.PlaceHolder plhNoParameters;
+        
+        /// <summary>
+        /// plhErrors control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.PlaceHolder plhErrors;
+        
+        /// <summary>
+        /// AdvancedPanel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.PlaceHolder AdvancedPanel;
         
         /// <summary>
         /// FunctionCallDesigner control.

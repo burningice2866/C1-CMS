@@ -16,7 +16,8 @@ namespace Composite.Core.Instrumentation
         {
             int index = 0;
 
-            var result = new XElement("Measurements");
+            var result = new XElement("Measurements", new XAttribute("MemoryUsageKb", measurement.MemoryUsage / 1024));
+
             foreach (var node in measurement.Nodes)
             {
                 result.Add(BuildReportXmlRec(node, node.TotalTime, node.TotalTime, false, index.ToString()));
@@ -45,6 +46,11 @@ namespace Composite.Core.Instrumentation
                                       new XAttribute("ownTime", ownTime),
                                       new XAttribute("persentFromTotal", persentTotal),
                                       new XAttribute("parallel", parallel.ToString().ToLowerInvariant()));
+
+            if (measurement.MemoryUsage != 0)
+            {
+                result.Add(new XAttribute("memoryUsageKb", measurement.MemoryUsage / 1024));
+            }
 
             int index = 0;
             foreach (var childNode in measurement.Nodes.OrderByDescending(c => c.TotalTime))

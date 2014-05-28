@@ -31,7 +31,7 @@
         }
         else
         {
-            _currentStringValue = "<html xmlns='http://www.w3.org/1999/xhtml'>\n\t<head></head>\n\t<body></body>\n</html>";
+            _currentStringValue = "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t<head></head>\n\t<body></body>\n</html>";
         }
 		_currentStringValue = HttpContext.Current.Server.UrlEncode(_currentStringValue).Replace("+", "%20");
     }
@@ -61,12 +61,14 @@
     }
 </script>
 
-<ui:htmldatadialog 
+<ui:htmldatadialog
+	label="<%= HttpUtility.HtmlAttributeEncode(String.Format( Composite.Core.ResourceSystem.StringResourceSystemFacade.GetString("Composite.Web.VisualEditor","LaunchButton.Label"), FormControlLabel)) %>" 
 	value="<%= _currentStringValue %>" 
 	formattingconfiguration="<%= this.ClassConfigurationName %>"
-	elementclassconfiguration="<%= this.ClassConfigurationName %>" 
     embedablefieldstypenames="<%= HttpUtility.HtmlAttributeEncode(this.EmbedableFieldsTypesString) %>"
-	configurationstylesheet="<%= Composite.Core.WebClient.UrlUtils.ResolvePublicUrl( "Frontend/Styles/VisualEditor/VisualEditor.Config.css" ) %>"  
-	presentationstylesheet="<%= Composite.Core.WebClient.UrlUtils.ResolvePublicUrl( "Frontend/Styles/VisualEditor/VisualEditor.Default.css" ) %>"   
 	name="<%= this.UniqueID %>"
-	callbackid="<%= this.UniqueID %>"/>
+	callbackid="<%= this.UniqueID %>"
+    previewpageid="<%= PreviewPageId %>"
+    previewtemplateid="<%= PreviewTemplateId %>"
+    previewplaceholder="<%= PreviewPlaceholder %>"
+    />

@@ -5,6 +5,7 @@ using System.Xml.Linq;
 
 using Composite.Core.Collections.Generic;
 using Composite.Data;
+using Composite.Data.Caching;
 
 
 namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.Foundation
@@ -21,10 +22,12 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider.Foundation
         public string FilePath;
         public string ElementName;
         public RecordSet RecordSet;
-        public IEnumerable<XElement> ReadOnlyElementsList;
+        public ICollection<XElement> ReadOnlyElementsList;
         public DateTime LastModified;
         public DateTime FileModificationDate;
+        public DataCachingFacade.CachedTable CachedTable;
         public bool Dirty = false; // Determines whether the inner XElement list is dirty
+
 
         public string TempFilePath
         {

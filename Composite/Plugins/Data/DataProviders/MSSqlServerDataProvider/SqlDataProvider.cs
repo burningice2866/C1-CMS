@@ -63,7 +63,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         public IEnumerable<Type> GetSupportedInterfaces()
         {
-            return _sqlDataTypeStoresContainer.SupportedInterface;
+            return _sqlDataTypeStoresContainer.SupportedInterfaces;
         }
 
 
@@ -88,7 +88,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             using (TimerProfilerFacade.CreateTimerProfiler(typeof(T).ToString()))
             {
                 string errorMessage;
-                if (!DataTypeValidationRegistry.IsValidateForProvider(typeof(T), _dataProviderContext.ProviderName, out errorMessage))
+                if (!DataTypeValidationRegistry.IsValidForProvider(typeof(T), _dataProviderContext.ProviderName, out errorMessage))
                 {
                     throw new InvalidOperationException(errorMessage);
                 }
@@ -104,12 +104,12 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         public T GetData<T>(IDataId dataId)
             where T : class, IData
         {
+            Verify.ArgumentNotNull(dataId, "dataId");
+
             using (TimerProfilerFacade.CreateTimerProfiler(string.Format("dataId ({0})", typeof(T))))
             {
-                if (dataId == null) throw new ArgumentNullException("dataId");
-
                 string errorMessage;
-                if (!DataTypeValidationRegistry.IsValidateForProvider(typeof(T), _dataProviderContext.ProviderName, out errorMessage))
+                if (!DataTypeValidationRegistry.IsValidForProvider(typeof(T), _dataProviderContext.ProviderName, out errorMessage))
                 {
                     throw new InvalidOperationException(errorMessage);
                 }
@@ -147,7 +147,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 }
 
                 string errorMessage;
-                if (!DataTypeValidationRegistry.IsValidateForProvider(interfaceType, _dataProviderContext.ProviderName, out errorMessage))
+                if (!DataTypeValidationRegistry.IsValidForProvider(interfaceType, _dataProviderContext.ProviderName, out errorMessage))
                 {
                     throw new InvalidOperationException(errorMessage);
                 }
@@ -166,7 +166,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             using (TimerProfilerFacade.CreateTimerProfiler())
             {
                 string errorMessage;
-                if (!DataTypeValidationRegistry.IsValidateForProvider(typeof(T), _dataProviderContext.ProviderName, out errorMessage))
+                if (!DataTypeValidationRegistry.IsValidForProvider(typeof(T), _dataProviderContext.ProviderName, out errorMessage))
                 {
                     throw new InvalidOperationException(errorMessage);
                 }
@@ -208,7 +208,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 }
 
                 string errorMessage;
-                if (!DataTypeValidationRegistry.IsValidateForProvider(interfaceType, _dataProviderContext.ProviderName, out errorMessage))
+                if (!DataTypeValidationRegistry.IsValidForProvider(interfaceType, _dataProviderContext.ProviderName, out errorMessage))
                 {
                     throw new InvalidOperationException(errorMessage);
                 }
@@ -232,7 +232,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 var typeDesrciptor = DynamicTypeManager.GetDataTypeDescriptor(type);
                 SqlStoreManipulator.AddLocale(typeDesrciptor, cultureInfo);
 
-                InterfaceConfigurationElement oldElement = _interfaceConfigurationElements.Where(f => f.DataTypeId == typeDesrciptor.DataTypeId).Single();
+                InterfaceConfigurationElement oldElement = _interfaceConfigurationElements.Single(f => f.DataTypeId == typeDesrciptor.DataTypeId);
 
                 InterfaceConfigurationElement newElement = InterfaceConfigurationManipulator.RefreshLocalizationInfo(_dataProviderContext.ProviderName, typeDesrciptor);
                 
@@ -269,7 +269,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         internal void BuildAllCode(CodeGenerationBuilder codeGenerationBuilder)
         {
-            SqlDataProviderCodeBuilder codeBuilder = new SqlDataProviderCodeBuilder(_dataProviderContext.ProviderName, codeGenerationBuilder);
+            var codeBuilder = new SqlDataProviderCodeBuilder(_dataProviderContext.ProviderName, codeGenerationBuilder);
 
             foreach (InterfaceConfigurationElement element in _interfaceConfigurationElements)
             {
@@ -279,7 +279,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
                 if (!dataTypeDescriptor.ValidateRuntimeType())
                 {
-                    Log.LogError("SqlDataProvider", string.Format("The non code generated interface type '{0}' was not found, skipping code generation for that type", dataTypeDescriptor.BuildNewHandlerTypeName));
+                    Log.LogError(LogTitle, string.Format("The non code generated interface type '{0}' was not found, skipping code generation for that type", dataTypeDescriptor));
                     continue;
                 }
 
@@ -336,12 +336,12 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         public IDataProvider Assemble(IBuilderContext context, DataProviderData objectConfiguration, IConfigurationSource configurationSource, ConfigurationReflectionCache reflectionCache)
         {
-            SqlDataProviderData sqlDataProviderData = (SqlDataProviderData)objectConfiguration;
+            var sqlDataProviderData = (SqlDataProviderData)objectConfiguration;
 
             string configFilePath = Path.Combine(PathUtil.Resolve(GlobalSettingsFacade.ConfigurationDirectory), string.Format("{0}.config", sqlDataProviderData.Name));
-            C1Configuration configuration = new C1Configuration(configFilePath);
+            var configuration = new C1Configuration(configFilePath);
 
-            SqlDataProviderConfigurationSection section = configuration.GetSection(SqlDataProviderConfigurationSection.SectionName) as SqlDataProviderConfigurationSection;
+            var section = configuration.GetSection(SqlDataProviderConfigurationSection.SectionName) as SqlDataProviderConfigurationSection;
             if (section == null)
             {
                 section = new SqlDataProviderConfigurationSection();
@@ -350,7 +350,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             }
 
 
-            List<InterfaceConfigurationElement> interfaceConfigurationElements = new List<InterfaceConfigurationElement>();
+            var interfaceConfigurationElements = new List<InterfaceConfigurationElement>();
             foreach (InterfaceConfigurationElement table in section.Interfaces)
             {
                 interfaceConfigurationElements.Add(table);
@@ -359,7 +359,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             ReplaceTypeNamesWithTypeIDs(interfaceConfigurationElements);
 
 
-            SqlLoggingContext sqlLoggingContext = new SqlLoggingContext();
+            var sqlLoggingContext = new SqlLoggingContext();
             sqlLoggingContext.Enabled = sqlDataProviderData.SqlQueryLoggingEnabled;
             sqlLoggingContext.IncludeStack = sqlDataProviderData.SqlQueryLoggingIncludeStack;
             sqlLoggingContext.TypesToIgnore = new List<Type>();

@@ -88,7 +88,7 @@ _Application.prototype = {
 	/** 
 	 * @type {boolean} 
 	 */
-	hasStartPage : true,
+ 	hasStartPage : true,
 	
 	/**
 	 * Flipped when certain critical errors are encountered.
@@ -253,13 +253,13 @@ _Application.prototype = {
 		EventBroadcaster.subscribe ( BroadcastMessages.STAGE_INITIALIZED, {
 			handleBroadcast : function () {
 				
-				/*
-				 * Launching system developer panels.
-				 */
-				if ( Application.isDeveloperMode ) {
-					StageBinding.handleViewPresentation ( "Composite.Management.SystemLog" );
-					StageBinding.handleViewPresentation ( "Composite.Management.Developer" );
-				}
+				///*
+				// * Launching system developer panels.
+				// */
+				//if (Application.isDeveloperMode && !Client.isPad) {
+				//	StageBinding.handleViewPresentation ( "Composite.Management.SystemLog" );
+				//	StageBinding.handleViewPresentation ( "Composite.Management.Developer" );
+				//}
 				
 				setTimeout ( function () {
 					ProgressBarBinding.notch ( 4 );
@@ -356,6 +356,7 @@ _Application.prototype = {
 		TreeService					= WebServiceProxy.createProxy ( Constants.URL_WSDL_TREESERVICE );
 		SecurityService				= WebServiceProxy.createProxy ( Constants.URL_WSDL_SECURITYSERVICE );
 		XhtmlTransformationsService = WebServiceProxy.createProxy ( Constants.URL_WSDL_XHTMLTRANSFORM );
+		PageTemplateService			= WebServiceProxy.createProxy ( Constants.URL_WSDL_PAGETEMPLATE );
 		FunctionService				= WebServiceProxy.createProxy ( Constants.URL_WSDL_FUNCTIONSERVICE );
 		LocalizationService			= WebServiceProxy.createProxy ( Constants.URL_WSDL_LOCALIZATION );
 		SourceValidationService		= WebServiceProxy.createProxy ( Constants.URL_WSDL_SOURCEVALIDATION );

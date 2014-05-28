@@ -59,6 +59,7 @@ StandardEventHandler.prototype._addListeners = function () {
 	DOMEvents.addEventListener( doc, DOMEvents.MOUSEDOWN, this);
 	DOMEvents.addEventListener ( doc, DOMEvents.MOUSEUP, this );
 	DOMEvents.addEventListener ( doc, DOMEvents.MOUSEMOVE, this );
+	DOMEvents.addEventListener ( doc, DOMEvents.TOUCHSTART, this);
 
 
 	/*
@@ -125,8 +126,14 @@ StandardEventHandler.prototype._addListeners = function () {
 		doc.addEventListener ( DOMEvents.KEYDOWN, {
 			handleEvent : function ( e ) {
 				var s = 83;
-				if ( e.ctrlKey && e.keyCode == s ) {
-					e.preventDefault ();
+				if (Client.isMac) {
+					if (e.metaKey && e.keyCode == s && !e.altKey) {
+						e.preventDefault();
+					}
+				} else {
+					if (e.ctrlKey && e.keyCode == s && !e.altKey) {
+						e.preventDefault();
+					}
 				}
 			}
 		}, true );
@@ -148,6 +155,9 @@ StandardEventHandler.prototype.handleEvent = function ( e ) {
 			break;
 		case DOMEvents.MOUSEMOVE :
 			this._handleMouseMove ( e );
+			break;
+		case DOMEvents.TOUCHSTART:
+			this._handleTouchStart(e);
 			break;
 		case DOMEvents.KEYDOWN :
 			this._handleKeyDown ( e );
@@ -262,6 +272,15 @@ StandardEventHandler.prototype._handleMouseMove = function ( e ) {
 		);
 		throw ( exception );
 	}
+}
+
+/*
+ * Broadcast touchstart globally.
+ * @param {MouseEvent} e
+ */
+StandardEventHandler.prototype._handleTouchStart = function (e) {
+
+	EventBroadcaster.broadcast(BroadcastMessages.TOUCHEVENT_TOUCHSTART, e);
 }
 
 /**

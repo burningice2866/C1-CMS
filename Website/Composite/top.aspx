@@ -10,7 +10,8 @@
 
 		<title>C1: <%=Request.Url.Host%></title>
         <meta name="robots" content="noindex, nofollow" />
-        <meta name="google" value="notranslate" />		
+        <meta name="google" value="notranslate" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
 
 		<control:styleloader runat="server"/>
 		<link rel="stylesheet" type="text/css" href="top.css.aspx"/>
@@ -45,7 +46,7 @@
 	</head>
 	<body id="top">
 	
-		<ui:cover id="mastercover" transparent="true" busy="true" blockevents="true"/>
+		<ui:cover id="mastercover" transparent="true" busy="true" blockevents="true" doubletouchunlock="true"/>
 		<ui:cover id="logoutcover" busy="false" blockevents="true" hidden="true"/>
 		<ui:uncover id="uncover"/>
 		

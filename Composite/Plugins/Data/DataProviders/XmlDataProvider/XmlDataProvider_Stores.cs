@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Composite.Core;
 using Composite.Core.Extensions;
+using Composite.Core.Linq;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
@@ -85,6 +86,8 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
             XmlDataProviderDocumentCache.ClearCache();
 
             InterfaceConfigurationManipulator.Remove(_dataProviderContext.ProviderName, typeDescriptor);
+
+            _dataTypeConfigurationElements = _dataTypeConfigurationElements.Where(s => s.DataTypeId != typeDescriptor.DataTypeId).Evaluate();
         }
 
 
@@ -223,14 +226,17 @@ namespace Composite.Plugins.Data.DataProviders.XmlDataProvider
                 dataProviderHelperType = TypeManager.TryGetType(dataProviderHelperClassFullName);
                 dataIdClassType = TypeManager.TryGetType(dataIdClassFullName);
 
-                bool isRecompileNeeded = CodeGenerationManager.IsRecompileNeeded(interfaceType, new[] { dataProviderHelperType, dataIdClassType });
-
-                if (isRecompileNeeded || forceCompile)
+                if (!forceCompile)
                 {
-                    CodeGenerationBuilder codeGenerationBuilder = new CodeGenerationBuilder(_dataProviderContext.ProviderName + ":" + dataTypeDescriptor.Name);
+                    forceCompile = CodeGenerationManager.IsRecompileNeeded(interfaceType, new[] { dataProviderHelperType, dataIdClassType });
+                }
+
+                if (forceCompile)
+                {
+                    var codeGenerationBuilder = new CodeGenerationBuilder(_dataProviderContext.ProviderName + ":" + dataTypeDescriptor.Name);
 
                     // XmlDataProvider types                
-                    XmlDataProviderCodeBuilder codeBuilder = new XmlDataProviderCodeBuilder(_dataProviderContext.ProviderName, codeGenerationBuilder);
+                    var codeBuilder = new XmlDataProviderCodeBuilder(_dataProviderContext.ProviderName, codeGenerationBuilder);
                     codeBuilder.AddDataType(dataTypeDescriptor);
 
 

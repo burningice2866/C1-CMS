@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Web;
+//using System.Web.Instrumentation;
 using System.Web.WebPages;
 using System.Xml;
 using System.Xml.Linq;
 using Composite.Core.Application;
+//using Composite.Core.Extensions;
+//using Composite.Core.IO;
 using Composite.Core.Types;
 using Composite.Core.Xml;
 using Composite.Functions;
@@ -21,8 +25,6 @@ namespace Composite.AspNet.Razor
     {
         internal static readonly string PageContext_FunctionContextContainer = "C1.FunctionContextContainer";
 
-        private static FieldInfo HttpContext_items = typeof (HttpContext).GetField("_items", BindingFlags.Instance | BindingFlags.NonPublic);
-
         /// <summary>
         /// Executes the razor page.
         /// </summary>
@@ -32,7 +34,7 @@ namespace Composite.AspNet.Razor
         /// <param name="functionContextContainer">The function context container</param>
         /// <returns></returns>
         public static object ExecuteRazorPage(
-            string virtualPath,
+            string virtualPath, 
             Action<WebPageBase> setParameters,
             Type resultType,
             FunctionContextContainer functionContextContainer)
@@ -72,95 +74,86 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public static object ExecuteRazorPage(
             WebPageBase webPage,
-            Action<WebPageBase> setParameters,
-            Type resultType,
+            Action<WebPageBase> setParameters, 
+            Type resultType, 
             FunctionContextContainer functionContextContainer)
         {
-            var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+            HttpContext currentContext = HttpContext.Current;
 
+            var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
+            
+            // IEnumerable<PageExecutionListener> pageExecutionListeners;
             HttpContextBase httpContext;
 
-            HttpContext currentContext = HttpContext.Current;
-            HttpContext replacementContext = null;
             if (currentContext == null)
             {
-                httpContext = NoHttpRazorContext.GetDotNetSpecificVersion();
+                httpContext = new NoHttpRazorContext();
+                // pageExecutionListeners = new PageExecutionListener[0];
             }
             else
             {
-                httpContext = new CustomHttpContextWrapper(currentContext);
-                replacementContext = BuildContextWithReplacedItems(currentContext, httpContext);
+                httpContext = new HttpContextWrapper(currentContext);
+                // pageExecutionListeners = httpContext.PageInstrumentation.ExecutionListeners;
             }
 
+
             var pageContext = new WebPageContext(httpContext, webPage, startPage);
+
             if (functionContextContainer != null)
             {
                 pageContext.PageData.Add(PageContext_FunctionContextContainer, functionContextContainer);
             }
 
+
             if (setParameters != null)
             {
+
                 setParameters(webPage);
             }
-
+                
             var sb = new StringBuilder();
             using (var writer = new StringWriter(sb))
             {
-                try
-                {
-                    if (replacementContext != null)
-                    {
-                        HttpContext.Current = replacementContext;
-                    }
-                    
-                    webPage.ExecutePageHierarchy(pageContext, writer);
-                }
-                finally
-                {
-                    if (replacementContext != null)
-                    {
-                        HttpContext.Current = currentContext;
-                    }
-                }
+                //// PageExecutionContext enables "Browser Link" support
+                //var pageExecutionContext = new PageExecutionContext
+                //{
+                //    TextWriter = writer,
+                //    VirtualPath = PathUtil.Resolve(webPage.VirtualPath),
+                //    StartPosition = 0,
+                //    IsLiteral = true
+                //};
+
+                //pageExecutionListeners.ForEach(l => l.BeginContext(pageExecutionContext));
+
+                webPage.ExecutePageHierarchy(pageContext, writer);
+
+                //pageExecutionListeners.ForEach(l => l.EndContext(pageExecutionContext));
             }
 
-            string output = sb.ToString().Trim();
+            string output = sb.ToString();
+            
 
+			if (resultType == typeof(XhtmlDocument))
+			{
+			    if (string.IsNullOrWhiteSpace(output)) return new XhtmlDocument();
 
-            if (resultType == typeof(XhtmlDocument))
-            {
-                if (output == "") return new XhtmlDocument();
-
-                try
+				try
                 {
                     return OutputToXhtmlDocument(output);
-                }
-                catch (XmlException ex)
-                {
-                    string[] codeLines = output.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
+				}
+				catch (XmlException ex)
+				{
+				    string[] codeLines = output.Split(new [] { Environment.NewLine, "\n" }, StringSplitOptions.None);
 
-                    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, codeLines, ex.LineNumber);
+				    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, codeLines, ex.LineNumber);
 
-                    throw;
-                }
-            }
+				    throw;
+				}
+			}
 
-            return ValueTypeConverter.Convert(output, resultType);
+			return ValueTypeConverter.Convert(output, resultType);
         }
 
-
-        private static HttpContext BuildContextWithReplacedItems(HttpContext currentContext, HttpContextBase newContext)
-        {
-            var result = new HttpContext(currentContext.Request, currentContext.Response);
-            result.ApplicationInstance = currentContext.ApplicationInstance;
-            result.Handler = currentContext.Handler;
-            result.SkipAuthorization = currentContext.SkipAuthorization;
-            result.User = currentContext.User;
-
-            HttpContext_items.SetValue(result, newContext.Items);
-
-            return result;
-        }
 
         private static XhtmlDocument OutputToXhtmlDocument(string output)
         {
@@ -209,13 +202,11 @@ namespace Composite.AspNet.Razor
         /// <param name="functionContextContainer">The function context container.</param>
         /// <returns></returns>
         public static ResultType ExecuteRazorPage<ResultType>(
-            string virtualPath,
-            Action<WebPageBase> setParameters,
-            FunctionContextContainer functionContextContainer = null) where ResultType : class
+            string virtualPath, 
+            Action<WebPageBase> setParameters, 
+            FunctionContextContainer functionContextContainer = null) where ResultType: class
         {
-            return (ResultType)ExecuteRazorPage(virtualPath, setParameters, typeof(ResultType), functionContextContainer);
+            return (ResultType) ExecuteRazorPage(virtualPath, setParameters, typeof(ResultType), functionContextContainer);
         }
     }
-
-
 }

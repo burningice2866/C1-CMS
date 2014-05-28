@@ -109,7 +109,7 @@ namespace Composite.Core.WebClient.Setup
                 
                 bool selected = false;
 
-                if (string.IsNullOrEmpty(clientPreferredCultureName)==true)
+                if (string.IsNullOrEmpty(clientPreferredCultureName))
                 {
                     XAttribute selectedAttribute = element.Attribute("Selected");
                     selected = (selectedAttribute != null && (bool)selectedAttribute);
@@ -141,22 +141,20 @@ namespace Composite.Core.WebClient.Setup
         [WebMethod]
         public bool SetUp(string setupDescriptionXML, string username, string email, string password, string language, string consolelanguage, bool newsletter)
         {
-            if (SystemSetupFacade.IsSystemFirstTimeInitialized == true) return true;
+            if (SystemSetupFacade.IsSystemFirstTimeInitialized) return true;
 
+            SystemSetupFacade.SetupIsRunning = true;
             SystemSetupFacade.IsSystemFirstTimeInitialized = true;
 
             try
             {
-                SetupServiceFacade.SetUp(setupDescriptionXML, username, password, email, language, consolelanguage, newsletter);
-                Log.LogInformation(LogTitle, "Setup complete. Enjoy!");
+                return SetupServiceFacade.SetUp(setupDescriptionXML, username, password, email, language, consolelanguage, newsletter);
             }
             catch(Exception ex)
             {
                 Log.LogError(LogTitle, ex);
                 throw;
             }
-
-            return true;
         }
 
 
@@ -189,7 +187,7 @@ namespace Composite.Core.WebClient.Setup
             }
             catch (Exception)
             {
-                if (RuntimeInformation.IsDebugBuild == true) throw;
+                if (RuntimeInformation.IsDebugBuild) throw;
                 
                 return false;
             }            
@@ -232,7 +230,7 @@ namespace Composite.Core.WebClient.Setup
         {
             string filePath = Path.Combine(testDir, "NtfsSecurityTest.xml"); 
 
-            if (C1File.Exists(filePath) == true)
+            if (C1File.Exists(filePath))
             {
                 FileUtils.Delete(filePath);
             }
@@ -267,7 +265,7 @@ namespace Composite.Core.WebClient.Setup
             }
             catch (Exception)
             {
-                if (RuntimeInformation.IsDebugBuild == true) throw;
+                if (RuntimeInformation.IsDebugBuild) throw;
             }
 
             return false;
@@ -303,7 +301,7 @@ namespace Composite.Core.WebClient.Setup
             }
             catch (Exception)
             {
-                if (RuntimeInformation.IsDebugBuild == true) throw;
+                if (RuntimeInformation.IsDebugBuild) throw;
                 
                 return false;
             }

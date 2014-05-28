@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Composite.Core.IO;
-using Composite.Core.Logging;
 using Composite.Core.PackageSystem.Foundation;
 using Composite.Core.Serialization;
 using System.ComponentModel;
@@ -21,28 +20,34 @@ namespace Composite.Core.PackageSystem
     [SerializerHandler(typeof(PackageManagerInstallProcess))]
     public sealed class PackageManagerInstallProcess : ISerializerHandler
     {
-        private IPackageInstaller _packageInstaller = null;
+        private static readonly string LogTitle = typeof(PackageManagerInstallProcess).Name;
+
+        private readonly IPackageInstaller _packageInstaller;
         private readonly SystemLockingType _systemLockingType;
-        private readonly string _zipFilename = null;
-        private readonly string _packageInstallDirectory = null;
-        private readonly string _packageName = null;
+        private readonly string _zipFilename;
+        private readonly string _packageInstallDirectory;
+        private readonly string _packageName;
         private readonly Guid _packageId;
-        private List<PackageFragmentValidationResult> _preInstallValidationResult = null;
-        private List<PackageFragmentValidationResult> _validationResult = null;
-        private List<PackageFragmentValidationResult> _installationResult = null;
+        private readonly string _originalPackageInstallDirectory;
+        private readonly List<PackageFragmentValidationResult> _preInstallValidationResult;
+        private List<PackageFragmentValidationResult> _validationResult;
+        private List<PackageFragmentValidationResult> _installationResult;
+        
 
 
 
         /// <exclude />
         public string Serialize(object objectToSerialize)
         {
-            PackageManagerInstallProcess processToSerialize = objectToSerialize as PackageManagerInstallProcess;
+            var processToSerialize = objectToSerialize as PackageManagerInstallProcess;
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             StringConversionServices.SerializeKeyValuePair(sb, "ZipFileName", processToSerialize._zipFilename);
             StringConversionServices.SerializeKeyValuePair(sb, "PackageInstallDirectory", processToSerialize._packageInstallDirectory);
             StringConversionServices.SerializeKeyValuePair(sb, "HasBeenValidated", processToSerialize._validationResult != null);
+            StringConversionServices.SerializeKeyValuePair(sb, "OriginalPackageInstallDirectory", processToSerialize._originalPackageInstallDirectory);
+            
             
             return sb.ToString();
         }
@@ -57,6 +62,14 @@ namespace Composite.Core.PackageSystem
             string packageInstallDirectory = StringConversionServices.DeserializeValueString(dic["PackageInstallDirectory"]);
             bool hasBeenValidated = StringConversionServices.DeserializeValueBool(dic["HasBeenValidated"]);
 
+            string originalPackageInstallDirectory = null;
+            string serializedValue;
+
+            if (dic.TryGetValue("OriginalPackageInstallDirectory", out serializedValue))
+            {
+                originalPackageInstallDirectory = StringConversionServices.DeserializeValueString(serializedValue);
+            }
+            
             if (C1File.Exists(zipFilename))
             {
                 XElement installContent;
@@ -68,18 +81,26 @@ namespace Composite.Core.PackageSystem
                 string packageZipFilename = Path.Combine(packageInstallDirectory, Path.GetFileName(zipFilename));
                 C1File.Copy(zipFilename, packageZipFilename, true);
 
-                IPackageInstaller packageInstaller = new PackageInstaller(new PackageInstallerUninstallerFactory(), packageZipFilename, packageInstallDirectory, TempDirectoryFacade.CreateTempDirectory(), packageInformation);
+                var packageInstaller = new PackageInstaller(new PackageInstallerUninstallerFactory(), packageZipFilename, packageInstallDirectory, TempDirectoryFacade.CreateTempDirectory(), packageInformation);
 
-                PackageManagerInstallProcess packageManagerInstallProcess = new PackageManagerInstallProcess(packageInstaller, packageInformation.SystemLockingType, zipFilename, packageInstallDirectory, packageInformation.Name, packageInformation.Id);
+                var packageManagerInstallProcess = new PackageManagerInstallProcess(
+                    packageInstaller, 
+                    packageInformation.SystemLockingType, 
+                    zipFilename, 
+                    packageInstallDirectory, 
+                    packageInformation.Name, 
+                    packageInformation.Id,
+                    originalPackageInstallDirectory);
+
                 if (hasBeenValidated)
+                {
                     packageManagerInstallProcess.Validate();
+                }
 
                 return packageManagerInstallProcess;
             }
-            else
-            {
-                return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult>(), null);;
-            }
+
+            return new PackageManagerInstallProcess(new List<PackageFragmentValidationResult>(), null);;
         }
 
 
@@ -92,7 +113,7 @@ namespace Composite.Core.PackageSystem
 
         internal PackageManagerInstallProcess(List<PackageFragmentValidationResult> preInstallValidationResult, string zipFilename)
         {
-            if (preInstallValidationResult == null) throw new ArgumentNullException("preInstallValidationResult");
+            Verify.ArgumentNotNull(preInstallValidationResult, "preInstallValidationResult");
 
             _preInstallValidationResult = preInstallValidationResult;
             _zipFilename = zipFilename;
@@ -100,10 +121,17 @@ namespace Composite.Core.PackageSystem
 
 
 
-        internal PackageManagerInstallProcess(IPackageInstaller packageInstaller, SystemLockingType systemLockingType, string zipFilename, string packageInstallDirectory, string packageName, Guid packageId)
+        internal PackageManagerInstallProcess(
+            IPackageInstaller packageInstaller, 
+            SystemLockingType systemLockingType, 
+            string zipFilename, 
+            string packageInstallDirectory, 
+            string packageName, 
+            Guid packageId,
+            string originalPackageInstallDirectory)
         {
-            if (packageInstaller == null) throw new ArgumentNullException("packageInstaller");
-            if (string.IsNullOrEmpty(packageInstallDirectory)) throw new ArgumentNullException("packageInstallDirectory");
+            Verify.ArgumentNotNull(packageInstaller, "packageInstaller");
+            Verify.ArgumentNotNullOrEmpty(packageInstallDirectory, "packageInstallDirectory");
 
             _packageInstaller = packageInstaller;
             _systemLockingType = systemLockingType;
@@ -111,6 +139,7 @@ namespace Composite.Core.PackageSystem
             _packageInstallDirectory = packageInstallDirectory;
             _packageName = packageName;
             _packageId = packageId;
+            _originalPackageInstallDirectory = originalPackageInstallDirectory;
 
             _preInstallValidationResult = new List<PackageFragmentValidationResult>();
         }
@@ -122,7 +151,7 @@ namespace Composite.Core.PackageSystem
         {
             get
             {
-                if (_packageInstaller == null) throw new InvalidOperationException("Pre installation did not validate");
+                Verify.IsNotNull(_packageInstaller, "Pre installation did not validate");
 
                 return _packageInstaller.CanBeUninstalled;
             }
@@ -134,7 +163,7 @@ namespace Composite.Core.PackageSystem
         {
             get
             {
-                if (_packageInstaller == null) throw new InvalidOperationException("Pre installation did not validate");
+                Verify.IsNotNull(_packageInstaller, "Pre installation did not validate");
 
                 return _packageInstaller.FlushOnCompletion;
             }
@@ -146,7 +175,7 @@ namespace Composite.Core.PackageSystem
         {
             get
             {
-                if (_packageInstaller == null) throw new InvalidOperationException("Pre installation did not validate");
+                Verify.IsNotNull(_packageInstaller, "Pre installation did not validate");
 
                 return _packageInstaller.ReloadConsoleOnCompletion;
             }
@@ -167,14 +196,14 @@ namespace Composite.Core.PackageSystem
         /// <exclude />
         public List<PackageFragmentValidationResult> Validate()
         {
-            if (_packageInstaller == null) throw new InvalidOperationException("Pre installation did not validate");
-            if (_validationResult != null) throw new InvalidOperationException("Validate may only be called once");
+            Verify.IsNotNull(_packageInstaller, "Pre installation did not validate");
+            Verify.IsNull(_validationResult, "Validate() may only be called once");
 
             _validationResult = _packageInstaller.Validate().ToList();
 
             if (_validationResult.Count > 0)
             {
-                _validationResult.AddRange(FinalizeProcess());
+                _validationResult.AddRange(FinalizeProcess(false));
             }
 
             return _validationResult;
@@ -185,12 +214,12 @@ namespace Composite.Core.PackageSystem
         /// <exclude />
         public List<PackageFragmentValidationResult> Install()
         {
-            if (_packageInstaller == null) throw new InvalidOperationException("Pre installation did not validate");
-            if (_validationResult == null) throw new InvalidOperationException("Call validation first");
+            Verify.IsNotNull(_packageInstaller, "Pre installation did not validate");
+            Verify.IsNotNull(_validationResult, "Call validation first");
             if (_validationResult.Count > 0) throw new InvalidOperationException("Installation did not validate");
-            if (_installationResult != null) throw new InvalidOperationException("Install may only be called onece");
+            Verify.IsNull(_installationResult, "Install may only be called once");
 
-            LoggingService.LogVerbose("PackageManager", string.Format("Installing package: {0}, Id = {1}", _packageName, _packageId));            
+            Log.LogInformation(LogTitle, "Installing package: {0}, Id = {1}", _packageName, _packageId);
 
             PackageFragmentValidationResult result = _packageInstaller.Install(_systemLockingType);
 
@@ -203,7 +232,7 @@ namespace Composite.Core.PackageSystem
                 _installationResult = new List<PackageFragmentValidationResult>();
             }
 
-            _installationResult.AddRange(FinalizeProcess());
+            _installationResult.AddRange(FinalizeProcess(true));
 
             return _installationResult;
         }
@@ -213,32 +242,59 @@ namespace Composite.Core.PackageSystem
         /// <exclude />
         public void CancelInstallation()
         {
-            if ((_zipFilename != null) && (C1File.Exists(_zipFilename))) C1File.Delete(_zipFilename);
+            if (_zipFilename != null && C1File.Exists(_zipFilename))
+            {
+                C1File.Delete(_zipFilename);
+            }
 
-            if (C1Directory.Exists(_packageInstallDirectory)) DirectoryUtils.DeleteFilesRecursively(_packageInstallDirectory);
+            if (C1Directory.Exists(_packageInstallDirectory))
+            {
+                C1Directory.Delete(_packageInstallDirectory, true);
+            }
         }
 
 
 
-        private List<PackageFragmentValidationResult> FinalizeProcess()
+        private ICollection<PackageFragmentValidationResult> FinalizeProcess(bool install)
         {
             try        
             {
-                if ((_zipFilename != null) && (C1File.Exists(_zipFilename))) C1File.Delete(_zipFilename);
-
-                if ((_preInstallValidationResult != null) && (_validationResult.Count > 0) && (C1Directory.Exists(_packageInstallDirectory))) DirectoryUtils.DeleteFilesRecursively(_packageInstallDirectory);
-                else if ((_validationResult != null) && (_validationResult.Count > 0) && (C1Directory.Exists(_packageInstallDirectory))) DirectoryUtils.DeleteFilesRecursively(_packageInstallDirectory);
-                else if ((_installationResult != null) && (_installationResult.Count > 0) && (C1Directory.Exists(_packageInstallDirectory))) DirectoryUtils.DeleteFilesRecursively(_packageInstallDirectory);
-                else
+                if (_zipFilename != null && C1File.Exists(_zipFilename))
                 {
-                    C1File.WriteAllText(Path.Combine(_packageInstallDirectory, PackageSystemSettings.InstalledFilename), "");
+                    C1File.Delete(_zipFilename);
                 }
 
-                return new List<PackageFragmentValidationResult>();
+                Func<IList<PackageFragmentValidationResult>, bool> isNotEmpty = list => list != null && list.Count > 0;
+
+                bool installationFailed = isNotEmpty(_preInstallValidationResult) 
+                                          || isNotEmpty(_validationResult) 
+                                          || isNotEmpty(_installationResult);
+
+                if (installationFailed && C1Directory.Exists(_packageInstallDirectory))
+                {
+                    C1Directory.Delete(_packageInstallDirectory, true);
+                }
+
+                if(!installationFailed && install)
+                {
+                    Log.LogInformation(LogTitle, "Package successfully installed");
+
+                    C1File.WriteAllText(Path.Combine(_packageInstallDirectory, PackageSystemSettings.InstalledFilename), "");
+
+                    // Moving package files to a proper location, if an newer version of an already installed package is installed
+                    if (_originalPackageInstallDirectory != null)
+                    {
+                        C1Directory.Delete(_originalPackageInstallDirectory, true);
+
+                        C1Directory.Move(_packageInstallDirectory, _originalPackageInstallDirectory);
+                    }
+                }
+
+                return new PackageFragmentValidationResult[0];
             }
             catch (Exception ex)
             {
-                return new List<PackageFragmentValidationResult> { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, ex) };
+                return new [] { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, ex) };
             }
         }
     }

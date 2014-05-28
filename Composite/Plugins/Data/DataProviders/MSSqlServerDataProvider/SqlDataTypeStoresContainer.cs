@@ -5,8 +5,8 @@ using System.Data;
 using System.Data.Linq;
 using System.Data.SqlTypes;
 using System.Reflection;
+using Composite.Core;
 using Composite.Core.Extensions;
-using Composite.Core.Logging;
 using Composite.Core.Sql;
 using Composite.Core.Threading;
 using Composite.Data;
@@ -24,9 +24,9 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
 
         private readonly Dictionary<Type, SqlDataTypeStore> _sqlDataTypeStores = new Dictionary<Type, SqlDataTypeStore>();
-        private readonly List<Type> _supportedInterface = new List<Type>();
-        private readonly List<Type> _knownInterface = new List<Type>();
-        private readonly List<Type> _generatedInterface = new List<Type>();
+        private readonly List<Type> _supportedInterfaces = new List<Type>();
+        private readonly List<Type> _knownInterfaces = new List<Type>();
+        private readonly List<Type> _generatedInterfaces = new List<Type>();
 
 
         private readonly string _providerName;
@@ -49,33 +49,37 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         /// <summary>
         /// All working data types 
         /// </summary>
-        public IEnumerable<Type> SupportedInterface { get { return _supportedInterface; } }
+        public IEnumerable<Type> SupportedInterfaces { get { return _supportedInterfaces; } }
 
 
 
         /// <summary>
         /// All data types, including non working due to config error or something else
         /// </summary>
-        public IEnumerable<Type> KnownInterfaces { get { return _knownInterface; } }
+        public IEnumerable<Type> KnownInterfaces { get { return _knownInterfaces; } }
 
 
 
         /// <summary>
         /// All working generated data types
         /// </summary>
-        public IEnumerable<Type> GeneratedInterfaces { get { return _generatedInterface; } }
+        public IEnumerable<Type> GeneratedInterfaces { get { return _generatedInterfaces; } }
 
 
 
-        internal Type DataContextType { get; set; }
+        internal Type DataContextClass { get; set; }
 
 
 
         public SqlDataTypeStore GetDataTypeStore(Type interfaceType)
         {
-            if (!_sqlDataTypeStores.ContainsKey(interfaceType)) throw new InvalidOperationException();
+            SqlDataTypeStore store;
+            if (!_sqlDataTypeStores.TryGetValue(interfaceType, out store))
+            {
+                throw new InvalidOperationException("Interface '{0}' is not supported".FormatWith(interfaceType));
+            }
             
-            return _sqlDataTypeStores[interfaceType];
+            return store;
         }
 
 
@@ -89,12 +93,12 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         {
             _sqlDataTypeStores.Add(interfaceType, sqlDataTypeStore);
 
-            _supportedInterface.Add(interfaceType);
+            _supportedInterfaces.Add(interfaceType);
             AddKnownInterface(interfaceType);
 
             if (sqlDataTypeStore.IsGeneretedDataType)
             {
-                _generatedInterface.Add(interfaceType);
+                _generatedInterfaces.Add(interfaceType);
             }
         }
 
@@ -102,9 +106,14 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
         internal void AddKnownInterface(Type interfaceType)
         {
-            _knownInterface.Add(interfaceType);
+            _knownInterfaces.Add(interfaceType);
         }
 
+
+        internal void RemoveKnownInterface(Type interfaceType)
+        {
+            _knownInterfaces.Remove(interfaceType);
+        }
 
 
         #region CRUD methos
@@ -303,7 +312,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
                 DataContext result = Verify.ResultNotNull(threadData[threadDataKey] as DataContext);
 
                 // In a result of a flush, data context type can be changed
-               if(result.GetType().GUID == DataContextType.GUID)
+               if(result.GetType().GUID == DataContextClass.GUID)
                {
                    return result;
                }
@@ -330,7 +339,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
         {
             IDbConnection connection = SqlConnectionManager.GetConnection(ConnectionString);
 
-            DataContext dataContext = (DataContext)Activator.CreateInstance(DataContextType, connection);
+            DataContext dataContext = (DataContext)Activator.CreateInstance(DataContextClass, connection);
 
             if (_sqlLoggingContext.Enabled)
             {
@@ -350,10 +359,16 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("SqlDataProviderCodeGeneratorResult", ex);
+                Log.LogWarning("SqlDataProviderCodeGeneratorResult", ex);
 
                 throw;
             }
-        }        
+        }
+
+
+        public void ForgetInterface(Type interfaceType)
+        {
+            _sqlDataTypeStores.Remove(interfaceType);
+        }
     }
 }

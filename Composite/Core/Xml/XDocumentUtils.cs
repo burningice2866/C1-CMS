@@ -18,16 +18,22 @@ namespace Composite.Core.Xml
         /// <param name="inputUri">This could be a file or a url</param>
         public static XDocument Load(string inputUri)
         {
-            XDocument document;
-
-            using (Stream stream = UriResolver.GetStream(inputUri))
-            {
-                document = XDocument.Load(stream);
-            }
-
-            return document;
+            return Load(inputUri, LoadOptions.None);
         }
 
+
+        /// <summary>
+        /// This should be a part of the I/O layer
+        /// </summary>
+        /// <param name="loadOptions">Load options.</param>
+        /// <param name="inputUri">This could be a file or a url</param>
+        public static XDocument Load(string inputUri, LoadOptions loadOptions)
+        {
+            using (Stream stream = UriResolver.GetStream(inputUri))
+            {
+                return XDocument.Load(stream, loadOptions);
+            }
+        }
 
 
         /// <summary>
@@ -56,17 +62,17 @@ namespace Composite.Core.Xml
         /// <exclude />
         public static string GetDocumentAsString(this XDocument document)
         {
-            if (document == null) throw new ArgumentNullException("document");
+            Verify.ArgumentNotNull(document, "document");
 
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
-                using (C1StreamWriter sw = new C1StreamWriter(ms))
+                using (var sw = new C1StreamWriter(ms))
                 {
                     document.Save(sw);
 
                     ms.Seek(0, SeekOrigin.Begin);
 
-                    using (C1StreamReader sr = new C1StreamReader(ms))
+                    using (var sr = new C1StreamReader(ms))
                     {
                         return sr.ReadToEnd();
                     }

@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Transactions;
 using System.Xml.Linq;
 using Composite.Core.Application;
 using Composite.Core.IO;
 using Composite.Core.IO.Zip;
-using Composite.Core.Logging;
 using Composite.Core.PackageSystem.Foundation;
 using Composite.Core.Types;
 using Composite.Core.Xml;
@@ -18,8 +16,9 @@ namespace Composite.Core.PackageSystem
 {
     internal sealed class PackageUninstaller : IPackageUninstaller
     {
-        private bool _isInitialized = false;
-        private List<IPackageFragmentUninstaller> _packageFramentUninstallers = new List<IPackageFragmentUninstaller>();
+        public static readonly string LogTitle = typeof (PackageUninstaller).Name;
+        private bool _isInitialized;
+        private readonly List<IPackageFragmentUninstaller> _packageFramentUninstallers = new List<IPackageFragmentUninstaller>();
 
         private string ZipFilename { get; set; }
         private string UninstallFilename { get; set; }
@@ -32,10 +31,10 @@ namespace Composite.Core.PackageSystem
 
         public PackageUninstaller(string zipFilename, string uninstallFilename, string packageInstallationDirectory, string tempDirectory, bool flushOnCompletion, bool reloadConsoleOnCompletion, bool useTransaction, PackageInformation packageInformation)
         {
-            if (string.IsNullOrEmpty(zipFilename)) throw new ArgumentNullException("zipFilename");
-            if (string.IsNullOrEmpty(uninstallFilename)) throw new ArgumentNullException("uninstallFilename");
-            if (string.IsNullOrEmpty(packageInstallationDirectory)) throw new ArgumentNullException("packageInstallationDirectory");
-            if (string.IsNullOrEmpty(tempDirectory)) throw new ArgumentNullException("tempDirectory");
+            Verify.ArgumentNotNullOrEmpty(zipFilename, "zipFilename");
+            Verify.ArgumentNotNullOrEmpty(uninstallFilename, "uninstallFilename");
+            Verify.ArgumentNotNullOrEmpty(packageInstallationDirectory, "packageInstallationDirectory");
+            Verify.ArgumentNotNullOrEmpty(tempDirectory, "tempDirectory");
 
             this.ZipFilename = zipFilename;
             this.UninstallFilename = uninstallFilename;
@@ -60,21 +59,15 @@ namespace Composite.Core.PackageSystem
                 return validationResult;
             }
 
-            foreach (IPackageFragmentUninstaller packageFragmentUninstaller in _packageFramentUninstallers)
+            foreach (var packageFragmentUninstaller in _packageFramentUninstallers.OrderByDescending(p => p.ValidateFirst))
             {
-                List<PackageFragmentValidationResult> result = null;
                 try
                 {
-                    result = packageFragmentUninstaller.Validate().ToList();
+                    validationResult.AddRange(packageFragmentUninstaller.Validate());
                 }
                 catch (Exception ex)
                 {
                     validationResult.Add(new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, ex));
-                }
-
-                if (result != null)
-                {
-                    validationResult.AddRange(result);
                 }
             }
 
@@ -134,7 +127,7 @@ namespace Composite.Core.PackageSystem
 
         private void DoUninstall()
         {
-            using (TransactionScope transactionScope = TransactionsFacade.CreateNewScope())
+            using (var transactionScope = TransactionsFacade.CreateNewScope())
             {
                 DoUninstallWithoutTransaction();
 
@@ -146,10 +139,23 @@ namespace Composite.Core.PackageSystem
 
         private void DoUninstallWithoutTransaction()
         {
-            foreach (IPackageFragmentUninstaller packageFragmentUninstaller in _packageFramentUninstallers)
+            Log.LogInformation(LogTitle, "Uninstalling package '{0}', Id = {1}", PackageInformation.Name, PackageInformation.Id);
+
+
+            try
             {
-                packageFragmentUninstaller.Uninstall();
+                foreach (IPackageFragmentUninstaller packageFragmentUninstaller in _packageFramentUninstallers)
+                {
+                    packageFragmentUninstaller.Uninstall();
+                }
             }
+            catch (Exception ex)
+            {
+                Log.LogError(LogTitle, ex);
+                throw;
+            }
+
+            Log.LogInformation(LogTitle, "Package uninstalled successfully.");
         }
 
 
@@ -173,14 +179,17 @@ namespace Composite.Core.PackageSystem
             }
             if (exception != null)
             {
-                return new PackageFragmentValidationResult[] { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, exception) };
+                return new[] { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, exception) };
             }
 
             XElement packageFragmentUninstallersElement = uninstallElement.Element(XmlUtils.GetXName(PackageSystemSettings.XmlNamespace, PackageSystemSettings.PackageFragmentUninstallersElementName));
-            if (packageFragmentUninstallersElement == null) return new PackageFragmentValidationResult[] { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, string.Format("The {0} file is wrongly formattet", this.UninstallFilename)) };
-
+            if (packageFragmentUninstallersElement == null)
+            {
+                return new[] { new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, string.Format("The '{0}' file is wrongly formatted", this.UninstallFilename)) };
+            }
+            
             List<PackageFragmentValidationResult> result2 = LoadPackageFramentUninstallers(packageFragmentUninstallersElement).ToList();
-            if (result2.Count > 0) return result2;
+            if (result2.Any()) return result2;
 
             _packageFramentUninstallers.Reverse();
 
@@ -193,33 +202,33 @@ namespace Composite.Core.PackageSystem
         {
             string binariesDirectory = Path.Combine(this.PackageInstallationDirectory, PackageSystemSettings.BinariesDirectoryName);
 
-            if (C1Directory.Exists(binariesDirectory))
+            if (!C1Directory.Exists(binariesDirectory))
             {
-                foreach (string filename in C1Directory.GetFiles(binariesDirectory))
-                {
-                    string newFilename = Path.Combine(this.TempDirectory, Path.GetFileName(filename));
-                    C1File.Copy(filename, newFilename);
-
-                    LoggingService.LogVerbose("PackageUninstaller", string.Format("Loading package uninstaller fragment assembly '{0}'", newFilename));
-
-                    Exception exception = null;
-                    try
-                    {
-                        PackageAssemblyHandler.AddAssembly(newFilename);
-                    }
-                    catch (Exception ex)
-                    {
-                        exception = ex;
-                    }
-
-                    if (exception != null)
-                    {
-                        yield return new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, exception);
-                    }
-                }
+                yield break;
             }
 
-            yield break;
+            foreach (string filename in C1Directory.GetFiles(binariesDirectory))
+            {
+                string newFilename = Path.Combine(this.TempDirectory, Path.GetFileName(filename));
+                C1File.Copy(filename, newFilename);
+
+                Log.LogVerbose("PackageUninstaller", "Loading package uninstaller fragment assembly '{0}'", newFilename);
+
+                Exception exception = null;
+                try
+                {
+                    PackageAssemblyHandler.AddAssembly(newFilename);
+                }
+                catch (Exception ex)
+                {
+                    exception = ex;
+                }
+
+                if (exception != null)
+                {
+                    yield return new PackageFragmentValidationResult(PackageFragmentValidationResultType.Fatal, exception);
+                }
+            }
         }
 
 
@@ -231,7 +240,9 @@ namespace Composite.Core.PackageSystem
             Exception exception = null;
             try
             {
-                packageUninstallerContext = new PackageUninstallerContext(new ZipFileSystem(this.ZipFilename), this.PackageInformation);
+                string packageDirectory = Path.GetDirectoryName(ZipFilename);
+
+                packageUninstallerContext = new PackageUninstallerContext(new ZipFileSystem(this.ZipFilename), packageDirectory, this.PackageInformation);
             }
             catch (Exception ex)
             {

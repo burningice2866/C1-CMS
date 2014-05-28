@@ -31,6 +31,13 @@ StageBinding.treeSelector = null;
 
 
 /**
+* The current placeholder width
+* @type {SystemTreeBinding}
+*/
+StageBinding.placeholderWidth = null;
+
+
+/**
  * Hide OR show a ViewDefinition on stage (dependant on its current status).
  * @param {string} handle
  */
@@ -310,7 +317,7 @@ StageBinding.prototype._onStageReady = function () {
 		 * Broadcasting readystate. If no start 
 		 * page, show default start splash. 
 		 */	
-		if ( !Application.hasStartPage || !Application.hasExternalConnection ) {
+		if ( !Application.hasStartPage || !Application.hasExternalConnection || Client.isPad) {
 			top.app.bindingMap.defaultstartdeck.select ();
 			this._isShowingDefaultStart = true;
 		}

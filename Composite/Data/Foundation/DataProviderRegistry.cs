@@ -150,6 +150,28 @@ namespace Composite.Data.Foundation
             _dataProviderRegistry.AddKnownDataType(interaceType, providerName);
         }
 
+        public static void UnregisterDataType(Type interfaceType, string providerName)
+        {
+            _dataProviderRegistry.UnregisterDataType(interfaceType, providerName);
+        }
+
+
+        public static void RegisterDataTypeInitializationError(Type interfaceType, Exception exception)
+        {
+            _dataProviderRegistry.RegisterDataTypeInitializationError(interfaceType, exception);
+        }
+
+
+        /// <summary>
+        /// Checks whether the data store for the specified data type was created without errors.
+        /// If any errors occured, an exception will be thrown.
+        /// </summary>
+        /// <param name="interfaceType">The interface type</param>
+        public static void CheckInitializationErrors(Type interfaceType)
+        {
+            _dataProviderRegistry.CheckInitializationErrors(interfaceType);
+        }
+
 
         internal static void InitializeDataTypes()
         {

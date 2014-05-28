@@ -43,9 +43,9 @@ namespace Composite.Data
         {
             IQueryable<T> resultQueryable;
 
-            if (DataProviderRegistry.AllInterfaces.Contains(typeof(T)))
+            if (DataProviderRegistry.AllInterfaces.Contains(typeof (T)))
             {
-                if (useCaching && DataCachingFacade.IsDataAccessCacheEnabled(typeof(T)))
+                if (useCaching && DataCachingFacade.IsDataAccessCacheEnabled(typeof (T)))
                 {
                     resultQueryable = DataCachingFacade.GetDataFromCache<T>();
                 }
@@ -53,7 +53,7 @@ namespace Composite.Data
                 {
                     if (providerNames == null)
                     {
-                        providerNames = DataProviderRegistry.GetDataProviderNamesByInterfaceType(typeof(T));
+                        providerNames = DataProviderRegistry.GetDataProviderNamesByInterfaceType(typeof (T));
                     }
 
                     List<IQueryable<T>> queryables = new List<IQueryable<T>>();
@@ -64,19 +64,33 @@ namespace Composite.Data
                         queryables.Add(queryable);
                     }
 
-                    DataFacadeQueryable<T> multipleSourceQueryable = new DataFacadeQueryable<T>(queryables);
+                    bool resultIsCached = queryables.Count == 1 && queryables[0] is ICachedQuery;
 
-                    resultQueryable = multipleSourceQueryable;
+                    if (resultIsCached)
+                    {
+                        resultQueryable = queryables[0];
+                    }
+                    else
+                    {
+                        var multipleSourceQueryable = new DataFacadeQueryable<T>(queryables);
+
+                        resultQueryable = multipleSourceQueryable;
+                    }
                 }
-            }
-            else if (typeof(T).GetCustomInterfaceAttributes<AutoUpdatebleAttribute>().Any())
-            {
-                resultQueryable = new List<T>().AsQueryable();
             }
             else
             {
-                throw new ArgumentException(string.Format("The given interface type ({0}) is not supported by any data providers", typeof(T)));
+                DataProviderRegistry.CheckInitializationErrors(typeof(T));
+
+                if (!typeof(T).GetCustomInterfaceAttributes<AutoUpdatebleAttribute>().Any())
+                {
+                    throw new ArgumentException(string.Format("The given interface type ({0}) is not supported by any data providers", typeof(T)));
+                    
+                }
+
+                resultQueryable = new List<T>().AsQueryable();
             }
+            
 
             DataInterceptor dataInterceptor;
             this.DataInterceptors.TryGetValue(typeof(T), out dataInterceptor);

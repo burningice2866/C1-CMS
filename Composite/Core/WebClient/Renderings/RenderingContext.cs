@@ -50,6 +50,9 @@ namespace Composite.Core.WebClient.Renderings
 
         private static readonly string ProfilerXslPath = UrlUtils.AdminRootPath + "/Transformations/page_profiler.xslt";
 
+        private static readonly List<string> _prettifyErrorUrls = new List<string>();
+        private static int _prettifyErrorCount;
+
         private string _previewKey;
         private IDisposable _pagePerfMeasuring;
         private string _cachedUrl;
@@ -95,7 +98,7 @@ namespace Composite.Core.WebClient.Renderings
                 {
                     if (responseHandling.RedirectRequesterTo != null)
                     {
-                        response.Redirect(responseHandling.RedirectRequesterTo.AbsoluteUri, false);
+                        response.Redirect(responseHandling.RedirectRequesterTo.ToString(), false);
                     }
 
                     httpContext.ApplicationInstance.CompleteRequest();
@@ -144,7 +147,27 @@ namespace Composite.Core.WebClient.Renderings
             }
             catch
             {
-                Log.LogWarning("/Renderers/Page.aspx", "Failed to format output xhtml. Url: " + (_cachedUrl ?? String.Empty));
+                if (!PreviewMode)
+                {
+                    const int maxWarningsToShow = 3;
+
+                    if (_prettifyErrorCount < maxWarningsToShow)
+                    {
+                        lock (_prettifyErrorUrls)
+                        {
+                            if (!_prettifyErrorUrls.Contains(_cachedUrl) && _prettifyErrorCount < maxWarningsToShow)
+                            {
+                                _prettifyErrorUrls.Add(_cachedUrl);
+                                _prettifyErrorCount++;
+                                Log.LogWarning("/Renderers/Page.aspx", "Failed to format output xhtml in a pretty way - your page output is likely not strict xml. Url: " + (HttpUtility.UrlDecode(_cachedUrl) ?? "undefined"));
+                                if (maxWarningsToShow == _prettifyErrorCount)
+                                {
+                                    Log.LogInformation("/Renderers/Page.aspx", "{0} xhtml format errors logged since startup. No more will be logged untill next startup.", maxWarningsToShow);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             return xhtml;
@@ -199,6 +222,8 @@ namespace Composite.Core.WebClient.Renderings
             {
                 Page = (IPage)HttpRuntime.Cache.Get(_previewKey + "_SelectedPage");
                 C1PageRoute.PageUrlData = new PageUrlData(Page);
+
+                PageRenderer.RenderingReason = (RenderingReason) HttpRuntime.Cache.Get(_previewKey + "_RenderingReason");
             }
             else
             {
@@ -206,6 +231,10 @@ namespace Composite.Core.WebClient.Renderings
                 Page = pageUrl.GetPage();
 
                 _cachedUrl = request.Url.PathAndQuery;
+
+                PageRenderer.RenderingReason = new UrlSpace(httpContext).ForceRelativeUrls 
+                    ? RenderingReason.C1ConsoleBrowserPageView 
+                    : RenderingReason.PageView;
             }
 
             ValidateViewUnpublishedRequest(httpContext);
@@ -258,7 +287,7 @@ namespace Composite.Core.WebClient.Renderings
 
         private void ValidateViewUnpublishedRequest(HttpContext httpContext)
         {
-            bool isPreviewingUrl = httpContext.Request.Url.OriginalString.Contains(PageUrlBuilder.UrlMarker_RelativeUrl);
+            bool isPreviewingUrl = httpContext.Request.Url.OriginalString.Contains(DefaultPageUrlProvider.UrlMarker_RelativeUrl);
             bool isUnpublishedPage = Page != null && Page.DataSourceId.PublicationScope != PublicationScope.Published;
 
             if ((isUnpublishedPage || isPreviewingUrl)
@@ -274,7 +303,8 @@ namespace Composite.Core.WebClient.Renderings
         /// Redirects to 404 page if PathInfo wasn't used. Adds 404 status code if the current page is specified as 404 page in hostname binding.
         /// Note that all C1 functions on page have to be executed before calling this method.
         /// </summary>
-        public void PreRenderRedirectCheck()
+        /// <returns><c>True</c> if the request was transferred to a 404 page and rendering should be stopped.</returns>
+        public bool PreRenderRedirectCheck()
         {
             var httpContext = HttpContext.Current;
 
@@ -282,12 +312,13 @@ namespace Composite.Core.WebClient.Renderings
                 && !C1PageRoute.PathInfoUsed)
             {
                 // Redirecting to PageNotFoundUrl or setting 404 response code if PathInfo url part hasn't been used
-                if (!HostnameBindingsFacade.RedirectCustomPageNotFoundUrl(httpContext))
+                if (HostnameBindingsFacade.RedirectCustomPageNotFoundUrl(httpContext))
                 {
-                    httpContext.Response.StatusCode = 404;
-                    httpContext.Response.End();
+                    return true;
                 }
-                return;
+
+                httpContext.Response.StatusCode = 404;
+                httpContext.Response.End();
             }
 
             // Setting 404 response code if it is a request to a custom "Page not found" page
@@ -295,6 +326,8 @@ namespace Composite.Core.WebClient.Renderings
             {
                 httpContext.Response.StatusCode = 404;
             }
+
+            return false;
         }
 
         private static string GetLoginRedirectUrl(string url)

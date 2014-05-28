@@ -18,7 +18,19 @@ function VisualMultiTemplateEditorBinding () {
 	 * @type {Map<string><string>}
 	 */
 	this._oldtextareas = null;
-	
+
+	/**
+	 * Page id.
+	 * @type {Guid}
+	 */
+	this._pageId = null;
+
+	/**
+	 * Template preview information.
+	 * @type {Object}
+	 */
+	this._templatePreview = null;
+
 	/*
 	 * Returnable.
 	 */
@@ -41,7 +53,32 @@ VisualMultiTemplateEditorBinding.prototype.onBindingAttach = function () {
 	
 	VisualMultiTemplateEditorBinding.superclass.onBindingAttach.call ( this );
 	this._oldtextareas = new Map ();
+
+	if (this.getProperty("pageid"))
+		this._pageId = this.getProperty("pageid");
 }
+
+/**
+ * @overloads {VisualEditorBinding#_onPageInitialize}
+ * @return
+ */
+VisualMultiTemplateEditorBinding.prototype._onPageInitialize = function ( binding ) {
+
+	VisualMultiTemplateEditorBinding.superclass._onPageInitialize.call(this, binding);
+
+	if (this.bindingElement.offsetWidth > 1000) {
+		this.getContentWindow().bindingMap.visualeditorsplitbox.setLayout("4:1");
+	}
+
+	var self = this;
+	this.getContentWindow().bindingMap.visualeditorsplitbox.addActionListener(SplitterBinding.ACTION_DRAGGED,
+		{
+			handleAction: function () {
+				self.handleCommand("CompositeUpdateLayout", false, null);
+			}
+		});
+}
+
 
 
 /**
@@ -113,8 +150,8 @@ VisualMultiTemplateEditorBinding.prototype._onTemplateSelectionChanged = functio
  * Actually parse textareas into treenodes.
  * @param {List<DOMElement>}
  */
-VisualMultiTemplateEditorBinding.prototype._parsePlaceHolders = function ( textareas ) {
-	
+VisualMultiTemplateEditorBinding.prototype._parsePlaceHolders = function (textareas) {
+
 	/*
 	 * Reset textareas Map but keep a copy of the old 
 	 * map content in order to persist content changes. 
@@ -223,6 +260,35 @@ VisualMultiTemplateEditorBinding.prototype._parsePlaceHolders = function ( texta
 	}
 };
 
+/** 
+ * @overloads {VisualMultiEditorBinding#_placeHolderSelected}
+ * @param {string} name
+ */
+VisualMultiTemplateEditorBinding.prototype._placeHolderSelected = function (name) {
+
+	VisualMultiTemplateEditorBinding.superclass._placeHolderSelected.call(this, name);
+
+	this.updateBodyWidth();
+}
+
+
+/**
+	 * Get elements by tagname in IXMLDOMElement
+	 * @param {DOMNode} node
+	 * @param {string} tagname
+	 * @return {NodeList} this would be an simple array in explorer...
+	 */
+VisualMultiTemplateEditorBinding.prototype._getElementsByTagName = function (node, tagname) {
+	var result = null;
+	if (Client.isWebKit || Client.isExplorer) {
+		result = node.getElementsByTagName(tagname);
+	} else {
+		result = node.getElementsByTagName("ui:" + tagname);
+	}
+	return result;
+}
+
+
 /**
  * Some pretty hacked stuff going on here. Stuff like this should not be communicated 
  * through the page DOM, but via a dedicated service offering structured data. Oh well...
@@ -234,16 +300,18 @@ VisualMultiTemplateEditorBinding.prototype._parsePlaceHolders = function ( texta
  */
 VisualMultiTemplateEditorBinding.prototype.updateElement = function ( newelement, oldelement ) {
 	
-	var newselector = newelement.getElementsByTagName ( "ui:selector" ).item ( 0 );
-	var oldselector = oldelement.getElementsByTagName ( "ui:selector" ).item ( 0 );
+	var newselector = this._getElementsByTagName(newelement, "selector" ).item ( 0 );
+	var oldselector = this._getElementsByTagName(oldelement, "selector" ).item ( 0 );
 	
 	var hasChanges = false;
+	var templateChanged = false;
 	
 	if ( newselector != null && oldselector != null ) {
-		var newselections = new List ( newselector.getElementsByTagName ( "ui:selection" )); 
-		var oldselections = new List ( oldselector.getElementsByTagName ( "ui:selection" ));
+		var newselections = new List ( this._getElementsByTagName(newselector, "selection" )); 
+		var oldselections = new List ( this._getElementsByTagName(oldselector, "selection" ));
 		if ( newselections.getLength () != oldselections.getLength ()) {
 			hasChanges = true;
+			templateChanged = true;
 		} else {
 			newselections.each ( function ( element, index ) {
 				var newvalue = element.getAttribute ( "value" );
@@ -252,6 +320,14 @@ VisualMultiTemplateEditorBinding.prototype.updateElement = function ( newelement
 					hasChanges = true;
 				}
 				return !hasChanges;
+			});
+			newselections.each(function (element, index) {
+				var newselected = element.getAttribute("selected");
+				var oldselected = oldselections.get(index).getAttribute("selected");
+				if (newselected != oldselected) {
+					templateChanged = true;
+				}
+				return !templateChanged;
 			});
 		}
 	}
@@ -263,6 +339,95 @@ VisualMultiTemplateEditorBinding.prototype.updateElement = function ( newelement
 		this.bindingWindow.DocumentManager.attachBindings ( div );
 		this._populateTemplateSelector ();
 	}
+
+	if (templateChanged) {
+		this.updateTemplatePreview();
+	}
+
 	
-	return VisualMultiTemplateEditorBinding.superclass.updateElement.call ( this, newelement, oldelement );
+	return VisualMultiTemplateEditorBinding.superclass.updateElement.call(this, newelement, oldelement, templateChanged);
+
+
+}
+
+/**
+ @overloads {EditorBinding#updateElement}
+ */
+VisualMultiTemplateEditorBinding.prototype.enableDialogMode = function () {
+
+	StageBinding.placeholderWidth = this.getPlaceholderWidth();
+
+	VisualMultiTemplateEditorBinding.superclass.enableDialogMode.call(this);
+}
+
+/**
+ @overloads {EditorBinding#disableDialogMode}
+ */
+VisualMultiTemplateEditorBinding.prototype.disableDialogMode = function () {
+
+	StageBinding.placeholderWidth = null;
+
+	VisualMultiTemplateEditorBinding.superclass.disableDialogMode.call(this);
+}
+
+/**
+ * Get placeholder width 
+ * @return {int}
+ */
+VisualMultiTemplateEditorBinding.prototype.getPlaceholderWidth = function (placeholderId) {
+	var placeholderWidth = null;
+	if (placeholderId == undefined) {
+		placeholderId = this._textareaname;
+	}
+	var self = this;
+	if (this._templatePreview) {
+		new List(this._templatePreview.Placeholders).each(function (placeholder) {
+			if (placeholder.PlaceholderId == placeholderId) {
+				placeholderWidth = placeholder.ClientRectangle.Width;
+				return false;
+			}
+		});
+	}
+	return placeholderWidth;
+}
+
+
+/**
+ * Update template preview information
+ */
+VisualMultiTemplateEditorBinding.prototype.updateTemplatePreview = function (sync) {
+	var pageId = this._pageId;
+	var templateId = this.getDescendantBindingByLocalName ( "selector" ).getValue();
+	this._templatePreview = null;
+	var self = this;
+	var result = PageTemplateService.GetTemplatePreviewInformation(pageId, templateId);
+	self._templatePreview = result;
+	self.updateBodyWidth();
+	
+}
+
+
+/**
+ * @overloads {VisualEditorBinding#getSoapTinyContent}
+ * @return {SOAP}
+ */
+VisualMultiTemplateEditorBinding.prototype.getSoapTinyContent = function (content) {
+	var pageId = this._pageId;
+	var placeholder = this._textareaname;
+	var templateId = this.getDescendantBindingByLocalName("selector").getValue();
+	var width = this.getEffectiveWidth();
+	return XhtmlTransformationsService.StructuredContentToTinyContentMultiTemplate(content, pageId, templateId, placeholder, width);
+}
+
+/**
+ * @overloads {VisualEditorBinding#getImageTagForFunctionCall}
+ * @return {SOAP}
+ */
+
+VisualMultiTemplateEditorBinding.prototype.getImageTagForFunctionCall = function (markup) {
+	var pageId = this._pageId;
+	var placeholder = this._textareaname;
+	var templateId = this.getDescendantBindingByLocalName("selector").getValue();
+	var width = this.getEffectiveWidth();
+	return XhtmlTransformationsService.GetImageTagForFunctionCall2(markup, pageId, templateId, placeholder, width);
 }

@@ -1,8 +1,9 @@
-﻿using System;
+﻿#define ProfileMemory
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Composite.Core.Threading;
-
 
 namespace Composite.Core.Instrumentation
 {
@@ -26,7 +27,7 @@ namespace Composite.Core.Instrumentation
             Verify.That(!threadData.HasValue(ProfilerKey), "Profiler has already been initialized");
 
             var stack = new Stack<Measurement>();
-            stack.Push(new Measurement("Root"));
+            stack.Push(new Measurement("Root") { MemoryUsage = GC.GetTotalMemory(true) });
             threadData.SetValue(ProfilerKey,  stack);
         }
 
@@ -42,7 +43,11 @@ namespace Composite.Core.Instrumentation
 
             threadData.SetValue(ProfilerKey, null);
 
-            return stack.Pop();
+            var measurement = stack.Pop();
+
+            measurement.MemoryUsage = GC.GetTotalMemory(false) - measurement.MemoryUsage;
+
+            return measurement;
         }
 
 
@@ -106,6 +111,9 @@ namespace Composite.Core.Instrumentation
             {
                 _stack = stack;
                 _node = new Measurement(name);
+#if ProfileMemory
+                _node.MemoryUsage = GC.GetTotalMemory(false);
+#endif
 
                 if (isInParralel)
                 {
@@ -129,6 +137,10 @@ namespace Composite.Core.Instrumentation
                 _stopwatch.Stop();
 
                 _node.TotalTime = (_stopwatch.ElapsedTicks*1000000) / Stopwatch.Frequency;
+
+#if ProfileMemory
+                _node.MemoryUsage = GC.GetTotalMemory(false) - _node.MemoryUsage;
+#endif
 
                 _stack.Pop();
             }

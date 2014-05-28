@@ -197,7 +197,7 @@ namespace Composite.Data
         public static IQueryable<T> GetData<T>(Expression<Func<T, bool>> predicate)
             where T : class, IData
         {
-            if (predicate == null) throw new ArgumentNullException("predicate");
+            Verify.ArgumentNotNull(predicate, "predicate");
 
             IQueryable<T> result = GetData<T>(true, null);
 
@@ -531,11 +531,18 @@ namespace Composite.Data
         public static T TryGetDataByUniqueKey<T>(DataKeyPropertyCollection dataKeyPropertyCollection)
             where T : class, IData
         {
-            if (dataKeyPropertyCollection == null) throw new ArgumentNullException("dataKeyPropertyCollection");
+            Verify.ArgumentNotNull(dataKeyPropertyCollection, "dataKeyPropertyCollection");
+
+            IQueryable<T> query = GetData<T>();
+
+            if (query is CachingQueryable_CachedByKey && dataKeyPropertyCollection.Count == 1)
+            {
+                return (T) (query as CachingQueryable_CachedByKey).GetCachedValueByKey(dataKeyPropertyCollection.KeyProperties.Single().Value);
+            }
 
             Expression<Func<T, bool>> lambdaExpression = GetPredicateExpressionByUniqueKey<T>(dataKeyPropertyCollection);
 
-            return GetData<T>(lambdaExpression).SingleOrDefault();
+            return query.FirstOrDefault(lambdaExpression);
         }
 
 
@@ -1667,9 +1674,9 @@ namespace Composite.Data
         {
             if (interfaceType == null) throw new ArgumentNullException("interfaceType");
 
-            IEnumerable<DataScopeIdentifier> supportedDataScope = interfaceType.GetSupportedDataScopes();
+            IReadOnlyCollection<DataScopeIdentifier> supportedDataScope = interfaceType.GetSupportedDataScopes();
 
-            if (!supportedDataScope.Any())
+            if (supportedDataScope.Count == 0)
             {
                 throw new InvalidOperationException(string.Format("The data type '{0}' does not support any data scopes, use the '{1}' attribute", interfaceType, typeof(DataScopeAttribute)));
             }

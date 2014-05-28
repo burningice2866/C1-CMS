@@ -23,7 +23,7 @@
         }
         else
         {
-            _currentStringValue = "<html xmlns='http://www.w3.org/1999/xhtml'>\n\t<head></head>\n\t<body>\n\t</body>\n</html>";
+            _currentStringValue = "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t<head></head>\n\t<body>\n\t</body>\n</html>";
         }
 		_currentStringValue = HttpContext.Current.Server.UrlEncode(_currentStringValue).Replace("+", "%20");
     }
@@ -56,10 +56,7 @@
 
 <ui:visualeditor 
 	formattingconfiguration="<%= this.ClassConfigurationName %>"
-	elementclassconfiguration="<%= this.ClassConfigurationName %>" 
     embedablefieldstypenames="<%= HttpUtility.HtmlAttributeEncode(this.EmbedableFieldsTypesString) %>"
-	configurationstylesheet="<%= Composite.Core.WebClient.UrlUtils.ResolvePublicUrl( "Frontend/Styles/VisualEditor/VisualEditor.Config.css" ) %>"  
-	presentationstylesheet="<%= Composite.Core.WebClient.UrlUtils.ResolvePublicUrl( "Frontend/Styles/VisualEditor/VisualEditor.Default.css" ) %>"
 	value="<%= _currentStringValue %>"
 	id="<%= this.UniqueID %>"
 	name="<%= this.UniqueID %>"
