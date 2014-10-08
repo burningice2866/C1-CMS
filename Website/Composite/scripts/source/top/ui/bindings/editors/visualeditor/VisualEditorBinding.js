@@ -383,9 +383,8 @@ VisualEditorBinding.prototype.initializeEditorComponent = function ( binding ) {
  * @overloads {EditorBinding#finalize}
  */
 VisualEditorBinding.prototype._finalize = function () {
-	
-	VisualEditorBinding.superclass._finalize.call ( this );
-	this._maybeShowEditor();
+
+	VisualEditorBinding.superclass._finalize.call(this);
 
 	/*
 	* Normalize start content and extract HEAD and BODY section before we 
@@ -400,14 +399,15 @@ VisualEditorBinding.prototype._finalize = function () {
 	* is handled by the VisualEditorPageBinding.
 	*/
 	var tinyContent = VisualEditorBinding.getTinyContent(this._startContent, this);
-	if (tinyContent.replace(/\s*/gm, '').length == 0)
-	{
+	if (tinyContent.replace(/\s*/gm, '').length == 0) {
 		tinyContent = VisualEditorBinding.DEFAULT_CONTENT;
 	}
 
 	this._tinyInstance.setContent(tinyContent, { format: 'raw' });
 
 	this.updateBodyWidth();
+
+	this._maybeShowEditor();
 
 };
 

@@ -33,6 +33,13 @@ namespace Composite.Core.Xml
             new NamespaceName { Name = "title", Namespace = "" }
         });
 
+        private static readonly HashSet<NamespaceName> AlwaysWrapElements = new HashSet<NamespaceName>(new[]
+        {
+            new NamespaceName { Name = "html", Namespace = "" },
+            new NamespaceName { Name = "head", Namespace = "" },
+            new NamespaceName { Name = "body", Namespace = "" }
+        });
+
         private static readonly HashSet<NamespaceName> InlineElements = new HashSet<NamespaceName>(new []
         {
             new NamespaceName { Name = "a", Namespace = "" }, 
@@ -47,12 +54,15 @@ namespace Composite.Core.Xml
             new NamespaceName { Name = "code", Namespace = "" }, 
             new NamespaceName { Name = "dfn", Namespace = "" }, 
             new NamespaceName { Name = "em", Namespace = "" }, 
+            new NamespaceName { Name = "fieldreference", Namespace = Namespaces.DynamicData10.NamespaceName },
             new NamespaceName { Name = "font", Namespace = "" }, 
             new NamespaceName { Name = "i", Namespace = "" }, 
             new NamespaceName { Name = "img", Namespace = "" }, 
             new NamespaceName { Name = "input", Namespace = "" }, 
             new NamespaceName { Name = "kbd", Namespace = "" }, 
             new NamespaceName { Name = "label", Namespace = "" }, 
+            new NamespaceName { Name = "page.description", Namespace = Namespaces.Rendering10.NamespaceName },
+            new NamespaceName { Name = "page.title", Namespace = Namespaces.Rendering10.NamespaceName },
             new NamespaceName { Name = "q", Namespace = "" }, 
             new NamespaceName { Name = "s", Namespace = "" }, 
             new NamespaceName { Name = "samp", Namespace = "" }, 
@@ -67,9 +77,6 @@ namespace Composite.Core.Xml
             new NamespaceName { Name = "tt", Namespace = "" }, 
             new NamespaceName { Name = "u", Namespace = "" }, 
             new NamespaceName { Name = "var", Namespace = "" },
-            new NamespaceName { Name = "fieldreference", Namespace = Namespaces.DynamicData10.NamespaceName },
-            new NamespaceName { Name = "page.title", Namespace = Namespaces.Rendering10.NamespaceName },
-            new NamespaceName { Name = "page.description", Namespace = Namespaces.Rendering10.NamespaceName },
         });
 
 
@@ -114,6 +121,7 @@ namespace Composite.Core.Xml
         /// <exclude />
         public static string Prettify(string xmlString, string indentString)
         {
+            xmlString = XmlUtils.RemoveXmlDeclaration(xmlString);
             CDataMatchHandler cdataMatchHandler;
 
             IEnumerable<XmlNode> tree = BuildTree(xmlString, out cdataMatchHandler);
@@ -156,10 +164,12 @@ namespace Composite.Core.Xml
                     }
 
                     bool isSelfClosingAndEmpty = node.IsSelfClosingElement() &&
+                                                 !node.IsAlwaysWrapElement() &&
+                                                 node.IsEmpty &&
                                                  !node.ChildNodes.Any(f => f.NodeType == XmlNodeType.Element 
                                                                            || f.NodeType == XmlNodeType.Text);
 
-                    if (!node.IsEmpty && !isSelfClosingAndEmpty)
+                    if (!isSelfClosingAndEmpty)
                     {
                         stringBuilder.Append(">");
                     }
@@ -174,9 +184,9 @@ namespace Composite.Core.Xml
                     NodeTreeToString(node.ChildNodes, stringBuilder, indentString, keepWhiteSpaces || nodeIsWhiteSpaceAware);
 
 
-                    if ((node.IsEmpty == false) && (isSelfClosingAndEmpty == false))
+                    if (!isSelfClosingAndEmpty)
                     {
-                        if (!keepWhiteSpaces && !nodeIsWhiteSpaceAware && (node.ContainsBlockElements || node.IsBlockElement()) && !node.IsCompactElement())
+                        if (!keepWhiteSpaces && !nodeIsWhiteSpaceAware && (node.ContainsBlockElements || node.IsAlwaysWrapElement()) && !node.IsCompactElement())
                         {
                             stringBuilder.AppendLine().AddIndent(node.Level, indentString);
                         }
@@ -445,7 +455,7 @@ namespace Composite.Core.Xml
 
                     if (node.NodeType == XmlNodeType.Element)
                     {
-                        if (node.IsEmpty == false)
+                        if (!node.IsEmpty)
                         {
                             foreach (XmlNode childNode in BuildTree(xmlReader, level + 1))
                             {
@@ -478,6 +488,7 @@ namespace Composite.Core.Xml
             private TriState _containsBlockElements = TriState.Undefined;
             private TriState _isBlockElement = TriState.Undefined;
             private TriState _isCompactElement = TriState.Undefined;
+            private TriState _isAlwaysWrapElement = TriState.Undefined;
             private NamespaceName _namespaceName;
 
             public XmlNodeType NodeType { get; internal set; }
@@ -602,13 +613,26 @@ namespace Composite.Core.Xml
                 return _isCompactElement == TriState.True;
             }
 
+
+            public bool IsAlwaysWrapElement()
+            {
+                if (_isAlwaysWrapElement == TriState.Undefined)
+                {
+                    _isAlwaysWrapElement = this.NodeType == XmlNodeType.Element
+                                      && AlwaysWrapElements.Contains(GetNamespaceName())
+                                      ? TriState.True : TriState.False; ;
+                }
+
+                return _isAlwaysWrapElement == TriState.True;
+            }
+            
+
             public bool IsBlockElement()
             {
                 if(_isBlockElement == TriState.Undefined)
                 {
                     _isBlockElement = this.NodeType == XmlNodeType.Element
                                       && !InlineElements.Contains(GetNamespaceName())
-                                      && !CompactElements.Contains(GetNamespaceName())
                                       ? TriState.True : TriState.False; ;
                 }
 

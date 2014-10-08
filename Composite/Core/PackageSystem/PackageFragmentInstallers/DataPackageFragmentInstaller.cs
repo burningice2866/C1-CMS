@@ -223,9 +223,6 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
             foreach (XElement typeElement in typesElement.Elements("Type"))
             {
-                string interfaceTypeName = null;
-
-
                 XAttribute typeAttribute = typeElement.Attribute("type");
                 if (typeAttribute == null)
                 {
@@ -233,7 +230,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                     continue;
                 }
                 
-                interfaceTypeName = typeAttribute.Value;
+                string interfaceTypeName = typeAttribute.Value;
 
                 interfaceTypeName = TypeManager.FixLegasyTypeName(interfaceTypeName);
 
@@ -296,19 +293,19 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                     }
 
 
-                    if (this.InstallerContext.ZipFileSystem.ContainsFile(dataFilenameAttribute.Value) == false)
+                    if (!this.InstallerContext.ZipFileSystem.ContainsFile(dataFilenameAttribute.Value))
                     {
                         _validationResult.AddFatal(GetText("DataPackageFragmentInstaller.MissingFile").FormatWith(dataFilenameAttribute.Value), dataFilenameAttribute);
                         continue;
                     }
 
 
-                    XDocument doc = null;
+                    XDocument doc;
                     try
                     {
-                        using (C1StreamReader sr = new C1StreamReader(this.InstallerContext.ZipFileSystem.GetFileStream(dataFilenameAttribute.Value)))
+                        using (var reader = new C1StreamReader(this.InstallerContext.ZipFileSystem.GetFileStream(dataFilenameAttribute.Value)))
                         {
-                            doc = XDocument.Load(sr);
+                            doc = XDocument.Load(reader);
                         }
                     }
                     catch (Exception ex)
@@ -322,7 +319,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
                     bool isDynamicAdded = isDynamicAddedAttribute != null && (bool)isDynamicAddedAttribute;
 
-                    DataType dataType = new DataType()
+                    var dataType = new DataType
                     {
                         InterfaceTypeName = interfaceTypeName,
                         DataScopeIdentifier = dataScopeIdentifier,
@@ -382,7 +379,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
             foreach (XElement addElement in dataType.Dataset)
             {
-                DataKeyPropertyCollection dataKeyPropertyCollection = new DataKeyPropertyCollection();
+                var dataKeyPropertyCollection = new DataKeyPropertyCollection();
 
                 bool propertyValidationPassed = true;
                 var assignedPropertyNames = new List<string>();
@@ -404,7 +401,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                         continue;
                     }
 
-                    if (propertyInfo.CanWrite == false)
+                    if (!propertyInfo.CanWrite)
                     {
                         _validationResult.AddFatal(GetText("DataPackageFragmentInstaller.MissingWritableProperty").FormatWith(dataType.InterfaceType, attribute.Name));
                         propertyValidationPassed = false;
@@ -542,6 +539,12 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
             return typeof(ILocalizedControlled).IsAssignableFrom(dataType.InterfaceType) && fieldName == "CultureName";
         }
 
+        private static bool IsObsoleteField(DataTypeDescriptor dataTypeDescriptor, string fieldName)
+        {
+            return dataTypeDescriptor.SuperInterfaces.Any(type => type == typeof(ILocalizedControlled)) 
+                    && fieldName == "CultureName";
+        }
+
         private void MapReference(Type type, string propertyName, object key, out Type referenceType, out string keyPropertyName, out object referenceKey)
         {
             if ((type == typeof(IImageFile) || type == typeof(IMediaFile))
@@ -604,17 +607,19 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
             {
                 foreach (XAttribute attribute in addElement.Attributes())
                 {
+                    string fieldName = attribute.Name.LocalName;
+
                     // A compatibility fix
-                    if (IsObsoleteField(dataType, attribute.Name.LocalName))
+                    if (IsObsoleteField(dataTypeDescriptor, fieldName))
                     {
                         continue;
                     }
 
-                    DataFieldDescriptor dataFieldDescriptor = dataTypeDescriptor.Fields[attribute.Name.LocalName];
+                    DataFieldDescriptor dataFieldDescriptor = dataTypeDescriptor.Fields[fieldName];
 
                     if (dataFieldDescriptor == null)
                     {
-                        _validationResult.AddFatal(GetText("DataPackageFragmentInstaller.MissingProperty").FormatWith(dataTypeDescriptor, attribute.Name));
+                        _validationResult.AddFatal(GetText("DataPackageFragmentInstaller.MissingProperty").FormatWith(dataTypeDescriptor, fieldName));
                     }
                     else
                     {
@@ -736,27 +741,39 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                 hashset.Add(keyValuePair);
             }
 
-            public bool KeyRegistered(DataType referencedDataType, KeyValuePair<string, object> keyValuePair)
+            public bool KeyRegistered(DataType refereeDataType, KeyValuePair<string, object> keyValuePair)
             {
-                var dataScopeIdentifier = referencedDataType.DataScopeIdentifier;
+                var dataScopeIdentifier = refereeDataType.DataScopeIdentifier;
 
                 if (!_isLocalized)
                 {
                     return KeyRegistered(dataScopeIdentifier, "", keyValuePair);
                 }
 
-                if (referencedDataType.Locale != null)
+                if (KeyRegistered(refereeDataType.DataScopeIdentifier, AllLocalesKey, keyValuePair))
                 {
-                    return KeyRegistered(referencedDataType.DataScopeIdentifier, referencedDataType.Locale.Name, keyValuePair);
+                    return true;
                 }
 
-                if (referencedDataType.AddToCurrentLocale)
+                if (refereeDataType.Locale != null)
                 {
-                    var currentLocale = LocalizationScopeManager.CurrentLocalizationScope;
-                    return KeyRegistered(referencedDataType.DataScopeIdentifier, currentLocale.Name, keyValuePair);
+                    return KeyRegistered(refereeDataType.DataScopeIdentifier, refereeDataType.Locale.Name, keyValuePair);
                 }
 
-                return KeyRegistered(referencedDataType.DataScopeIdentifier, AllLocalesKey, keyValuePair);
+                var currentLocale = LocalizationScopeManager.CurrentLocalizationScope;
+
+                if (refereeDataType.AddToCurrentLocale)
+                {
+                    return KeyRegistered(refereeDataType.DataScopeIdentifier, currentLocale.Name, keyValuePair);
+                }
+
+                if (DataLocalizationFacade.ActiveLocalizationCultures.Count() == 1
+                    && KeyRegistered(refereeDataType.DataScopeIdentifier, currentLocale.Name, keyValuePair))
+                {
+                    return true;
+                }
+
+                return false;
             }
 
             public bool KeyRegistered(DataScopeIdentifier publicationScope, string languageName, KeyValuePair<string, object> keyValuePair)

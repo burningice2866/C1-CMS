@@ -195,19 +195,6 @@ VisualEditorPageBinding.prototype.validate = function () {
 	if ( this.isSourceMode == true ) {
 		result = this._sourceEditor.validate (); 
 	}
-	
-	/*
-	 * Validate more stuff.
-	 */
-	if ( result == true ) {
-		var test = VisualEditorBinding.getTinyContent ( 
-			this.getContent (), 
-			this._editorBinding 
-		);
-		if ( test == null ) {
-			result = false;
-		}
-	}
 	return result;
 }
 
@@ -523,7 +510,12 @@ VisualEditorPageBinding.prototype.getCheckSum = function (checksum) {
 			return checksum;
 		}
 	} else {
-		checksum = this._tinyInstance.getDoc().body.innerHTML;
+		// IE innerHTML - returns wrong quotes (' instead ") in attribute data-markup
+		if (Client.isExplorer || Client.isExplorer11) {
+			checksum = this._tinyInstance.getContent();
+		} else {
+			checksum = this._tinyInstance.getDoc().body.innerHTML;
+		}
 
 		//delete mceC1Focused from checksum to prevent unexpected dirty
 		checksum = checksum.replace(/\s*mceC1Focused\s*/g, "");
