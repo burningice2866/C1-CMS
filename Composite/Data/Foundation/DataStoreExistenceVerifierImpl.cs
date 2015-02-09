@@ -10,7 +10,7 @@ using Composite.Plugins.WebClient.SessionStateProviders.DefaultSessionStateProvi
 
 
 namespace Composite.Data.Foundation
-{   
+{
     internal sealed class DataStoreExistenceVerifierImpl : IDataStoreExistenceVerifier
     {
         // Interfaces in this list will have a store created on system start if they do not exists
@@ -37,7 +37,6 @@ namespace Composite.Data.Foundation
                     typeof(IPageFolderDefinition),
                     typeof(IPageMetaDataDefinition),
                     typeof(IPagePlaceholderContent),
-                    typeof(IPagePublishSchedule),
                     typeof(IPageStructure),
                     typeof(IXmlPageTemplate),
                     typeof(IPageType),
@@ -47,14 +46,15 @@ namespace Composite.Data.Foundation
                     typeof(IPageTypePageTemplateRestriction),
                     typeof(IPageTypeParentRestriction),
                     typeof(IPageTypeTreeLink),
-                    typeof(IPageUnpublishSchedule),
                     typeof(IParameter),
+                    typeof(IPublishSchedule),
                     typeof(ISearchEngineOptimizationKeyword),
                     typeof(ISessionStateEntry),
                     typeof(ISqlConnection),
                     typeof(ISqlFunctionInfo),
                     typeof(ISystemActiveLocale),
                     typeof(ITaskItem),
+                    typeof(IUnpublishSchedule),
                     typeof(IUrlConfiguration),
                     typeof(IUser),
                     typeof(IUserActiveLocale),
@@ -71,7 +71,7 @@ namespace Composite.Data.Foundation
                     typeof(IUserUserGroupRelation),
                     typeof(IVisualFunction),
                     typeof(IXsltFunction)
-                };        
+                };
 
 
         public IEnumerable<Type> InterfaceTypes
@@ -112,7 +112,7 @@ namespace Composite.Data.Foundation
 
                 return typeDescriptors.Count > 0;
             }
-            
+
             Log.LogError("DataStoreExistenceVerifier", string.Format("Failed to load the configuration section '{0}' from the configuration", DataProviderSettings.SectionName));
             return false;
         }
