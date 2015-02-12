@@ -749,33 +749,36 @@ namespace Composite.Data.DynamicTypes
 
             if (_dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPublishControlled)))
             {
-                var publishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
+                if (!_dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPageMetaData)))
+                {
+                    var publishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
                         new XAttribute("name", "PublishDate"),
                         new XAttribute("type", typeof(DateTime)),
                         new XAttribute("optional", "true"));
 
-                _bindingsXml.Add(publishDateBinding);
+                    _bindingsXml.Add(publishDateBinding);
 
-                _panelXml.Add(
-                    new XElement(MainNamespace + "DateSelector",
-                        new XAttribute("Label", "Publish date"),
-                        new XElement(MainNamespace + "DateSelector.Date",
-                            new XElement(CmsNamespace + "bind",
-                                new XAttribute("source", "PublishDate")))));
+                    _panelXml.Add(
+                        new XElement(MainNamespace + "DateSelector",
+                            new XAttribute("Label", "Publish date"),
+                            new XElement(MainNamespace + "DateSelector.Date",
+                                new XElement(CmsNamespace + "bind",
+                                    new XAttribute("source", "PublishDate")))));
 
-                var unpublishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
-                    new XAttribute("name", "UnpublishDate"),
-                    new XAttribute("type", typeof(DateTime)),
-                    new XAttribute("optional", "true"));
+                    var unpublishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
+                        new XAttribute("name", "UnpublishDate"),
+                        new XAttribute("type", typeof(DateTime)),
+                        new XAttribute("optional", "true"));
 
-                _bindingsXml.Add(unpublishDateBinding);
+                    _bindingsXml.Add(unpublishDateBinding);
 
-                _panelXml.Add(
-                    new XElement(MainNamespace + "DateSelector",
-                        new XAttribute("Label", "Unpublish date"),
-                        new XElement(MainNamespace + "DateSelector.Date",
-                            new XElement(CmsNamespace + "bind",
-                                new XAttribute("source", "UnpublishDate")))));
+                    _panelXml.Add(
+                        new XElement(MainNamespace + "DateSelector",
+                            new XAttribute("Label", "Unpublish date"),
+                            new XElement(MainNamespace + "DateSelector.Date",
+                                new XElement(CmsNamespace + "bind",
+                                    new XAttribute("source", "UnpublishDate")))));
+                }
 
                 if (_showPublicationStatusSelector)
                 {
