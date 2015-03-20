@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Transactions;
+using Composite.Core.Extensions;
 using Composite.Data.DynamicTypes.Foundation;
 using Composite.Data.Foundation.PluginFacades;
 using Composite.C1Console.Events;
@@ -50,21 +51,23 @@ namespace Composite.Data.DynamicTypes
         }
 
 
-
         /// <exclude />
-        public void CreateStore(string providerName, DataTypeDescriptor typeDescriptor, bool doFlush)
+        public void CreateStores(string providerName, IReadOnlyCollection<DataTypeDescriptor> typeDescriptors, bool doFlush)
         {
-            if (string.IsNullOrEmpty(providerName)) throw new ArgumentNullException("providerName");
-            if (typeDescriptor == null) throw new ArgumentNullException("typeDescriptor");
+            Verify.ArgumentNotNullOrEmpty(providerName, "providerName");
+            Verify.ArgumentNotNull(typeDescriptors, "typeDescriptors");
 
-            typeDescriptor.Validate();
+            typeDescriptors.ForEach(d => d.Validate());
 
-            using (TransactionScope transactionScope = TransactionsFacade.CreateNewScope())
+            using (var transactionScope = TransactionsFacade.CreateNewScope())
             {
-                DataMetaDataFacade.PersistMetaData(typeDescriptor);
+                foreach (var typeDescriptor in typeDescriptors)
+                {
+                    DataMetaDataFacade.PersistMetaData(typeDescriptor);
+                }
 
-                DataProviderPluginFacade.CreateStore(providerName, typeDescriptor);                                
-                
+                DataProviderPluginFacade.CreateStores(providerName, typeDescriptors);
+
                 transactionScope.Complete();
             }
 
@@ -75,7 +78,6 @@ namespace Composite.Data.DynamicTypes
         }
 
 
-
         /// <exclude />
         public void AlterStore(UpdateDataTypeDescriptor updateDataTypeDescriptor, bool forceCompile)
         {
@@ -83,7 +85,7 @@ namespace Composite.Data.DynamicTypes
 
             dataTypeChangeDescriptor.AlteredType.Validate();
 
-            using (TransactionScope transactionScope = TransactionsFacade.CreateNewScope())
+            using (var transactionScope = TransactionsFacade.CreateNewScope())
             {
                 DataMetaDataFacade.PersistMetaData(dataTypeChangeDescriptor.AlteredType);
 

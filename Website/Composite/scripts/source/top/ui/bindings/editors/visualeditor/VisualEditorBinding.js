@@ -404,6 +404,8 @@ VisualEditorBinding.prototype._finalize = function () {
 	}
 
 	this._tinyInstance.setContent(tinyContent, { format: 'raw' });
+	this._tinyInstance.undoManager.clear();
+	this._tinyInstance.undoManager.add();
 
 	this.updateBodyWidth();
 
@@ -524,7 +526,7 @@ VisualEditorBinding.prototype.handleCommand = function ( cmd, gui, val ) {
 	 */
 	if ( !isCommandHandled ) {
 		try {
-			this._tinyInstance.execCommand ( cmd, gui, val );
+			this._tinyInstance.execCommand(cmd, gui, val, { skip_focus: true });
 			this.checkForDirty ();
 		} catch ( e ) {
 			SystemDebug.stack ( arguments );

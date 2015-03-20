@@ -21,6 +21,12 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
         private List<FileToCopy> _filesToCopy;
         private List<string> _directoriesToDelete;
 
+        private static readonly string LogTitle = typeof(FilePackageFragmentInstaller).Name;
+
+        private static readonly string[] DllsNotToLoad = 
+        {
+            "System.", "Microsoft.",  "Antlr3.", "WebGrease", "Composite.Web.BundlingAndMinification"
+        };
 
         /// <exclude />
         public override IEnumerable<PackageFragmentValidationResult> Validate()
@@ -123,7 +129,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                     }
                     else if (onlyUpdate)
                     {
-                        Log.LogVerbose("FilePackageFragmentInstaller", string.Format("Skipping updating of the file '{0}' because it does not exist", targetFilename));
+                        Log.LogVerbose(LogTitle, "Skipping updating of the file '{0}' because it does not exist", targetFilename);
                         continue; // Target file does not, so skip this
                     }
 
@@ -269,17 +275,17 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
         /// <exclude />
         public override IEnumerable<XElement> Install()
         {
-            Verify.IsNotNull(_filesToCopy, "FilePackageFragmentInstaller has not been validated");
+            Verify.IsNotNull(_filesToCopy, "{0} has not been validated", this.GetType().Name);
 
             foreach (string directoryToDelete in _directoriesToDelete)
             {
                 Directory.Delete(directoryToDelete, true);
             }
 
-            List<XElement> fileElements = new List<XElement>();
+            var fileElements = new List<XElement>();
             foreach (FileToCopy fileToCopy in _filesToCopy)
             {
-                Log.LogVerbose("FilePackageFragmentInstaller", "Installing the file '{0}' to the target filename '{1}'", fileToCopy.SourceFilename, fileToCopy.TargetFilePath);
+                Log.LogVerbose(LogTitle, "Installing the file '{0}' to the target filename '{1}'", fileToCopy.SourceFilename, fileToCopy.TargetFilePath);
 
                 string targetDirectory = Path.GetDirectoryName(fileToCopy.TargetFilePath);
                 if (!Directory.Exists(targetDirectory))
@@ -311,18 +317,20 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                 this.InstallerContext.ZipFileSystem.WriteFileToDisk(fileToCopy.SourceFilename, fileToCopy.TargetFilePath);
 
                 // Searching for static IData interfaces
-                if (fileToCopy.TargetFilePath.StartsWith(Path.Combine(PathUtil.BaseDirectory, "Bin"), StringComparison.InvariantCultureIgnoreCase)
-                    && fileToCopy.TargetFilePath.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    string fileName = Path.GetFileName(fileToCopy.TargetFilePath);
+                string targetFilePath = fileToCopy.TargetFilePath;
 
-                    if (!fileName.StartsWith("System.") && !fileName.StartsWith("Microsoft."))
+                if (targetFilePath.StartsWith(Path.Combine(PathUtil.BaseDirectory, "Bin"), StringComparison.InvariantCultureIgnoreCase)
+                    && targetFilePath.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    string fileName = Path.GetFileName(targetFilePath);
+
+                    if (!DllsNotToLoad.Any(fileName.StartsWith))
                     {
                         Assembly assembly;
 
                         try
                         {
-                            assembly = Assembly.LoadFrom(fileToCopy.TargetFilePath);
+                            assembly = Assembly.LoadFrom(targetFilePath);
                         }
                         catch (Exception)
                         {

@@ -8,6 +8,7 @@
     <cms:binding name="AllCultures" type="System.Collections.IEnumerable" />
     <cms:binding name="ActiveLocaleName" type="System.String" optional="true"/>
     <cms:binding name="ActiveLocaleList" type="System.Collections.IEnumerable" optional="true"/>
+    <cms:binding name="NewPassword" type="System.String" optional="false"/>
   </cms:bindings>
   <cms:layout iconhandle="users-edituser">
     <cms:layout.label>
@@ -25,7 +26,7 @@
           </TextBox>
           <TextBox Type="Password" Label="${Composite.Management, Website.Forms.Administrative.EditUserStep1.PasswordLabel}" Help="${Composite.Management, Website.Forms.Administrative.EditUserStep1.PasswordHelp}">
             <TextBox.Text>
-              <cms:bind source="User.EncryptedPassword" />
+              <cms:bind source="NewPassword" />
             </TextBox.Text>
           </TextBox>
           <TextBox Label="${Composite.Management, Website.Forms.Administrative.EditUserStep1.NameLabel}" Help="${Composite.Management, Website.Forms.Administrative.EditUserStep1.NameHelp}">
@@ -58,6 +59,11 @@
               </KeySelector>
             </f:NullCheck.WhenNotNull>
           </f:NullCheck>
+          <CheckBox Label="${Composite.Management, Website.Forms.Administrative.EditUserStep1.IsLockedLabel}" ItemLabel="${Composite.Management, Website.Forms.Administrative.EditUserStep1.IsLockedItemLabel}" Help="${Composite.Management, Website.Forms.Administrative.EditUserStep1.IsLockedHelp}">
+            <CheckBox.Checked>
+              <cms:bind source="User.IsLocked" />
+            </CheckBox.Checked>
+          </CheckBox>
         </FieldGroup>
         <FieldGroup Label="${Composite.Management, Website.Forms.Administrative.EditUserStep1.LabelLocalizationFieldGroup}">
           <KeySelector OptionsKeyField="Key" OptionsLabelField="Value" Label="${Composite.Management, Website.Forms.Administrative.EditUserStep1.CultureLabel}" Help="${Composite.Management, Website.Forms.Administrative.EditUserStep1.CultureHelp}">

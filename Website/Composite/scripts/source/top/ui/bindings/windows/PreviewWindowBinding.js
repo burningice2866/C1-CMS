@@ -110,7 +110,7 @@ PreviewWindowBinding.prototype.onWindowLoaded = function ( win ) {
 				var self = this;
 				this._loadhandler = {
 					handleEvent : function ( e ) {
-						self._coverBinding.show ();
+						//self._coverBinding.show ();
 						if ( win.isPostBackDocument ) {
 							self._postBackList = win.postBackList;
 							self._postBackURL = win.postBackURL;
@@ -291,6 +291,6 @@ PreviewWindowBinding.prototype.reset = function () {
 	this._hasFullStop = false;
 	this._isReturning = false;
 	
-	this._coverBinding.show ();
+	//this._coverBinding.show ();
 	this.setURL ( WindowBinding.DEFAULT_URL );
 }

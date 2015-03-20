@@ -11,7 +11,8 @@ using Composite.Core.Types;
 
 namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 {
-    /// <summary>    
+    /// <summary> 
+    /// Creates data stores for static data types. Can be used in combination with <see cref="DataPackageFragmentInstaller"/> to install content.
     /// </summary>
     /// <exclude />
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
@@ -24,7 +25,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
         /// <exclude />
         public override IEnumerable<PackageFragmentValidationResult> Validate()
         {
-            List<PackageFragmentValidationResult>  validationResult = new List<PackageFragmentValidationResult>();
+            var  validationResult = new List<PackageFragmentValidationResult>();
 
             if (this.Configuration.Count(f => f.Name == "Types") > 1)
             {
@@ -100,16 +101,18 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
         /// <exclude />
         public override IEnumerable<XElement> Install()
         {
-            if (_typesToInstall == null) throw new InvalidOperationException("DataTypePackageFragmentInstaller has not been validated");
+            Verify.IsNotNull(_typesToInstall, "DataTypePackageFragmentInstaller has not been validated");
 
-            List<XElement> typeElements = new List<XElement>();
-            foreach (DataTypeDescriptor dataTypeDescriptor in _typesToInstall)
+            string typeNames = string.Join(", ", _typesToInstall.Select(t => t.GetFullInterfaceName()));
+            Log.LogVerbose(this.GetType().Name, "Installing types: '{0}'", typeNames);
+
+
+            DynamicTypeManager.CreateStores(_typesToInstall, false);
+
+            var typeElements = new List<XElement>();
+            foreach (var dataTypeDescriptor in _typesToInstall)
             {
-                Log.LogVerbose("DataTypePackageFragmentInstaller", string.Format("Installing the type '{0}'", dataTypeDescriptor));
-
-                DynamicTypeManager.CreateStore(dataTypeDescriptor, false);
-
-                XElement typeElement = new XElement("Type", new XAttribute("typeId", dataTypeDescriptor.DataTypeId));
+                var typeElement = new XElement("Type", new XAttribute("typeId", dataTypeDescriptor.DataTypeId));
                 typeElements.Add(typeElement);
             }
 

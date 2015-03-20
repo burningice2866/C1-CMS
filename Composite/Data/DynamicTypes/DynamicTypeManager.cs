@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
@@ -119,6 +120,12 @@ namespace Composite.Data.DynamicTypes
         }
 
 
+        /// <exclude />
+        public static void CreateStores(IReadOnlyCollection<DataTypeDescriptor> typeDescriptors, bool doFlush)
+        {
+            CreateStores(DataProviderRegistry.DefaultDynamicTypeDataProviderName, typeDescriptors, doFlush);
+        }
+
 
         // Overload
         /// <exclude />
@@ -132,7 +139,13 @@ namespace Composite.Data.DynamicTypes
         /// <exclude />
         public static void CreateStore(string providerName, DataTypeDescriptor typeDescriptor, bool doFlush)
         {
-            _dynamicTypeManager.CreateStore(providerName, typeDescriptor, doFlush);
+            _dynamicTypeManager.CreateStores(providerName, new[] { typeDescriptor }, doFlush);
+        }
+
+        /// <exclude />
+        public static void CreateStores(string providerName, IReadOnlyCollection<DataTypeDescriptor> typeDescriptors, bool doFlush)
+        {
+            _dynamicTypeManager.CreateStores(providerName, typeDescriptors, doFlush);
         }
 
 
@@ -254,15 +267,28 @@ namespace Composite.Data.DynamicTypes
 
             if (providerName == null)
             {
+                // Checking if any of exising dynamic data providers already has a store for the specified interface type
+                if (DataProviderRegistry.DynamicDataProviderNames
+                    .Select(DataProviderPluginFacade.GetDataProvider)
+                    .Cast<IDynamicDataProvider>()
+                    .Any(dynamicDataProvider => dynamicDataProvider.GetKnownInterfaces().Contains(interfaceType)))
+                {
+                    return;
+                }
+
                 providerName = DataProviderRegistry.DefaultDynamicTypeDataProviderName;
             }
-
-            var dataProvider = (IDynamicDataProvider)DataProviderPluginFacade.GetDataProvider(providerName);
-            if (!dataProvider.GetKnownInterfaces().Contains(interfaceType))
+            else
             {
-                CreateStore(providerName, dataTypeDescriptor, true);
-                CodeGenerationManager.GenerateCompositeGeneratedAssembly(true);
+                var dataProvider = (IDynamicDataProvider) DataProviderPluginFacade.GetDataProvider(providerName);
+                if (dataProvider.GetKnownInterfaces().Contains(interfaceType))
+                {
+                    return;
+                }
             }
+
+            CreateStore(providerName, dataTypeDescriptor, true);
+            CodeGenerationManager.GenerateCompositeGeneratedAssembly(true);
         }
         
 

@@ -1,10 +1,105 @@
-﻿using System;
+﻿using Composite.Core.IO;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Composite.Core.WebClient
 {
     internal static class BuildManagerHelper
     {
+        private static readonly string LogTitle = typeof (BuildManagerHelper).Name;
+        private static int _preloadingInitiated;
+
+        /// <summary>
+        /// Preloading (compiling) all the controls. Speeds up first time editing in console.
+        /// </summary>
+        public static void InitializeControlPreLoading()
+        {
+            if (_preloadingInitiated == 0 && Interlocked.Increment(ref _preloadingInitiated) == 1)
+            {
+                Task.Factory.StartNew(LoadAllControls);
+            }
+        }
+
+        private static void LoadAllControls()
+        {
+            try
+            {
+                var config = XDocument.Load(PathUtil.Resolve("~/App_Data/Composite/Composite.config"));
+
+                var controlPathes = (from element in config.Descendants()
+                    let userControlVirtualPath = (string) element.Attribute("userControlVirtualPath")
+                    where userControlVirtualPath != null
+                    select userControlVirtualPath).ToList();
+
+                var stopWatch = new Stopwatch();
+                stopWatch.Start();
+
+                Log.LogVerbose(LogTitle, "Preloading all the contorls, starting");
+
+                foreach (var controlPath in controlPathes)
+                {
+                    try
+                    {
+                        BuildManagerHelper.GetCompiledType(controlPath);
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        // this exception is automatically rethrown after this catch
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.LogWarning(LogTitle, ex);
+                    }
+                }
+
+                stopWatch.Stop();
+
+                Log.LogVerbose(LogTitle, "Preloading all the contorls: " + stopWatch.ElapsedMilliseconds + "ms");
+
+                Func<string, bool> isAshxAsmxPath = f => f == ".ashx" || f == ".asmx";
+                Func<string, bool> isAspNetPath = f => f == ".aspx" || isAshxAsmxPath(f);
+                var aspnetPaths = DirectoryUtils.GetFilesRecursively(PathUtil.Resolve("~/Composite")).Where(f => isAshxAsmxPath(Path.GetExtension(f)))
+                    .Concat(DirectoryUtils.GetFilesRecursively(PathUtil.Resolve("~/Renderers")).Where(f => isAspNetPath(Path.GetExtension(f))))
+                    .ToList();
+
+                stopWatch.Reset();
+                stopWatch.Start();
+
+                foreach (var aspnetPath in aspnetPaths)
+                {
+                    try
+                    {
+                        BuildManagerHelper.GetCompiledType(PathUtil.GetWebsitePath(aspnetPath));
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        // this exception is automatically rethrown after this catch
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.LogWarning("BuildManagerHelper", ex);
+                    }
+                }
+
+                stopWatch.Stop();
+
+                Log.LogVerbose(LogTitle, "Preloading all asp.net files: " + stopWatch.ElapsedMilliseconds + "ms");
+            }
+            catch (ThreadAbortException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning(LogTitle, ex);
+            }
+        }
+
         /// <summary>
         /// Gets a user control. Prevents an exception that appears in Visual Studio while debugging
         /// </summary>

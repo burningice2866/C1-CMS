@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 using Composite.Data.DynamicTypes;
 
 
@@ -21,7 +19,7 @@ namespace Composite.Data.Plugins.DataProvider
         IEnumerable<Type> GetKnownInterfaces();
 
         /// <exclude />
-        void CreateStore(DataTypeDescriptor typeDescriptor);
+        void CreateStores(IReadOnlyCollection<DataTypeDescriptor> typeDescriptor);
 
         /// <summary>
         /// 

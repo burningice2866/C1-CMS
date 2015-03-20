@@ -31,7 +31,7 @@ namespace Composite.Core.Types
         private static bool _compositeGeneratedCompiled = true;
         private static List<ICodeProvider> _dynamicallyAddedCodeProviders = new List<ICodeProvider>();
         private static readonly List<Assembly> _compiledAssemblies = new List<Assembly>();
-        private static readonly List<Type> _compiledTypes = new List<Type>();
+        private static readonly Dictionary<string, Type>  _compiledTypesByFullName = new Dictionary<string, Type>();
 
         /// <summary>
         /// If set to <c>true</c>, /Bin/Composite.Generated.dll won't be overwritten on shutdown
@@ -108,7 +108,7 @@ namespace Composite.Core.Types
 
                         int t1 = Environment.TickCount;
 
-                        CodeGenerationBuilder builder = new CodeGenerationBuilder("Composite.Generated.dll");
+                        var builder = new CodeGenerationBuilder("Composite.Generated.dll");
                         PopulateBuilder(builder);
 
                         int t2 = Environment.TickCount;
@@ -150,22 +150,23 @@ namespace Composite.Core.Types
 
             _compositeGeneratedCompiled = false; // When compiling a new type, Composite.Generated.dll should always be recompiled
 
-            CompilerParameters compilerParameters = new CompilerParameters();
-            compilerParameters.GenerateExecutable = false;
-            compilerParameters.GenerateInMemory = false;
-
-            compilerParameters.OutputAssembly = Path.Combine(TempAssemblyFolderPath, Guid.NewGuid() + ".dll");
+            var compilerParameters = new CompilerParameters
+            {
+                GenerateExecutable = false,
+                GenerateInMemory = false,
+                OutputAssembly = Path.Combine(TempAssemblyFolderPath, Guid.NewGuid() + ".dll")
+            };
 
             compilerParameters.ReferencedAssemblies.AddRangeIfNotContained(codeGenerationBuilder.AssemblyLocations.ToArray());
             compilerParameters.ReferencedAssemblies.AddRangeIfNotContained(_compiledAssemblies.Select(f => f.Location).ToArray());
             compilerParameters.AddAssemblyLocationsFromBin();
 
 
-            CodeCompileUnit codeCompileUnit = new CodeCompileUnit();
+            var codeCompileUnit = new CodeCompileUnit();
             codeCompileUnit.Namespaces.AddRange(codeGenerationBuilder.Namespaces.ToArray());
 
-            CSharpCodeProvider compiler = new CSharpCodeProvider();
-            CompilerResults compileResult = compiler.CompileAssemblyFromDom(compilerParameters, codeCompileUnit);
+            var compiler = new CSharpCodeProvider();
+            var compileResult = compiler.CompileAssemblyFromDom(compilerParameters, codeCompileUnit);
 
             if (compileResult.Errors.Count == 0)
             {
@@ -182,7 +183,7 @@ namespace Composite.Core.Types
 
                 foreach (Type resultType in resultTypes)
                 {
-                    _compiledTypes.Add(resultType);
+                    _compiledTypesByFullName[resultType.FullName] = resultType;
                 }
 
                 return resultTypes;
@@ -199,24 +200,33 @@ namespace Composite.Core.Types
             }
 #endif
 
-            List<Type> referencedTypes = new List<Type>();
-            List<string> failedAssemblyLoads = new List<string>();
+            var failedAssemblyLoads = new List<Pair<string, Exception>>();
             foreach (string assemblyLocation in compilerParameters.ReferencedAssemblies)
             {
                 try
                 {
                     Assembly assembly = Assembly.LoadFrom(assemblyLocation);
-                    referencedTypes.AddRange(assembly.GetTypes());
+                    var types = assembly.GetTypes(); // Accessing GetTypes() to iterate classes
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    failedAssemblyLoads.Add(assemblyLocation);
+                    Exception exceptionToLog = ex;
+
+                    var loadException = ex as ReflectionTypeLoadException;
+                    if (loadException != null 
+                        && loadException.LoaderExceptions != null
+                        && loadException.LoaderExceptions.Any())
+                    {
+                        exceptionToLog = loadException.LoaderExceptions.First();
+                    }
+
+                    failedAssemblyLoads.Add(new Pair<string, Exception>( assemblyLocation, exceptionToLog));
                 }
             }
 
 
-            StringBuilder sb = new StringBuilder();
-            failedAssemblyLoads.ForEach(asm => sb.AppendLine("Failed to load dll: " + asm));
+            var sb = new StringBuilder();
+            failedAssemblyLoads.ForEach(asm => sb.AppendFormat("Failed to load dll: '{0}' : {1}", asm.First, asm.Second).AppendLine());
 
             sb.AppendLine("Failed building: " + codeGenerationBuilder.DebugLabel);
             foreach (CompilerError compilerError in compileResult.Errors)
@@ -285,32 +295,37 @@ namespace Composite.Core.Types
         }
 
 
-
         /// <summary>
         /// Gets the compiled types.
         /// </summary>
         /// <returns></returns>
-        public static IEnumerable<Type> GetCompiledTypes() { return _compiledTypes; }
-
+        public static Type GetCompiledType(string fullName)
+        {
+            Type type;
+            return _compiledTypesByFullName.TryGetValue(fullName, out type) ? type : null;
+        }
 
 
         private static void Compile(CodeGenerationBuilder builder)
         {
-            CompilerParameters compilerParameters = new CompilerParameters();
-            compilerParameters.GenerateExecutable = false;
-            compilerParameters.GenerateInMemory = false;
-            compilerParameters.OutputAssembly = CompositeGeneratedAssemblyPath;
+            var compilerParameters = new CompilerParameters
+            {
+                GenerateExecutable = false,
+                GenerateInMemory = false,
+                OutputAssembly = CompositeGeneratedAssemblyPath,
+                TempFiles = new TempFileCollection(TempAssemblyFolderPath)
+            };
 
             compilerParameters.ReferencedAssemblies.AddRangeIfNotContained(builder.AssemblyLocations.ToArray());
             compilerParameters.AddAssemblyLocationsFromBin();
 
-            CodeCompileUnit codeCompileUnit = new CodeCompileUnit();
+            var codeCompileUnit = new CodeCompileUnit();
             codeCompileUnit.Namespaces.AddRange(builder.Namespaces.ToArray());
 
 
             for (int i = 0; i < NumberOfCompileRetries; i++)
             {
-                CSharpCodeProvider compiler = new CSharpCodeProvider();
+                var compiler = new CSharpCodeProvider();
                 CompilerResults compileResult = compiler.CompileAssemblyFromDom(compilerParameters, codeCompileUnit);
 
 
@@ -328,7 +343,7 @@ namespace Composite.Core.Types
                     }
 #endif
 
-                    StringBuilder sb = new StringBuilder();
+                    var sb = new StringBuilder();
                     foreach (CompilerError compilerError in compileResult.Errors)
                     {
                         if (compilerError.IsWarning) continue;
@@ -439,7 +454,7 @@ namespace Composite.Core.Types
         {
             Type newType = newAssembly.GetTypes().First();
 
-            List<Assembly> assembliesToRemove = new List<Assembly>();
+            var assembliesToRemove = new List<Assembly>();
             foreach (Assembly assembly in _compiledAssemblies)
             {
                 Type type = assembly.GetTypes().SingleOrDefault(f => f.FullName == newType.FullName);

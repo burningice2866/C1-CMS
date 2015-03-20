@@ -17,6 +17,7 @@ using Composite.Core.Configuration;
 using Composite.Core.Extensions;
 using Composite.Core.IO;
 using Composite.Core.Instrumentation;
+using Composite.Core.Logging;
 using Composite.Core.PackageSystem;
 using Composite.Core.Threading;
 using Composite.Core.Types;
@@ -42,6 +43,7 @@ namespace Composite
         private static bool _coreInitialized;
         private static bool _initializing;
         private static bool _typesAutoUpdated;
+        private static bool _unhandledExceptionLoggingInitialized;
         private static Exception _exceptionThrownDurringInitialization;
         private static DateTime _exceptionThrownDurringInitializationTimeStamp;
         private static int _fatalErrorFlushCount = 0;
@@ -150,11 +152,27 @@ namespace Composite
                             _initializing = false;
                         }
                     }
+
+                    EnabledUnhandledExceptionsLogging();
                 }
             }
         }
 
+        private static void EnabledUnhandledExceptionsLogging()
+        {
+            if (_unhandledExceptionLoggingInitialized) return;
 
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+            {
+                var ex = (Exception)args.ExceptionObject;
+
+                Log.LogCritical("Unhandled exception", ex);
+
+                LogManager.Flush();
+            };
+
+            _unhandledExceptionLoggingInitialized = true;
+        }
 
         private static void DoInitialize()
         {
@@ -331,18 +349,22 @@ namespace Composite
 
                 InitializeTheSystem();
 
-                // Updating "hooks" either in the same thread, or in another
-                if (initializeHooksInTheSameThread)
+                if (!SystemSetupFacade.SetupIsRunning)
                 {
-                    object threadStartParameter = new KeyValuePair<TimeSpan, StackTrace>(TimeSpan.Zero, new StackTrace());
-                    EnsureHookingFacade(threadStartParameter);
+                    // Updating "hooks" either in the same thread, or in another
+                    if (initializeHooksInTheSameThread)
+                    {
+                        object threadStartParameter = new KeyValuePair<TimeSpan, StackTrace>(TimeSpan.Zero, new StackTrace());
+                        EnsureHookingFacade(threadStartParameter);
+                    }
+                    else
+                    {
+                        _hookingFacadeThread = new Thread(EnsureHookingFacade);
+                        _hookingFacadeThread.Name = "EnsureHookingFacade";
+                        _hookingFacadeThread.Start(new KeyValuePair<TimeSpan, StackTrace>(TimeSpan.FromSeconds(1), new StackTrace()));
+                    }
                 }
-                else
-                {
-                    _hookingFacadeThread = new Thread(EnsureHookingFacade);
-                    _hookingFacadeThread.Name = "EnsureHookingFacade";
-                    _hookingFacadeThread.Start(new KeyValuePair<TimeSpan, StackTrace>(TimeSpan.FromSeconds(1), new StackTrace()));
-                }
+
 
                 IsReinitializingTheSystem = false;
             }
@@ -396,7 +418,7 @@ namespace Composite
         /// <exclude />
         public static void FatalResetTheSytem()
         {
-            Log.LogWarning(LogTitle, "Unhandled error occured, reinitializing the system!");
+            Log.LogWarning(LogTitle, "Unhandled error occurred, reinitializing the system!");
 
             ReinitializeTheSystem(delegate() { _fatalErrorFlushCount++; GlobalEventSystemFacade.FlushTheSystem(); });
         }

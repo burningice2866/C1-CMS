@@ -9,13 +9,12 @@ using Composite.C1Console.Actions;
 using Composite.Data;
 using Composite.Data.Types;
 using Composite.Core.ResourceSystem;
-using Composite.C1Console.Security.Cryptography;
 using Composite.Core.Types;
 using Composite.C1Console.Users;
 using Composite.Data.Validation;
 using Composite.C1Console.Workflow;
 using Composite.C1Console.Events;
-
+using Composite.Plugins.Security.LoginProviderPlugins.DataBasedFormLoginProvider;
 using Microsoft.Practices.EnterpriseLibrary.Validation;
 using Composite.Core.Logging;
 using Composite.C1Console.Security;
@@ -28,6 +27,12 @@ namespace Composite.Plugins.Elements.ElementProviders.UserElementProvider
     {
         private static string NewUserBindingName { get { return "NewUser"; } }
 
+
+        private static class BindingNames
+        {
+            public const string Username = "NewUser.Username";
+            public const string EncryptedPassword = "NewUser.EncryptedPassword";
+        }
 
         public AddNewUserWorkflow()
         {
@@ -60,8 +65,19 @@ namespace Composite.Plugins.Elements.ElementProviders.UserElementProvider
 
                 if(usersWithTheSameName.Any())
                 {
-                    ShowFieldMessage(NewUserBindingName + ".Username",
+                    ShowFieldMessage(BindingNames.Username,
                         StringResourceSystemFacade.GetString("Composite.Management", "UserElementProvider.UserLoginIsAlreadyUsed"));
+
+                    isValid = false;
+                }
+
+                IList<string> validationMessages;
+                if (!PasswordPolicyFacade.ValidatePassword(newUser, newUser.EncryptedPassword, out validationMessages))
+                {
+                    foreach (var message in validationMessages)
+                    {
+                        this.ShowFieldMessage(BindingNames.EncryptedPassword, message);
+                    }
 
                     isValid = false;
                 }
@@ -89,7 +105,7 @@ namespace Composite.Plugins.Elements.ElementProviders.UserElementProvider
             IUser newUser = DataFacade.BuildNew<IUser>();
             newUser.Id = Guid.NewGuid();
 
-            UserElementProviderGroupEntityToken groupEntityToken = this.EntityToken as UserElementProviderGroupEntityToken;
+            var groupEntityToken = this.EntityToken as UserElementProviderGroupEntityToken;
 
             if (groupEntityToken != null)
             {
@@ -132,7 +148,7 @@ namespace Composite.Plugins.Elements.ElementProviders.UserElementProvider
 
             if (usersWithTheSameName.Any())
             {
-                this.ShowFieldMessage(string.Format("{0}.{1}", NewUserBindingName, "Username"), StringResourceSystemFacade.GetString("Composite.Management", "AddNewUserWorkflow.UsernameDuplicateError"));
+                this.ShowFieldMessage(BindingNames.Username, StringResourceSystemFacade.GetString("Composite.Management", "AddNewUserWorkflow.UsernameDuplicateError"));
             }
         }
 
@@ -145,8 +161,12 @@ namespace Composite.Plugins.Elements.ElementProviders.UserElementProvider
             IUser newUser = this.GetBinding<IUser>(NewUserBindingName);
             NormalizeUsername(newUser);
 
-            newUser.EncryptedPassword = newUser.EncryptedPassword.Encrypt();
+            string password = newUser.EncryptedPassword;
+
+            newUser.EncryptedPassword = "";
             newUser = DataFacade.AddNew<IUser>(newUser);
+
+            UserPasswordManager.SetPassword(newUser, password);
 
             string cultureName = this.GetBinding<string>("CultureName");
             string c1ConsoleUiLanguageName = this.GetBinding<string>("C1ConsoleUiLanguageName");

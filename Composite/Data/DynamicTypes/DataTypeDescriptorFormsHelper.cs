@@ -14,7 +14,7 @@ using Composite.Core.Xml;
 using Composite.Data.DynamicTypes.Foundation;
 using Composite.Data.ProcessControlled;
 using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
-using Composite.Data.Types;
+using Composite.Data.PublishScheduling;
 using Composite.Data.Validation;
 using Composite.Data.Validation.ClientValidationRules;
 using Composite.Functions;
@@ -41,8 +41,8 @@ namespace Composite.Data.DynamicTypes
         private XElement _bindingsXml;
         private XElement _panelXml;
 
-        private const string PublicationStatusPostFixBindingName = "___PublicationStatus___";
-        private const string PublicationStatusOptionsPostFixBindingName = "___PublicationStatusOptions___";
+        private const string PublicationStatusPostFixBindingName = "PublicationStatus";
+        private const string PublicationStatusOptionsPostFixBindingName = "PublicationStatusOptions";
 
         private static readonly XElement CmsFormElementTemplate;
         private static readonly XElement CmsBindingsElementTemplate;
@@ -247,36 +247,40 @@ namespace Composite.Data.DynamicTypes
                 newBindings.Add(GetBindingName(fieldDescriptor), value);
             }
 
-
-            //TODO: This code is dublicated. /MRJ
             if (_showPublicationStatusSelector &&
                 _dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPublishControlled)))
             {
-                newBindings.Add(PublicationStatusBindingName, GenericPublishProcessController.Draft);
-
-                IDictionary<string, string> transitionNames = new Dictionary<string, string>();
-                transitionNames.Add(GenericPublishProcessController.Draft, StringResourceSystemFacade.GetString("Composite.Plugins.GeneratedDataTypesElementProvider", "DraftTransition"));
-                transitionNames.Add(GenericPublishProcessController.AwaitingApproval, StringResourceSystemFacade.GetString("Composite.Plugins.GeneratedDataTypesElementProvider", "AwaitingApprovalTransition"));
-
-                var username = UserValidationFacade.GetUsername();
-                var userPermissionDefinitions = PermissionTypeFacade.GetUserPermissionDefinitions(username);
-                var userGroupPermissionDefinition = PermissionTypeFacade.GetUserGroupPermissionDefinitions(username);
-                var currentPermissionTypes = PermissionTypeFacade.GetCurrentPermissionTypes(UserValidationFacade.GetUserToken(), EntityToken, userPermissionDefinitions, userGroupPermissionDefinition);
-                foreach (var permissionType in currentPermissionTypes)
-                {
-                    if (GenericPublishProcessController.AwaitingPublicationActionPermissionType.Contains(permissionType))
-                    {
-                        transitionNames.Add(GenericPublishProcessController.AwaitingPublication,
-                            LocalizationFiles.Composite_Management.Website_Forms_Administrative_EditPage_AwaitingPublicationTransition);
-                        break;
-                    }
-                }
-
-                newBindings.Add(PublicationStatusOptionsBindingName, transitionNames);
+                newBindings[PublicationStatusBindingName] = GenericPublishProcessController.Draft;
+                newBindings.Add(PublicationStatusOptionsBindingName, GetAvailablePublishingFlowTransitions(EntityToken));
             }
 
 
             return newBindings;
+        }
+
+        private static Dictionary<string, string> GetAvailablePublishingFlowTransitions(EntityToken entityToken)
+        {
+            var transitionNames = new Dictionary<string, string>
+                {
+                    {GenericPublishProcessController.Draft, Texts.DraftTransition},
+                    {GenericPublishProcessController.AwaitingApproval, Texts.AwaitingApprovalTransition}
+                };
+
+            var username = UserValidationFacade.GetUsername();
+            var userPermissionDefinitions = PermissionTypeFacade.GetUserPermissionDefinitions(username);
+            var userGroupPermissionDefinition = PermissionTypeFacade.GetUserGroupPermissionDefinitions(username);
+            var currentPermissionTypes = PermissionTypeFacade.GetCurrentPermissionTypes(UserValidationFacade.GetUserToken(), entityToken, userPermissionDefinitions, userGroupPermissionDefinition);
+            foreach (var permissionType in currentPermissionTypes)
+            {
+                if (GenericPublishProcessController.AwaitingPublicationActionPermissionType.Contains(permissionType))
+                {
+                    transitionNames.Add(GenericPublishProcessController.AwaitingPublication,
+                        LocalizationFiles.Composite_Management.Website_Forms_Administrative_EditPage_AwaitingPublicationTransition);
+                    break;
+                }
+            }
+
+            return transitionNames;
         }
 
 
@@ -352,57 +356,18 @@ namespace Composite.Data.DynamicTypes
             if (_showPublicationStatusSelector &&
                 _dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPublishControlled)))
             {
-                bindings.Add(PublicationStatusBindingName, ((IPublishControlled)dataObject).PublicationStatus);
+                bindings[PublicationStatusBindingName] = ((IPublishControlled)dataObject).PublicationStatus;
+                bindings.Add(PublicationStatusOptionsBindingName, GetAvailablePublishingFlowTransitions(EntityToken));
 
-                IDictionary<string, string> transitionNames = new Dictionary<string, string>();
-                transitionNames.Add(GenericPublishProcessController.Draft, Texts.DraftTransition);
-                transitionNames.Add(GenericPublishProcessController.AwaitingApproval, Texts.AwaitingApprovalTransition);
+                var intefaceType = dataObject.DataSourceId.InterfaceType;
+                var stringKey = dataObject.GetUniqueKey().ToString();
+                var locale = dataObject.DataSourceId.LocaleScope.Name;
 
-                var username = UserValidationFacade.GetUsername();
-                var userPermissionDefinitions = PermissionTypeFacade.GetUserPermissionDefinitions(username);
-                var userGroupPermissionDefinition = PermissionTypeFacade.GetUserGroupPermissionDefinitions(username);
-                var currentPermissionTypes = PermissionTypeFacade.GetCurrentPermissionTypes(UserValidationFacade.GetUserToken(), EntityToken, userPermissionDefinitions, userGroupPermissionDefinition);
-                foreach (var permissionType in currentPermissionTypes)
-                {
-                    if (GenericPublishProcessController.AwaitingPublicationActionPermissionType.Contains(permissionType))
-                    {
-                        transitionNames.Add(GenericPublishProcessController.AwaitingPublication,
-                            LocalizationFiles.Composite_Management.Website_Forms_Administrative_EditPage_AwaitingPublicationTransition);
-                        break;
-                    }
-                }
+                var existingPublishSchedule = PublishScheduleHelper.GetPublishSchedule(intefaceType, stringKey, locale);
+                bindings.Add("PublishDate", existingPublishSchedule != null ? existingPublishSchedule.PublishDate : (DateTime?) null);
 
-                bindings.Add(PublicationStatusOptionsBindingName, transitionNames);
-
-                var existingPublishSchedule =
-                            (from ps in DataFacade.GetData<IPublishSchedule>()
-                             where ps.DataType == dataObject.DataSourceId.InterfaceType.FullName &&
-                             ps.DataId == dataObject.GetUniqueKey().ToString()
-                             select ps).FirstOrDefault();
-
-                if (existingPublishSchedule != null)
-                {
-                    bindings.Add("PublishDate", existingPublishSchedule.PublishDate);
-                }
-                else
-                {
-                    bindings.Add("PublishDate", null);
-                }
-
-                var existingUnpublishSchedule =
-                                (from ps in DataFacade.GetData<IUnpublishSchedule>()
-                                 where ps.DataType == dataObject.DataSourceId.InterfaceType.FullName &&
-                                    ps.DataId == dataObject.GetUniqueKey().ToString()
-                                 select ps).FirstOrDefault();
-
-                if (existingUnpublishSchedule != null)
-                {
-                    bindings.Add("UnpublishDate", existingUnpublishSchedule.UnpublishDate);
-                }
-                else
-                {
-                    bindings.Add("UnpublishDate", null);
-                }
+                var existingUnpublishSchedule = PublishScheduleHelper.GetUnpublishSchedule(intefaceType, stringKey, locale);
+                bindings.Add("UnpublishDate", existingUnpublishSchedule != null ? existingUnpublishSchedule.UnpublishDate : (DateTime?) null);
             }
 
             return bindings;
@@ -412,7 +377,7 @@ namespace Composite.Data.DynamicTypes
         /// <exclude />
         public Dictionary<string, List<ClientValidationRule>> GetBindingsValidationRules(IData data)
         {
-            if (data == null) throw new ArgumentNullException("data");
+            Verify.ArgumentNotNull(data, "data");
 
             var result = new Dictionary<string, List<ClientValidationRule>>();
 
@@ -649,17 +614,18 @@ namespace Composite.Data.DynamicTypes
             }
             else if (!string.IsNullOrEmpty(_dataTypeDescriptor.LabelFieldName))
             {
-
                 layout.Add((new XElement(CmsNamespace + "layout.label", new XElement(CmsNamespace + "read", new XAttribute("source", _dataTypeDescriptor.LabelFieldName)))));
             }
 
 
             _panelXml = new XElement(MainNamespace + "FieldGroup");
-            if (!string.IsNullOrEmpty(FieldGroupLabel))
-            {
-                _panelXml.Add(new XAttribute("Label", FieldGroupLabel));
-            }
 
+            string formLabel = !string.IsNullOrEmpty(FieldGroupLabel) ? FieldGroupLabel : _dataTypeDescriptor.Title;
+            if (!string.IsNullOrEmpty(formLabel))
+            {
+                _panelXml.Add(new XAttribute("Label", formLabel));
+            }
+            
             layout.Add(_panelXml);
 
             foreach (var fieldDescriptor in _dataTypeDescriptor.Fields)
@@ -747,73 +713,66 @@ namespace Composite.Data.DynamicTypes
                 }
             }
 
-            if (_dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPublishControlled)))
+            if (_showPublicationStatusSelector && _dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPublishControlled)))
             {
-                if (!_dataTypeDescriptor.SuperInterfaces.Contains(typeof(IPageMetaData)))
-                {
-                    var publishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
-                        new XAttribute("name", "PublishDate"),
-                        new XAttribute("type", typeof(DateTime)),
-                        new XAttribute("optional", "true"));
+                var placeholder = new XElement(MainNamespace + "PlaceHolder");
+                _panelXml.Remove();
 
-                    _bindingsXml.Add(publishDateBinding);
+                placeholder.Add(_panelXml);
+                layout.Add(placeholder);
+                
+                var publishFieldsXml = new XElement(MainNamespace + "FieldGroup", new XAttribute("Label", Texts.PublicationSettings_FieldGroupLabel));
+                placeholder.Add(publishFieldsXml);
 
-                    _panelXml.Add(
-                        new XElement(MainNamespace + "DateSelector",
-                            new XAttribute("Label", "Publish date"),
-                            new XElement(MainNamespace + "DateSelector.Date",
-                                new XElement(CmsNamespace + "bind",
-                                    new XAttribute("source", "PublishDate")))));
+                var publicationStatusOptionsBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
+                    new XAttribute("name", PublicationStatusOptionsBindingName),
+                    new XAttribute("type", typeof(object)));
 
-                    var unpublishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
-                        new XAttribute("name", "UnpublishDate"),
-                        new XAttribute("type", typeof(DateTime)),
-                        new XAttribute("optional", "true"));
+                _bindingsXml.Add(publicationStatusOptionsBinding);
 
-                    _bindingsXml.Add(unpublishDateBinding);
-
-                    _panelXml.Add(
-                        new XElement(MainNamespace + "DateSelector",
-                            new XAttribute("Label", "Unpublish date"),
-                            new XElement(MainNamespace + "DateSelector.Date",
-                                new XElement(CmsNamespace + "bind",
-                                    new XAttribute("source", "UnpublishDate")))));
-                }
-
-                if (_showPublicationStatusSelector)
-                {
-                    var publicationStatusBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
-                        new XAttribute("name", PublicationStatusBindingName),
-                        new XAttribute("type", typeof(string)));
-
-                    _bindingsXml.Add(publicationStatusBinding);
-
-                    var publicationStatusOptionsBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
-                        new XAttribute("name", PublicationStatusOptionsBindingName),
-                        new XAttribute("type", typeof(object)));
-
-                    _bindingsXml.Add(publicationStatusOptionsBinding);
-
-                    var element =
-                        new XElement(MainNamespace + "KeySelector",
-                            new XAttribute("OptionsKeyField", "Key"),
-                            new XAttribute("OptionsLabelField", "Value"),
-                            new XAttribute("Label", "${Composite.Plugins.GeneratedDataTypesElementProvider, LabelPublicationState}"),
-                            new XElement(MainNamespace + "KeySelector.Selected",
-                                new XElement(CmsNamespace + "bind",
-                                    new XAttribute("source", PublicationStatusBindingName)
-                                )
-                            ),
-                            new XElement(MainNamespace + "KeySelector.Options",
-                                new XElement(CmsNamespace + "read",
-                                    new XAttribute("source", PublicationStatusOptionsBindingName)
-                                )
-                            )
-                        );
+                var element =
+                    new XElement(MainNamespace + "KeySelector",
+                        new XAttribute("OptionsKeyField", "Key"),
+                        new XAttribute("OptionsLabelField", "Value"),
+                        new XAttribute("Label", Texts.PublicationStatus_Label),
+                        new XAttribute("Help", Texts.PublicationStatus_Help),
+                        new XElement(MainNamespace + "KeySelector.Selected",
+                            new XElement(CmsNamespace + "bind", new XAttribute("source", PublicationStatusBindingName))),
+                        new XElement(MainNamespace + "KeySelector.Options",
+                            new XElement(CmsNamespace + "read", new XAttribute("source", PublicationStatusOptionsBindingName)))
+                    );
 
 
-                    _panelXml.Add(element);
-                }
+                publishFieldsXml.Add(element);
+                
+
+                var publishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
+                    new XAttribute("name", "PublishDate"),
+                    new XAttribute("type", typeof(DateTime)),
+                    new XAttribute("optional", "true"));
+
+                _bindingsXml.Add(publishDateBinding);
+
+                publishFieldsXml.Add(
+                    new XElement(MainNamespace + "DateTimeSelector",
+                        new XAttribute("Label", Texts.PublishDate_Label),
+                        new XAttribute("Help", Texts.PublishDate_Help),
+                        new XElement(CmsNamespace + "bind",
+                            new XAttribute("source", "PublishDate"))));
+
+                var unpublishDateBinding = new XElement(CmsNamespace + FormKeyTagNames.Binding,
+                    new XAttribute("name", "UnpublishDate"),
+                    new XAttribute("type", typeof(DateTime)),
+                    new XAttribute("optional", "true"));
+
+                _bindingsXml.Add(unpublishDateBinding);
+
+                publishFieldsXml.Add(
+                    new XElement(MainNamespace + "DateTimeSelector",
+                        new XAttribute("Label", Texts.UnpublishDate_Label),
+                        new XAttribute("Help", Texts.UnpublishDate_Help),
+                        new XElement(CmsNamespace + "bind",
+                                new XAttribute("source", "UnpublishDate"))));
             }
 
             var formDefinition = new XElement(CmsFormElementTemplate);
@@ -842,7 +801,7 @@ namespace Composite.Data.DynamicTypes
                 {
                     var bindingName = bindingNameAttribute.Value;
 
-                    if (!fieldNameToBindingNameMapper.ContainsKey(bindingName))
+                    if (!IsNotFieldBinding(bindingName) && !fieldNameToBindingNameMapper.ContainsKey(bindingName))
                     {
                         throw new ParseDefinitionFileException("Invalid binding name '{0}'".FormatWith(bindingName), bindingNameAttribute);
                     }
@@ -850,7 +809,7 @@ namespace Composite.Data.DynamicTypes
 
                 var formDefinitionElement = new XElement(CustomFormDefinition.Root);
 
-                foreach (var bindingNameAttribute in getBindingsFunc(formDefinitionElement))
+                foreach (var bindingNameAttribute in getBindingsFunc(formDefinitionElement).Where(attr => !IsNotFieldBinding(attr.Value)))
                 {
                     bindingNameAttribute.Value = fieldNameToBindingNameMapper[bindingNameAttribute.Value];
                 }
@@ -871,6 +830,11 @@ namespace Composite.Data.DynamicTypes
             }
         }
 
+
+        private bool IsNotFieldBinding(string bindingName)
+        {
+            return bindingName == PublicationStatusOptionsBindingName;
+        }
 
         /// <exclude />
         public static string GetBindingName(string prefix, string bindingName)

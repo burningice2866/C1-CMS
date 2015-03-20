@@ -128,5 +128,17 @@ namespace Composite.Services
 
             return pageLocales;
         }
+
+		[WebMethod]
+		public string GetTextDirection(bool dummy)
+		{
+			return UserSettings.ActiveLocaleCultureInfo.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+		}
+
+		[WebMethod]
+		public string GetUITextDirection(bool dummy)
+		{
+			return UserSettings.C1ConsoleUiLanguage.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+		}
     }
 }

@@ -30,7 +30,7 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
 	    page.viewportSize = { width: 1920, height: 600 };
 	}
 
-    page.settings.resourceTimeout = (mode == "test") ? 2000 : 5000;
+    page.settings.resourceTimeout = (mode == "test") ? 15000 : 30000;
     
 	page.onResourceTimeout = function (request) {
 	    if (request.id == 1) {
@@ -53,6 +53,11 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
 	page.onResourceReceived = function (response) {
 	    if (response.id == 1 && (response.status == 301 || response.status == 302)) {
 	        console.log('REDIRECT: ' + response.url);
+	        phantom.exit(); // TODO: optimize, no exit needed
+	    }
+
+	    if (response.id == 1 && response.status == 503) {
+	        console.log('503 Service Unavailable.');
 	        phantom.exit(); // TODO: optimize, no exit needed
 	    }
 	}
@@ -129,11 +134,11 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
         });
     } finally {
         globalTimeout = setTimeout(function () {
-            console.log("Max execution time - 10 seconds - exceeded");
+            console.log("Max execution time - 60 seconds - exceeded");
             globalTimeout = null;
             page.close();
             WaitForInput(system, console);
-        }, 10000);
+        }, 60000);
     }
 }
 

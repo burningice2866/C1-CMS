@@ -1,4 +1,5 @@
 ﻿using System;
+using Composite.C1Console.Security;
 using Composite.Data.Hierarchy;
 using Composite.Data.Hierarchy.DataAncestorProviders;
 using Composite.Data.Validation.Validators;
@@ -35,14 +36,6 @@ namespace Composite.Data.Types
 
 
         /// <exclude />
-        [NotNullValidator]
-        [PasswordValidator]
-        [StoreFieldType(PhysicalStoreFieldType.String, 256)]
-        [ImmutableFieldId("{C0230DEB-5394-4819-BE18-A60CF5FA69F0}")]
-        string EncryptedPassword { get; set; }
-
-
-        /// <exclude />
         [StoreFieldType(PhysicalStoreFieldType.String, 128, IsNullable = true)]
         [ImmutableFieldId("{20F756AD-F03D-453E-B464-D2C13051A647}")]
         string Name { get; set; }
@@ -61,5 +54,39 @@ namespace Composite.Data.Types
         [ImmutableFieldId("{C7A7D63C-EA87-48ac-B009-5D4050A2F248}")]
         // This should be named Folder and have no relation to IUserGroup
         string Group { get; set; }
+
+        /// <summary>
+        /// Determines whether the user is locked
+        /// </summary>
+        [StoreFieldType(PhysicalStoreFieldType.Boolean)]
+        [DefaultFieldBoolValue(false)]
+        [ImmutableFieldId("{72BFFBDC-E4FF-4BD4-9BB1-B86FAEA39468}")]
+        bool IsLocked { get; set; }
+
+        /// <summary>
+        /// Contains a code describing lockout reason (f.e. locked by an administrator or automatically after X failed login attempts)
+        /// For possible values, see enumeration <see cref="UserLockoutReason"/>
+        /// </summary>
+        [StoreFieldType(PhysicalStoreFieldType.Integer)]
+        [DefaultFieldIntValue(0)]
+        [ImmutableFieldId("{39CBCCFA-CFB2-4E79-9204-C9596A3FC0E9}")]
+        int LockoutReason { get; set; }
+
+        /// <exclude />
+        [NotNullValidator]
+        [StoreFieldType(PhysicalStoreFieldType.String, 256)]
+        [ImmutableFieldId("{C0230DEB-5394-4819-BE18-A60CF5FA69F0}")]
+        string EncryptedPassword { get; set; }
+
+        /// <exclude />
+        [StoreFieldType(PhysicalStoreFieldType.String, 128, IsNullable = true)]
+        [ImmutableFieldId("{CA2CF6F8-489B-4D60-B3C3-AF46D1259647}")]
+        string PasswordHashSalt { get; set; }
+
+        /// <exclude />
+        [StoreFieldType(PhysicalStoreFieldType.DateTime)]
+        [ImmutableFieldId("{35457DA7-A13E-4A6C-9008-3D619A519F2B}")]
+        [DefaultFieldNowDateTimeValue]
+        DateTime LastPasswordChangeDate { get; set; }
     }
 }

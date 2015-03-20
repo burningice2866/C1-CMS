@@ -15,7 +15,7 @@ namespace Composite.C1Console.Security
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
     public static class UserValidationFacade
     {
-        private static object _lock = new object();
+        private static readonly object _lock = new object();
 
 
         /// <exclude />
@@ -32,6 +32,15 @@ namespace Composite.C1Console.Security
         };
 
 
+        private static readonly Dictionary<LoginResult, string> LoginResultDescriptions = new Dictionary<LoginResult, string>
+        {
+            {LoginResult.IncorrectPassword, "Incorrect password."},
+            {LoginResult.UserDoesNotExist, "User does not exist."},
+            {LoginResult.PolicyViolated, "Login policy violated."},
+            {LoginResult.UserLockedByAdministrator, "User is locked by an administrator."},
+            {LoginResult.UserLockedAfterMaxLoginAttempts, "User locked after reaching maximum login attempts."}
+        };
+
 
         /// <exclude />
         public static ValidationType GetValidationType()
@@ -40,7 +49,7 @@ namespace Composite.C1Console.Security
             {
                 return ValidationType.Form;
             }
-            else if (LoginProviderPluginFacade.CheckType<IWindowsLoginProvider>())
+            if (LoginProviderPluginFacade.CheckType<IWindowsLoginProvider>())
             {
                 return ValidationType.Windows;
             }
@@ -71,29 +80,26 @@ namespace Composite.C1Console.Security
 
 
         /// <summary>
-        /// Validates and persists a form based login
+        /// Validates and persists a form based login. If no users exist and the user name matches the default administrator user, that user will be created.
         /// </summary>
         /// <param name="userName"></param>
         /// <param name="password"></param>
         /// <returns>True if the user was validated</returns>
-        public static bool FormValidateUser(string userName, string password)
+        public static LoginResult FormValidateUser(string userName, string password)
         {
             LoginResult loginResult = LoginProviderPluginFacade.FormValidateUser(userName, password);
 
-            if (loginResult == LoginResult.UserDoesNotExist)
+            if (loginResult == LoginResult.UserDoesNotExist && AdministratorAutoCreator.CanBeAutoCreated(userName))
             {
                 lock (_lock)
                 {
                     loginResult = LoginProviderPluginFacade.FormValidateUser(userName, password);
 
-                    if (loginResult == LoginResult.UserDoesNotExist)
+                    if (loginResult == LoginResult.UserDoesNotExist && AdministratorAutoCreator.CanBeAutoCreated(userName))
                     {
-                        if (AdministratorAutoCreator.CanBeAutoCreated(userName))
-                        {
-                            AdministratorAutoCreator.AutoCreatedAdministrator(userName, password, "");
+                        AdministratorAutoCreator.AutoCreateAdministrator(userName, password, "");
 
-                            loginResult = LoginProviderPluginFacade.FormValidateUser(userName, password);
-                        }
+                        loginResult = LoginProviderPluginFacade.FormValidateUser(userName, password);
                     }
                 }
             }
@@ -103,20 +109,12 @@ namespace Composite.C1Console.Security
                 LoggingService.LogVerbose("UserValidation", String.Format("The user: [{0}], has been validated and accepted. {1}", userName, GetIpInformation()), LoggingService.Category.Audit);
                 PersistUsernameInSessionDataProvider(userName);
             }
-            else if(loginResult == LoginResult.IncorrectPassword)
+            else if (LoginResultDescriptions.ContainsKey(loginResult))
             {
-                LogLoginFailed(userName, "Incorrect password.");
-            }
-            else if (loginResult == LoginResult.UserDoesNotExist)
-            {
-                LogLoginFailed(userName, "User does not exist.");
-            }
-            else if (loginResult == LoginResult.PolicyViolated)
-            {
-                LogLoginFailed(userName, "Login policy violated.");
+                LogLoginFailed(userName, LoginResultDescriptions[loginResult]);
             }
 
-            return loginResult == LoginResult.Success;
+            return loginResult;
         }
 
         private static void LogLoginFailed(string userName, string message)
@@ -199,7 +197,7 @@ namespace Composite.C1Console.Security
         /// <exclude />
         public static bool IsLoggedIn()
         {
-            return (string.IsNullOrEmpty(LoginSessionStorePluginFacade.StoredUsername) == false);
+            return !string.IsNullOrEmpty(LoginSessionStorePluginFacade.StoredUsername);
         }
 
 
@@ -207,7 +205,7 @@ namespace Composite.C1Console.Security
         /// <exclude />
         public static UserToken GetUserToken()
         {
-            if (IsLoggedIn() == false) throw new InvalidOperationException("No user has been logged in");
+            Verify.That(IsLoggedIn(), "No user has been logged in");
 
             return new UserToken(LoginSessionStorePluginFacade.StoredUsername);
         }
@@ -217,7 +215,7 @@ namespace Composite.C1Console.Security
         /// <exclude />
         public static string GetUsername()
         {
-            if (IsLoggedIn() == false) throw new InvalidOperationException("No user has been logged in");
+            Verify.That(IsLoggedIn(), "No user has been logged in");
 
             return LoginSessionStorePluginFacade.StoredUsername;
         }

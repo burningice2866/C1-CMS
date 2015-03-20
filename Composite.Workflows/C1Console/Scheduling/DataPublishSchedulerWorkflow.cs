@@ -1,14 +1,15 @@
+using System;
 using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
-
+using Composite.C1Console.Security;
 using Composite.Core;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.ProcessControlled;
 using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
+using Composite.Data.PublishScheduling;
 using Composite.Data.Transactions;
-using Composite.Data.Types;
+
 
 namespace Composite.C1Console.Scheduling
 {
@@ -24,24 +25,22 @@ namespace Composite.C1Console.Scheduling
 
         protected override void Execute()
         {
+            Type type = TypeManager.GetType(DataType);
+
             using (new DataScope(DataScopeIdentifier.Administrated, CultureInfo.CreateSpecificCulture(LocaleName)))
             {
+                DataEntityToken dataEntityToken;
+
                 using (var transaction = TransactionsFacade.CreateNewScope())
                 {
-                    var publishSchedule =
-                        (from ps in DataFacade.GetData<IPublishSchedule>()
-                         where ps.DataType == DataType &
-                         ps.DataId == DataId &&
-                               ps.LocaleCultureName == LocaleName
-                         select ps).Single();
-
+                    var publishSchedule = PublishScheduleHelper.GetPublishSchedule(type, DataId, LocaleName);
                     DataFacade.Delete(publishSchedule);
 
-                    var type = TypeManager.GetType(DataType);
-
                     var data = (IPublishControlled)DataFacade.GetDataByUniqueKey(type, DataId);
-                    Verify.IsNotNull(data, "The data with the id {0} does not exist", DataId);
+                    Verify.IsNotNull(data, "The data with the id '{0}' does not exist", DataId);
 
+                    dataEntityToken = data.GetDataEntityToken();
+                    
                     var transitions = ProcessControllerFacade.GetValidTransitions(data).Keys;
 
                     if (transitions.Contains(GenericPublishProcessController.Published))
@@ -59,6 +58,9 @@ namespace Composite.C1Console.Scheduling
 
                     transaction.Complete();
                 }
+                
+                EntityTokenCacheFacade.ClearCache(dataEntityToken);
+                PublishControlledHelper.ReloadDataElementInConsole(dataEntityToken);
             }
         }
     }

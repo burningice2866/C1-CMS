@@ -34,10 +34,14 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
     public static class MarkupTransformationServices
     {
+        /// <exclude />
+        public static IEnumerable<string> Html5specificElementNames = new List<string> { "article", "aside", "audio", "canvas", "command", "datalist", "details", "embed", "figcaption", "figure", "footer", "header", "hgroup", "keygen", "mark", "meter", "nav", "output", "progress", "rp", "rt", "ruby", "section", "source", "summary", "time", "video", "wbr", "main" };
+
         static readonly Regex _duplicateAttributesRegex = new Regex(@"<([^>]*?) (?<attributeName>\w*?)=(?<quote>"")([^>]*?)(\k<quote>)([^>]*?) (\k<attributeName>)=(?<quote2>"")([^>]*?)(\k<quote2>)([^>]*?)>", RegexOptions.Compiled);
         static readonly Regex _namespacePrefixedElement = new Regex(@"<([a-zA-Z0-9\._]*?):([a-zA-Z0-9\._]*)([^>]*?)(/?)>", RegexOptions.Multiline | RegexOptions.Compiled);
         static readonly Regex _elementWithNamespaceDeclaration = new Regex(@"<(.*?) xmlns:([a-zA-Z0-9\._]*)=""(.*?)""(.*?)(/?)>", RegexOptions.Compiled);
         static readonly Regex _elementsWithPrefixedAttributes = new Regex(@"<[^>]*? ([\w]):.*?>", RegexOptions.Compiled);
+        static readonly Regex _customNamespaceDeclarations = new Regex(@"<(.*?) xmlns:(?<prefix>[a-zA-Z0-9\._]*?)=""(?<uri>.*?)""([^>]*?)>", RegexOptions.Compiled);
 
         /// <summary>
         /// Repairs an html fragment (makes it Xhtml) and executes a transformation on it.
@@ -251,7 +255,7 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
             string bodyInnerXhtml = "";
 
             XmlWriterSettings settings = CustomizedWriterSettings();
-            using (MemoryStream memoryStream = new MemoryStream())
+            using (var memoryStream = new MemoryStream())
             {
                 using (XmlWriter writer = XmlWriter.Create(memoryStream, settings))
                 {
@@ -265,32 +269,34 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
 
                     writer.Flush();
                     memoryStream.Position = 0;
-                    C1StreamReader sr = new C1StreamReader(memoryStream);
+                    var sr = new C1StreamReader(memoryStream);
                     bodyInnerXhtml = sr.ReadToEnd();
                 }
             }
 
             bodyInnerXhtml = bodyInnerXhtml.Replace(" xmlns=\"http://www.w3.org/1999/xhtml\"", "");
 
-            Regex customNamespaceDeclarations = new Regex(@"<(.*?) xmlns:(?<prefix>[a-zA-Z0-9\._]*?)=""(?<uri>.*?)""([^>]*?)>", RegexOptions.Compiled);
-            Dictionary<string, string> prefixToUriLookup = new Dictionary<string, string>();
+            var prefixToUriLookup = new Dictionary<string, string>();
 
             int lastLength = -1;
             while (bodyInnerXhtml.Length != lastLength)
             {
                 lastLength = bodyInnerXhtml.Length;
-                MatchCollection matchCollection = customNamespaceDeclarations.Matches(bodyInnerXhtml);
+                MatchCollection matchCollection = _customNamespaceDeclarations.Matches(bodyInnerXhtml);
 
                 foreach (Match match in matchCollection)
                 {
                     string prefix = match.Groups["prefix"].Value;
-                    if (prefixToUriLookup.ContainsKey(prefix) == false)
+                    if (!prefixToUriLookup.ContainsKey(prefix))
                     {
                         prefixToUriLookup.Add(prefix, match.Groups["uri"].Value);
                     }
                 }
 
-                bodyInnerXhtml = customNamespaceDeclarations.Replace(bodyInnerXhtml, "<$1$2>");
+                if (matchCollection.Count > 0)
+                {
+                    bodyInnerXhtml = _customNamespaceDeclarations.Replace(bodyInnerXhtml, "<$1$2>");
+                }
             }
 
             foreach (var prefixInfo in prefixToUriLookup)
@@ -305,7 +311,7 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
 
         private static XmlWriterSettings CustomizedWriterSettings()
         {
-            XmlWriterSettings settings = new XmlWriterSettings();
+            var settings = new XmlWriterSettings();
             settings.OmitXmlDeclaration = true;
             settings.ConformanceLevel = ConformanceLevel.Fragment;
             settings.CloseOutput = false;
@@ -332,6 +338,7 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
 
         private static string RemoveDuplicateAttributes(string html)
         {
+            // TODO: optimize, way to slow, takes 150ms!
             int prevLength = -1;
             while (html.Length != prevLength)
             {
@@ -372,7 +379,7 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
 
         private static Tidy GetXhtmlConfiguredTidy()
         {
-            Tidy t = new Tidy();
+            var t = new Tidy();
 
             t.Options.RawOut = true;
             t.Options.TidyMark = false;
@@ -418,9 +425,7 @@ namespace Composite.Core.WebClient.Services.WysiwygEditor
 
         private static void AllowHtml5ElementNames(Tidy tidy)
         {
-            List<string> html5specificElementNames = new List<string> { "article", "aside", "audio", "canvas", "command", "datalist", "details", "embed", "figcaption", "figure", "footer", "header", "hgroup", "keygen", "mark", "meter", "nav", "output", "progress", "rp", "rt", "ruby", "section", "source", "summary", "time", "video", "wbr" };
-
-            foreach (string elementName in html5specificElementNames)
+            foreach (string elementName in Html5specificElementNames)
             {
                 tidy.Options.AddTag(elementName.ToLower());
             }

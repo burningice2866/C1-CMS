@@ -2,6 +2,7 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Web;
 using System.Web.Caching;
 using System.Xml.Linq;
@@ -47,6 +48,39 @@ namespace Composite.Core.WebClient.Media
         /// </summary>
         public int? Quality { get; set; }
 
+        /// <exclude />
+        public ResizingOptions()
+        {
+        }
+
+        /// <exclude />
+        internal ResizingOptions(string predefinedOptionsName)
+        {
+            //Load the xml file
+            var options = GetPredefinedResizingOptions().Elements("image");
+
+            foreach (XElement e in options.Where(e => (string)e.Attribute("name") == predefinedOptionsName))
+            {
+                Height = ParseOptionalIntAttribute(e, "height");
+                Width = ParseOptionalIntAttribute(e, "width");
+                MaxHeight = ParseOptionalIntAttribute(e, "maxheight");
+                MaxWidth = ParseOptionalIntAttribute(e, "maxwidth");
+                Quality = ParseOptionalIntAttribute(e, "quality");
+
+                var attr = e.Attribute("action");
+                if (attr != null)
+                {
+                    ResizingAction = (ResizingAction)Enum.Parse(typeof(ResizingAction), attr.Value, true);
+                }
+            }
+        }
+
+        private static int? ParseOptionalIntAttribute(XElement element, string attributeName)
+        {
+            XAttribute attribute = element.Attribute(attributeName);
+            return attribute == null ? (int?) null : int.Parse(attribute.Value);
+        }
+
         /// <summary>
         /// Image quality (when doing lossy compression)
         /// </summary>
@@ -58,10 +92,7 @@ namespace Composite.Core.WebClient.Media
                 {
                     return Quality.Value;
                 }
-                else
-                {
-                    return GlobalSettingsFacade.ImageQuality;
-                }
+                return GlobalSettingsFacade.ImageQuality;
             }
         }
 
@@ -92,7 +123,7 @@ namespace Composite.Core.WebClient.Media
             string resizingKey = queryString["k"];
             if (!string.IsNullOrEmpty(resizingKey))
             {
-                return GetResizingOptionsByKey(httpServerUtility, resizingKey);
+                return new ResizingOptions(resizingKey);
             }
 
             return FromQueryString(queryString);
@@ -153,63 +184,11 @@ namespace Composite.Core.WebClient.Media
             return result;
         }
 
-
-        private static ResizingOptions GetResizingOptionsByKey(HttpServerUtility httpServerUtility, string key)
-        {
-            //Load the xml file
-            XElement xml = GetPredefinedResizingOptions(httpServerUtility);
-
-            //Get all nodes where the name equals the key
-            //To make this code work in .Net 2.0, use an xpath query to get the height
-            //and width values instead of a LINQ query
-            var query = from r in xml.Elements("image")
-                        where r.Attribute("name") != null && r.Attribute("name").Value == key
-                        select r;
-
-
-            var result = new ResizingOptions();
-
-            foreach (XElement r in query)
-            {
-                var attr = r.Attribute("height");
-                if (attr != null)
-                {
-                    result.Height = int.Parse(attr.Value);
-                }
-
-                attr = r.Attribute("width");
-                if (attr != null)
-                {
-                    result.Width = int.Parse(attr.Value);
-                }
-
-                attr = r.Attribute("maxheight");
-                if (attr != null)
-                {
-                    result.MaxHeight = int.Parse(attr.Value);
-                }
-
-                attr = r.Attribute("maxwidth");
-                if (attr != null)
-                {
-                    result.MaxWidth = int.Parse(attr.Value);
-                }
-
-                attr = r.Attribute("action");
-                if (attr != null)
-                {
-                    result.ResizingAction = (ResizingAction)Enum.Parse(typeof(ResizingAction), attr.Value, true);
-                }
-            }
-
-            return result;
-        }
-
-        private static XElement GetPredefinedResizingOptions(HttpServerUtility httpServerUtility)
+        private static XElement GetPredefinedResizingOptions()
         {
             if (_resizedImageKeysFilePath == null)
             {
-                _resizedImageKeysFilePath = httpServerUtility.MapPath(ResizedImageKeys);
+                _resizedImageKeysFilePath = PathUtil.Resolve(ResizedImageKeys);
             }
 
             XElement xel = HttpRuntime.Cache.Get("ResizedImageKeys") as XElement;
@@ -222,47 +201,57 @@ namespace Composite.Core.WebClient.Media
                     string directoryPath = Path.GetDirectoryName(_resizedImageKeysFilePath);
                     if (!C1Directory.Exists(directoryPath)) C1Directory.CreateDirectory(directoryPath);
 
-                    var config = new XElement("ResizedImages");
-                    config.Add(new XElement("image",
-                        new XAttribute("name", "thumbnail"),
-                        new XAttribute("maxwidth", "100"),
-                        new XAttribute("maxheight", "100")));
-
-                    config.Add(new XElement("image",
-                        new XAttribute("normal", "thumbnail"),
-                        new XAttribute("maxwidth", "200")));
-
-                    config.Add(new XElement("image",
-                        new XAttribute("name", "large"),
-                        new XAttribute("maxheight", "300")));
+                    var config = new XElement("ResizedImages",
+                        new XElement("image",
+                            new XAttribute("name", "thumbnail"),
+                            new XAttribute("maxwidth", "100"),
+                            new XAttribute("maxheight", "100")),
+                        new XElement("image",
+                            new XAttribute("name", "normal"),
+                            new XAttribute("maxwidth", "200")),
+                        new XElement("image",
+                            new XAttribute("name", "large"),
+                            new XAttribute("maxheight", "300"))
+                    );
 
                     config.SaveToPath(_resizedImageKeysFilePath);
                 }
 
                 xel = XElementUtils.Load(_resizedImageKeysFilePath);
-                CacheDependency cd = new CacheDependency(_resizedImageKeysFilePath);
-                TimeSpan ts = new TimeSpan(24, 0, 0);
-                HttpRuntime.Cache.Add("ResizedImageKeys", xel, cd, Cache.NoAbsoluteExpiration, ts, CacheItemPriority.Default, null);
+                var cd = new CacheDependency(_resizedImageKeysFilePath);
+                var cacheExpirationTimeSpan = new TimeSpan(24, 0, 0);
+                HttpRuntime.Cache.Add("ResizedImageKeys", xel, cd, Cache.NoAbsoluteExpiration, cacheExpirationTimeSpan, CacheItemPriority.Default, null);
             }
 
             return xel;
         }
 
-        //public string Serialize()
-        //{
-        //    var sb = new StringBuilder();
-        //    var parameters = new int?[] { Width, Height, MaxWidth, MaxHeight };
-        //    var parameterNames = new[] { "w", "h", "mw", "mh" };
+        /// <exclude />
+        override public string ToString()
+        {
+            var sb = new StringBuilder();
+            var parameters = new int?[] { Width, Height, MaxWidth, MaxHeight, Quality };
+            var parameterNames = new[] { "w", "h", "mw", "mh", "q" };
 
-        //    for (int i = 0; i < parameters.Length; i++)
-        //    {
-        //        if (parameters[i] != null)
-        //        {
-        //            sb.Append(parameterNames[i]).Append((int)parameters[i]);
-        //        }
-        //    }
-        //    return sb.ToString();
-        //}
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                if (parameters[i] != null)
+                {
+                    sb.Append(sb.Length == 0 ? "" : "&");
+
+                    sb.Append(parameterNames[i]).Append("=").Append((int)parameters[i]);
+                }
+            }
+
+            if (ResizingAction != ResizingAction.Stretch)
+            {
+                sb.Append(sb.Length == 0 ? "" : "&");
+
+                sb.Append("action=").Append(ResizingAction.ToString().ToLowerInvariant());
+            }
+
+            return sb.ToString();
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 
@@ -20,7 +21,7 @@ namespace Composite.Data.DynamicTypes
         void UpdateDataTypeDescriptor(DataTypeDescriptor dataTypeDescriptor, bool flushTheSystem);
 
         /// <exclude />
-        void CreateStore(string providerName, DataTypeDescriptor typeDescriptor, bool doFlush);
+        void CreateStores(string providerName, IReadOnlyCollection<DataTypeDescriptor> typeDescriptor, bool doFlush);
 
         /// <exclude />
         void AlterStore(UpdateDataTypeDescriptor updateDataTypeDescriptor, bool makeAFlush);

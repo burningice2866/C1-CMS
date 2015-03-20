@@ -322,26 +322,23 @@ namespace Composite.Plugins.Routing.Pages
 
             using (new DataScope(publicationScope, locale))
             {
-                PageUrlData data = ParsePagePath(pathWithoutLanguageCode, publicationScope, locale, hostnameBinding);
-                if (data != null)
+                bool isObsolete = false;
+                string pathToResolve = pathWithoutLanguageCode;
+
+                // Supporting obsolete "*.aspx" urls
+                if (!string.Equals(UrlSuffix, ".aspx", StringComparison.OrdinalIgnoreCase) 
+                    && (pathToResolve.Contains(".aspx/") || pathToResolve.EndsWith(".aspx")))
                 {
-                    urlKind = UrlKind.Public;
-                    data.QueryParameters = urlBuilder.GetQueryParameters();
-                    return data;
+                    pathToResolve = pathToResolve.Replace(".aspx", UrlSuffix);
+                    isObsolete = true;
                 }
 
-                // Supporting obsolete urls
-                if (pathWithoutLanguageCode.Contains(".aspx/") || pathWithoutLanguageCode.EndsWith(".aspx"))
+                PageUrlData data = ParsePagePath(pathToResolve, publicationScope, locale, hostnameBinding);
+                if (data != null)
                 {
-                    string patchedLegasyUrl = pathWithoutLanguageCode.Replace(".aspx", UrlSuffix);
-
-                    data = ParsePagePath(patchedLegasyUrl, publicationScope, locale, hostnameBinding);
-                    if (data != null)
-                    {
-                        urlKind = UrlKind.Redirect;
-                        data.QueryParameters = urlBuilder.GetQueryParameters();
-                        return data;
-                    }
+                    urlKind = !isObsolete ? UrlKind.Public : UrlKind.Redirect;
+                    data.QueryParameters = urlBuilder.GetQueryParameters();
+                    return data;
                 }
 
                 Guid friendlyUrlPageId = ParseFriendlyUrlPath(pathWithoutLanguageCode);
@@ -388,7 +385,7 @@ namespace Composite.Plugins.Routing.Pages
             return _friendlyUrls.GetOrAddSync(scopeKey, a =>
             {
                 var result = new Hashtable<string, Guid>();
-                foreach (var pair in DataFacade.GetData<IPage>().Where(p => !string.IsNullOrEmpty(p.FriendlyUrl))
+                foreach (var pair in DataFacade.GetData<IPage>().Where(p => !(p.FriendlyUrl == null || p.FriendlyUrl == string.Empty))
                     .Select(p => new {p.Id, p.FriendlyUrl}))
                 {
                     result[pair.FriendlyUrl.ToLowerInvariant()] = pair.Id;

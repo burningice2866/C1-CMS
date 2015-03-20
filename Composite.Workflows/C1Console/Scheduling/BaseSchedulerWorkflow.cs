@@ -29,16 +29,9 @@ namespace Composite.C1Console.Scheduling
             var delayActivity = (DelayActivity)GetActivityByName("waitDelayActivity");
 
             var now = DateTime.Now;
-            Log.LogVerbose(LogTitle, string.Format("Current time: {0}, Execution time: {1}", Date, now));
+            Log.LogVerbose(LogTitle, "Current time: {0}, Execution time: {1}", Date, now);
 
-            if (Date > now)
-            {
-                delayActivity.TimeoutDuration = Date - now;
-            }
-            else
-            {
-                delayActivity.TimeoutDuration = new TimeSpan(0);
-            }
+            delayActivity.TimeoutDuration = Date > now ? Date - now : new TimeSpan(0);
 
             Log.LogVerbose(LogTitle, "Timeout in: " + delayActivity.TimeoutDuration);
         }

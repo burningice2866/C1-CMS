@@ -34,7 +34,8 @@ var KickStart = new function () {
 			SetupService = WebServiceProxy.createProxy ( Constants.URL_WSDL_SETUPSERVICE );
 			ReadyService = WebServiceProxy.createProxy ( Constants.URL_WSDL_READYSERVICE );
 			LoginService =  WebServiceProxy.createProxy ( Constants.URL_WSDL_LOGINSERVICE );
-			InstallationService = WebServiceProxy.createProxy ( Constants.URL_WSDL_INSTALLSERVICE );
+			InstallationService = WebServiceProxy.createProxy(Constants.URL_WSDL_INSTALLSERVICE);
+			StringService = WebServiceProxy.createProxy(Constants.URL_WSDL_STRINGSERVICE);
 
 			EventBroadcaster.broadcast(BroadcastMessages.APPLICATION_KICKSTART);
 
@@ -61,8 +62,22 @@ var KickStart = new function () {
 				// doStartUp (); hmmmm....
 				break;
 				
-			case BroadcastMessages.KEY_ENTER :
-				this.login ();
+			case BroadcastMessages.KEY_ENTER:
+				if (bindingMap.decks != null) {
+					var selecteddeck = bindingMap.decks.getSelectedDeckBinding();
+					if (selecteddeck != null) {
+						switch (selecteddeck.getID()) {
+							case "logindeck":
+								this.login();
+								break;
+						    case "changepassworddeck":
+								this.changePassword();
+								break;
+							default:
+						}
+					}
+					
+				}
 				break;
 				
 			case BroadcastMessages.APPLICATION_LOGIN :
@@ -143,7 +158,8 @@ var KickStart = new function () {
 		ver.firstChild.data = ver.firstChild.data.replace ( "${version}", Installation.versionPrettyString );
 		
 		var build = document.getElementById ( "build" );
-		build.firstChild.data = build.firstChild.data.replace ( "${build}", Installation.versionString );
+		build.firstChild.data = build.firstChild.data.replace("${build}", Installation.versionString);
+
 	}
 	
 	/*
@@ -165,6 +181,7 @@ var KickStart = new function () {
 		EventBroadcaster.subscribe ( BroadcastMessages.KEY_ENTER, KickStart );
 		Application.unlock ( KickStart );
 		bindingMap.decks.select ( "logindeck" );
+		
 		setTimeout ( function () {
 			if ( Application.isDeveloperMode && Application.isLocalHost ) {
 				DataManager.getDataBinding ( "username" ).setValue ( DEVUSERNAME );
@@ -202,6 +219,85 @@ var KickStart = new function () {
 			Application.unlock ( KickStart );
 		}, PageBinding.TIMEOUT );
 	}
+
+
+	this.changePassword = function () {
+		
+		if (bindingMap.toppage.validateAllDataBindings()) {
+
+			var username = DataManager.getDataBinding("username").getResult();
+			var oldpassword = DataManager.getDataBinding("passwordold").getResult();
+			var newpassword = DataManager.getDataBinding("passwordnew").getResult();
+			var newpassword2 = DataManager.getDataBinding("passwordnew2").getResult();
+
+
+			if (newpassword == newpassword2) {
+				var wasEnabled = WebServiceProxy.isLoggingEnabled;
+				WebServiceProxy.isLoggingEnabled = false;
+				WebServiceProxy.isFaultHandler = false;
+
+				var result = LoginService.ChangePassword(username, oldpassword, newpassword);
+
+				if (result instanceof SOAPFault) {
+					alert(result.getFaultString());
+				} else {
+					if (result.length == 0) {
+						setTimeout(function() {
+							top.window.location.reload(true);
+						}, 0);
+					} else {
+						this.showPasswordErrors(result);
+					}
+				}
+
+				WebServiceProxy.isFaultHandler = true;
+				if (wasEnabled) {
+					WebServiceProxy.isLoggingEnabled = true;
+				}
+			} else {
+
+				
+				this.showPasswordErrors([Resolver.resolve("${string:Composite.C1Console.Users:ChangePasswordForm.ConfirmationPasswordMimatch}")]);
+			}
+		}
+	}
+
+	this.showPasswordErrors = function (errors) {
+		errors = new List(errors);
+		var errorsElement = document.getElementById("passworderror");
+		errorsElement.innerHTML = "";
+
+		errors.each(function(error) {
+			var errorElement = document.createElement("div");
+			errorElement.textContent = error;
+			errorElement.className = "errortext";
+			errorsElement.appendChild(errorElement);
+
+		});
+		
+
+
+		errorsElement.style.display = "block";
+
+
+		var handler = {
+			handleAction: function (action) {
+				document.getElementById("passworderror").style.display = "none";
+				action.target.removeActionListener(
+						Binding.ACTION_DIRTY, handler
+				);
+			}
+		}
+		bindingMap.passwordfields.addActionListener(
+				Binding.ACTION_DIRTY, handler
+		);
+
+		DataManager.getDataBinding("passwordold").clean();
+		DataManager.getDataBinding("passwordnew").clean();
+		DataManager.getDataBinding("passwordnew2").clean();
+	}
+
+
 	
 	/** 
 	 * Note that we disable SOAP debugging during login. 
@@ -228,7 +324,7 @@ var KickStart = new function () {
 			
 		}, 25 );
 	}
-	
+
 	/**
 	 * Isolated in order to be invoked by {@link Welcome}
 	 * @param {String} username
@@ -241,14 +337,34 @@ var KickStart = new function () {
 		WebServiceProxy.isFaultHandler = false;
 		
 		var isAllowed = false;
+		var isChangePasswordRequired = false;
 		var result = LoginService.ValidateAndLogin ( username, password );
 		if ( result instanceof SOAPFault ) {
 			alert ( result.getFaultString ());
 		} else {
-			isAllowed = result;
+		    if (result == "lockedAfterMaxAttempts") {
+                // TODO: unhardcode
+		        alert("The account was locked after maximum login attempts. Please contact administrator.");
+		    }
+
+		    if (result == "lockedByAnAdministrator") {
+		        // TODO: unhardcode
+		        alert("The account was locked by an administrator.");
+		    }
+
+		    if (result == "passwordUpdateRequired") {
+		    	isChangePasswordRequired = true;
+
+		    }
+
+            if (result == "success") {
+                isAllowed = true;
+            }
 		}
-		
-		if ( isAllowed ) {
+
+		if (isChangePasswordRequired) {
+			changePasswordRequired();
+		}else if ( isAllowed ) {
 			EventBroadcaster.unsubscribe ( BroadcastMessages.KEY_ENTER, KickStart );
 			accessGranted ();
 		} else {
@@ -276,6 +392,29 @@ var KickStart = new function () {
 				Application.login ();
 			}, 0 );
 		}, 0 );
+	}
+
+	/**
+	 * Change Password Required.
+	 */
+	function changePasswordRequired() {
+
+		setTimeout(function () {
+			Application.unlock(KickStart);
+			if (bindingMap.decks != null) {
+			    bindingMap.decks.select("changepassworddeck");
+				bindingMap.cover.attachClassName("widesplash");
+
+				setTimeout(function () {
+					var passwordexpired = document.getElementById("passwordexpired");
+					passwordexpired.firstChild.data = passwordexpired.firstChild.data.replace("{0}", Installation.passwordExpirationTimeInDays);
+
+					DataManager.getDataBinding("usernameold").setValue(DataManager.getDataBinding("username").getResult());
+					DataManager.getDataBinding("passwordold").focus();
+				}, 0);
+
+			}
+		}, 25);
 	}
 	
 	/**

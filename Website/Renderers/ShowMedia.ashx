@@ -10,6 +10,7 @@ using System.Text;
 using System.Web;
 using System.Web.SessionState;
 using Composite;
+using Composite.C1Console.Security;
 using Composite.Data;
 using Composite.Data.Types;
 using Composite.Core;
@@ -57,24 +58,34 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
                 context.Response.StatusCode = 404;
                 context.Response.Write("File not found");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+                if (UserValidationFacade.IsLoggedIn())
+                {
+                    throw;
+                }
+                
                 context.Response.StatusCode = 500;
-                context.Response.Write(ex.Message);
             }
 
-            if (file != null)
+            if (file == null)
             {
-                try
+                return;
+            }
+            
+            try
+            {
+                ValidateAndSend(context, file);
+            }
+            catch (Exception)
+            {
+                context.Response.ClearHeaders();
+                if (UserValidationFacade.IsLoggedIn())
                 {
-                    ValidateAndSend(context, file);
+                    throw;
                 }
-                catch (Exception ex)
-                {
-                    context.Response.ClearHeaders();
-                    context.Response.StatusCode = 500;
-                    context.Response.Write(ex.Message);
-                }
+
+                context.Response.StatusCode = 500;
             }
         }
     }
@@ -125,20 +136,22 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
         context.Response.AddHeader("Content-Disposition", "{0};filename=\"{1}\"".FormatWith((download ? "attachment" : "inline"), encodedFileName));
 
 
-        bool clientCaching = false;
+        bool checkIfModifiedSince = false;
 
 
-        if (UrlContainsTimestamp(context))
+        if (UrlContainsTimestamp(context, file))
         {
             context.Response.Cache.SetExpires(DateTime.Now.AddDays(30));
             context.Response.Cache.SetCacheability(HttpCacheability.Public);
+
+            checkIfModifiedSince = true;
         } 
-        else if (!Composite.C1Console.Security.UserValidationFacade.IsLoggedIn())
+        else if (!UserValidationFacade.IsLoggedIn())
         {
             context.Response.Cache.SetExpires(DateTime.Now.AddMinutes(60));
             context.Response.Cache.SetCacheability(HttpCacheability.Private);
 
-            clientCaching = true;
+            checkIfModifiedSince = true;
         }
 
         Stream inputStream = null;
@@ -173,7 +186,7 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
                 context.Response.AddHeader("Accept-Ranges", "bytes");
             }            
             
-            if (clientCaching && file.LastWriteTime != null)
+            if (checkIfModifiedSince && file.LastWriteTime != null)
             {
                 var lastModified = file.LastWriteTime.Value;
 
@@ -246,7 +259,7 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
         }
     }
     
-    private static bool UrlContainsTimestamp(HttpContext context)
+    private static bool UrlContainsTimestamp(HttpContext context, IMediaFile file)
     {
         string url = context.Request.RawUrl;
 
@@ -255,13 +268,20 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
         string[] urlParts = url.Substring(MediaUrl_PublicPrefix.Length).Split('/');
 
         Guid tempGuid;
-        int tempInt;
         
         return urlParts.Length >= 2 
             && Guid.TryParse(urlParts[0], out tempGuid)
-            && int.TryParse(urlParts[1], out tempInt);
+            && urlParts[1].Length == 6 
+            && urlParts[1] == GetTimeStampHash(file);
     }
 
+    
+    private static string GetTimeStampHash(IMediaFile file)
+    {
+        int hash = file.LastWriteTime.Value.ToUniversalTime().GetHashCode();
+        return Convert.ToBase64String(BitConverter.GetBytes(hash)).Substring(0, 6).Replace('+', '-').Replace('/', '_');
+    }
+    
     
     private static void OutputToResponse(HttpContext context, Stream inputStream) {
         var response = context.Response;

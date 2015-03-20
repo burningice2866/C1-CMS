@@ -138,5 +138,51 @@ namespace Composite.Data
 
             return false;
         }
+
+        internal static Dictionary<Guid, Type> GetDataTypes(IReadOnlyCollection<DataTypeDescriptor> dataTypeDescriptors)
+        {
+            var result = new Dictionary<Guid, Type>();
+            var toCompile = new List<DataTypeDescriptor>();
+
+            foreach (var dataTypeDescriptor in dataTypeDescriptors)
+            {
+                string typeFullName = dataTypeDescriptor.GetFullInterfaceName();
+                Type type = _LoadedDataTypes.FirstOrDefault(f => f.FullName == typeFullName);
+                if (type == null)
+                {
+                    bool compilationNeeded;
+                    type = InterfaceCodeManager.TryGetType(dataTypeDescriptor, false, out compilationNeeded);
+
+                    if (compilationNeeded)
+                    {
+                        toCompile.Add(dataTypeDescriptor);
+                    }
+                }
+
+                result[dataTypeDescriptor.DataTypeId] = type;
+            }
+
+            if (toCompile.Any())
+            {
+                var codeGenerationBuilder = new CodeGenerationBuilder("DataTypeTypesManager:compiling missing interfaces");
+
+                foreach (var dataTypeDescriptor in toCompile)
+                {
+                    InterfaceCodeGenerator.AddAssemblyReferences(codeGenerationBuilder, dataTypeDescriptor);
+                    InterfaceCodeGenerator.AddInterfaceTypeCode(codeGenerationBuilder, dataTypeDescriptor);
+                }
+
+                var types = CodeGenerationManager.CompileRuntimeTempTypes(codeGenerationBuilder);
+                var typesMap = types.ToDictionary(type => type.FullName);
+
+                foreach (var dataTypeDescriptor in toCompile)
+                {
+                    var type = typesMap[dataTypeDescriptor.GetFullInterfaceName()];
+                    result[dataTypeDescriptor.DataTypeId] = type;
+                }
+            }
+
+            return result;
+        }
     }
 }

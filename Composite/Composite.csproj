@@ -62,9 +62,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\Packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -101,9 +100,9 @@
     </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web.Extensions" />
-    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="System.Web.WebPages, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
     </Reference>
     <Reference Include="System.Workflow.Activities" />
     <Reference Include="System.Workflow.ComponentModel" />
@@ -145,13 +144,25 @@
     <Compile Include="C1Console\Drawing\FunctionPresentation.cs" />
     <Compile Include="C1Console\Elements\ElementProviderHelpers\DataGroupingProviderHelper\ElipsisEntityToken.cs" />
     <Compile Include="C1Console\Forms\CoreUiControls\FontIconSelectorUiControl.cs" />
+    <Compile Include="C1Console\Security\Foundation\PluginFacades\PasswordRulePluginFacade.cs" />
+    <Compile Include="C1Console\Security\PasswordPolicyFacade.cs" />
+    <Compile Include="C1Console\Security\Plugins\PasswordPolicy\IPasswordRule.cs" />
+    <Compile Include="C1Console\Security\Plugins\PasswordPolicy\PasswordRuleData.cs" />
+    <Compile Include="C1Console\Security\Plugins\PasswordPolicy\NonConfigurablePasswordRule.cs" />
+    <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordRuleCustomFactory.cs" />
+    <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordRuleFactory.cs" />
+    <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordPolicySettings.cs" />
+    <Compile Include="C1Console\Security\UserLockoutReason.cs" />
     <Compile Include="C1Console\Trees\SortDirection.cs" />
     <Compile Include="Core\Application\Job.cs" />
     <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="Core\Caching\FileRelatedDataCache.cs" />
+    <Compile Include="Core\Extensions\StackTraceExtensionMethods.cs" />
     <Compile Include="Core\Instrumentation\LogExecutionTime.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\FileModifyPackageFragmentInstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\FileModifyPackageFragmentUninstaller.cs" />
+    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\DllPackageFragmentInstaller.cs" />
+    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\DllPackageFragmentUninstaller.cs" />
     <Compile Include="Core\PageTemplates\ISharedCodePageTemplateProvider.cs" />
     <Compile Include="Core\PageTemplates\SharedFile.cs" />
     <Compile Include="Core\Parallelization\AsyncLock.cs" />
@@ -165,6 +176,7 @@
     <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectRouteHandler.cs" />
     <Compile Include="Core\Threading\ThreadCultureScope.cs" />
     <Compile Include="Core\WebClient\BrowserRender.cs" />
+    <Compile Include="Core\WebClient\BrowserRender_PhantomServer.cs" />
     <Compile Include="Core\WebClient\BuildManagerHelper.cs" />
     <Compile Include="Core\WebClient\Captcha\CaptchaConfiguration.cs" />
     <Compile Include="Core\WebClient\Renderings\FunctionPreview.cs" />
@@ -195,6 +207,8 @@
     <Compile Include="Data\Types\IPublishSchedule.cs" />
     <Compile Include="Data\Types\ISchedule.cs" />
     <Compile Include="Data\Types\IUnpublishSchedule.cs" />
+    <Compile Include="Data\Types\IUserPasswordHistory.cs" />
+    <Compile Include="Data\PublishScheduling\PublishScheduleHelper.cs" />
     <Compile Include="Data\Types\TypeVersionAttribute.cs" />
     <Compile Include="Data\Validation\Validators\NullDateTimeRangeValidatorAttribute.cs" />
     <Compile Include="Functions\ContentFilterFacade.cs" />
@@ -225,6 +239,7 @@
     <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\FunctionBasedFunctionProviderHelper.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\FunctionParameter.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\NotLoadedFileBasedFunction.cs" />
+    <Compile Include="Core\IO\ReparsePointUtils.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\RazorFunctionProvider\RazorBasedFunction.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\RazorFunctionProvider\RazorFunctionProvider.cs" />
     <Compile Include="Plugins\Functions\FunctionProviders\RazorFunctionProvider\RazorFunctionProviderAssembler.cs" />
@@ -322,8 +337,6 @@
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageFragmentValidationExtension.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageLicenseFragmentInstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageLicenseFragmentUninstaller.cs" />
-    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\RebootingConsoleFragmentInstaller.cs" />
-    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\RebootingConsoleFragmentUninstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\XmlFileMergePackageFragmentInstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\XmlFileMergePackageFragmentUninstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageLicenseDefinition.cs" />
@@ -950,6 +963,11 @@
     <Compile Include="Plugins\Routing\Pages\DefaultPageUrlProvider.cs" />
     <Compile Include="Plugins\Routing\UrlFormatters\StringReplaceUrlFormatter.cs" />
     <Compile Include="Plugins\Routing\UrlFormatters\ToLowerCaseUrlFormatter.cs" />
+    <Compile Include="Plugins\Security\LoginProviderPlugins\DataBasedFormLoginProvider\UserPasswordManager.cs" />
+    <Compile Include="Plugins\Security\PasswordRules\DifferentCharacterGroups\DifferentCharacterGroupsPasswordRule.cs" />
+    <Compile Include="Plugins\Security\PasswordRules\DoNotUseUserName\DoNotUseUserNamePasswordRule.cs" />
+    <Compile Include="Plugins\Security\PasswordRules\EnforcePasswordHistory\EnforcePasswordHistoryPasswordRule.cs" />
+    <Compile Include="Plugins\Security\PasswordRules\MinimumLength\MinimumLengthPasswordRule.cs" />
     <Compile Include="Plugins\Security\UserGroupPermissionDefinitionProvider\DataBasedUserGroupPermissionDefinitionProvider\DataBasedUserGroupPermissionDefinitionProvider.cs" />
     <Compile Include="C1Console\Tasks\BaseTaskManager.cs" />
     <Compile Include="C1Console\Tasks\ITaskManager.cs" />
@@ -1026,7 +1044,6 @@
     <Compile Include="C1Console\Elements\Plugins\ElementProvider\ILocaleAwareElementProvider.cs" />
     <Compile Include="Core\Extensions\IEnumerableExtensionMethods.cs" />
     <Compile Include="Core\Extensions\MethodInfoExtensionMethods.cs" />
-    <Compile Include="Core\Extensions\StackFrameExtensionMethods.cs" />
     <Compile Include="Core\Linq\PropertyInfoValueCollectioncs.cs" />
     <Compile Include="Core\Localization\LocalizationParser.cs" />
     <Compile Include="Core\Localization\LocalizationXmlConstants.cs" />
@@ -1087,9 +1104,7 @@
     <Compile Include="Data\IDataFacade.cs" />
     <Compile Include="Data\Types\Foundation\ExceptingSerializerHandler.cs" />
     <Compile Include="Data\Types\IPackageServerSource.cs" />
-    <Compile Include="C1Console\Elements\Plugins\ElementProvider\ElementProviderConfigurationServices.cs" />
     <Compile Include="Core\Extensions\ByteArrayExtensionMethods.cs" />
-    <Compile Include="Core\Extensions\StackTraceExtensionMethods.cs" />
     <Compile Include="C1Console\Forms\BindablePropertyAttribute.cs" />
     <Compile Include="C1Console\Forms\ControlVaulePropertyAttribute.cs" />
     <Compile Include="C1Console\Forms\CoreFunctions\BooleanCheckFunctionFactory.cs" />
@@ -1454,8 +1469,6 @@
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\DynamicDataTypePackageFragmentUninstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\FilePackageFragmentInstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\FilePackageFragmentUninstaller.cs" />
-    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\VirtualElementProviderNodePackageFragmentInstaller.cs" />
-    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\VirtualElementProviderNodePackageFragmentUninstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentValidationResult.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentValidationResultType.cs" />
     <Compile Include="Core\PackageSystem\PackageInstaller.cs" />
@@ -1472,7 +1485,6 @@
     <Compile Include="C1Console\Security\HookingFacadeEventArgs.cs" />
     <Compile Include="C1Console\Security\HookingFacadeImpl.cs" />
     <Compile Include="C1Console\Security\IHookingFacade.cs" />
-    <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\VirtualElementProviderConfigurationManipulator.cs" />
     <Compile Include="Core\Caching\RequestLifetimeCache.cs" />
     <Compile Include="Core\Collections\Generic\DictionaryExtensionMethods.cs" />
     <Compile Include="Core\Collections\Generic\ResourceLocker.cs" />
@@ -1500,10 +1512,12 @@
     <Compile Include="Data\Types\IPageHostNameBinding.cs" />
     <Compile Include="Data\Types\Foundation\PagePublishControlledAuxiliary.cs" />
     <Compile Include="Data\Types\IPagePlaceholderContent.cs" />
+    <Compile Include="Data\Types\IPageUnpublishSchedule.cs" />
     <Compile Include="Data\Types\IUserActivePerspective.cs" />
     <Compile Include="Data\Types\IUserDeveloperSettings.cs" />
     <Compile Include="Data\Types\IUserPermissionDefinitionPermissionType.cs" />
     <Compile Include="Data\Types\IUserSettings.cs" />
+    <Compile Include="Data\Types\IPagePublishSchedule.cs" />
     <Compile Include="Data\Types\IUserPermissionDefinition.cs" />
     <Compile Include="Data\NotReferenceable.cs" />
     <Compile Include="Data\Types\ExtensionMethods\IMediaFileFolderExtensions.cs" />
@@ -1753,8 +1767,6 @@
     <Compile Include="Core\Xml\XhtmlDocument.cs" />
     <Compile Include="Functions\XElementParameterRuntimeTreeNode.cs" />
     <Compile Include="Core\Instrumentation\Foundation\NoopTimerProfiler.cs" />
-    <Compile Include="Core\Instrumentation\Foundation\XmlTimerProfiler.cs" />
-    <Compile Include="Core\Instrumentation\Foundation\XmlTimerProfilerFacade.cs" />
     <Compile Include="Core\Instrumentation\TimerProfiler.cs" />
     <Compile Include="Core\Instrumentation\TimerProfilerFacade.cs" />
     <Compile Include="Core\IO\MimeTypeInfo.cs" />

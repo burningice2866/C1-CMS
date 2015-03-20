@@ -33,6 +33,7 @@ using Composite.Data.DynamicTypes;
 using Composite.Data.GeneratedTypes;
 using Composite.Data.ProcessControlled;
 using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
+using Composite.Data.PublishScheduling;
 using Composite.Data.Transactions;
 using Composite.Data.Types;
 using Composite.Data.Validation;
@@ -40,7 +41,7 @@ using Composite.Data.Validation.ClientValidationRules;
 
 namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 {
-    [EntityTokenLock()]
+    [EntityTokenLock]
     [AllowPersistingWorkflow(WorkflowPersistingType.Idle)]
     public sealed partial class EditPageWorkflow : FormsWorkflow
     {
@@ -167,7 +168,11 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
             IFormMarkupProvider markupProvider = new FormDefinitionFileMarkupProvider(@"\Administrative\EditPage.xml");
 
-            var formDocument = XDocument.Load(markupProvider.GetReader());
+            XDocument formDocument;
+            using (var reader = markupProvider.GetReader())
+            {
+                formDocument = XDocument.Load(reader);
+            }
 
             var bindingsXElement = formDocument.Root.Element(DataTypeDescriptorFormsHelper.CmsNamespace + FormKeyTagNames.Bindings);
             var layoutXElement = formDocument.Root.Element(DataTypeDescriptorFormsHelper.CmsNamespace + FormKeyTagNames.Layout);
@@ -277,35 +282,17 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             UpdateBinding("StateOptions", transitionNames);
 
 
-            var existingPagePublishSchedule =
-                            (from ps in DataFacade.GetData<IPublishSchedule>()
-                             where ps.DataType == typeof(IPage).FullName &&
-                                ps.DataId == selectedPage.Id.ToString()
-                             select ps).FirstOrDefault();
+            var existingPagePublishSchedule = PublishScheduleHelper.GetPublishSchedule(typeof (IPage), 
+                selectedPage.Id.ToString(), 
+                UserSettings.CultureInfo.Name);
 
-            if (existingPagePublishSchedule != null)
-            {
-                UpdateBinding("PublishDate", existingPagePublishSchedule.PublishDate);
-            }
-            else
-            {
-                UpdateBinding("PublishDate", null);
-            }
+            UpdateBinding("PublishDate", existingPagePublishSchedule != null ? existingPagePublishSchedule.PublishDate : (object) null);
 
-            var existingPageUnpublishSchedule =
-                            (from ps in DataFacade.GetData<IUnpublishSchedule>()
-                             where ps.DataType == typeof(IPage).FullName &&
-                                ps.DataId == selectedPage.Id.ToString()
-                             select ps).FirstOrDefault();
+            var existingPageUnpublishSchedule = PublishScheduleHelper.GetUnpublishSchedule(typeof(IPage),
+                selectedPage.Id.ToString(),
+                UserSettings.CultureInfo.Name);
 
-            if (existingPageUnpublishSchedule != null)
-            {
-                UpdateBinding("UnpublishDate", existingPageUnpublishSchedule.UnpublishDate);
-            }
-            else
-            {
-                UpdateBinding("UnpublishDate", null);
-            }
+            UpdateBinding("UnpublishDate", existingPageUnpublishSchedule != null ? existingPageUnpublishSchedule.UnpublishDate : (object) null);
 
             var formDefinition = formDocument.GetDocumentAsString();
 
@@ -356,7 +343,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
                     if (dataValidated)
                     {
-                        PublishControlledHelper.HandlePublishUnpublishWorkflows(selectedPage, PublishDate, UnpublishDate, ref publishWorkflowInstance, ref unpublishWorkflowInstance);
+                        PublishControlledHelper.HandlePublishUnpublishWorkflows(selectedPage, UserSettings.ActiveLocaleCultureInfo.Name, PublishDate, UnpublishDate, ref publishWorkflowInstance, ref unpublishWorkflowInstance);
 
                         if (selectedPage.PageTypeId != originalPage.PageTypeId)
                         {

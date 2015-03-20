@@ -1,12 +1,11 @@
 ﻿using System;
-
 using Microsoft.Practices.EnterpriseLibrary.Validation.Validators;
-
 using Composite.Data.Validation.Validators;
 
 namespace Composite.Data.Types
 {
-    /// <summary>    
+    /// <summary>
+    /// A base interface for <see cref="Composite.Data.Types.IPublishSchedule"/> and <see cref="Composite.Data.Types.IUnpublishSchedule"/> interfaces.
     /// </summary>
     /// <exclude />
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
@@ -21,9 +20,9 @@ namespace Composite.Data.Types
         Guid Id { get; set; }
 
         /// <exclude />
-        [StoreFieldType(PhysicalStoreFieldType.String, 512)]
-        [ImmutableFieldId("6fe85be2-7f44-4386-bec6-1f5171af1592")]
-        string DataType { get; set; }
+        [StoreFieldType(PhysicalStoreFieldType.Guid)]
+        [ImmutableFieldId("e6c8bd27-e3ea-4d0d-bbeb-e6a7a5200447")]
+        Guid DataTypeId { get; set; }
 
         /// <exclude />
         [StoreFieldType(PhysicalStoreFieldType.String, 512)]
@@ -37,7 +36,7 @@ namespace Composite.Data.Types
 
         /// <exclude />
         [NotNullValidator]
-        [StringSizeValidator(2, 16)]
+        [StringSizeValidator(0, 16)]
         [StoreFieldType(PhysicalStoreFieldType.String, 16)]
         [DefaultFieldStringValue("")]
         [ImmutableFieldId("8bfc68ee-8f63-4674-b1c8-d1ab1f1489f5")]

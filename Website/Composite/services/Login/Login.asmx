@@ -1,32 +1,75 @@
 ﻿<%@ WebService Language="C#" Class="Composite.Services.Login" %>
 
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using System.Web.Services;
 using System.Web.Services.Protocols;
-using System.Xml.Linq;
 using Composite.C1Console.Security;
+using Composite.Core;
+using Composite.Core.ResourceSystem;
+using Composite.Data;
+using Composite.Data.Types;
 
 namespace Composite.Services
 {
     [WebService(Namespace = "http://www.composite.net/ns/management")]
     [SoapDocumentService(RoutingStyle = SoapServiceRoutingStyle.RequestElement)]
-    public class Login : System.Web.Services.WebService
+    public class Login : WebService
     {
-
-        public Login()
+        [WebMethod]
+        public string ValidateAndLogin(string username, string password)
         {
+            var result = UserValidationFacade.FormValidateUser(username, password);
+
+            switch (result)
+            {
+                case LoginResult.Success:
+                    return "success";
+                case LoginResult.UserLockedAfterMaxLoginAttempts:
+                    return "lockedAfterMaxAttempts";
+                case LoginResult.UserLockedByAdministrator:
+                    return "lockedByAnAdministrator";
+                case LoginResult.PasswordUpdateRequired:
+                    return "passwordUpdateRequired";
+            }
+            return "failed";
         }
 
         [WebMethod]
-        public bool ValidateAndLogin(string username, string password)
+        public string[] ChangePassword(string username, string oldPassword, string newPassword)
         {
-            return UserValidationFacade.FormValidateUser(username, password);
+            var result = UserValidationFacade.FormValidateUser(username, oldPassword);
+            if (result == LoginResult.IncorrectPassword)
+            {
+                return new[] {StringResourceSystemFacade.GetString("Composite.C1Console.Users", "ChangePasswordForm.IncorrectOldPassword")};
+            }
+            
+            Verify.That(result == LoginResult.PasswordUpdateRequired, "Password update has to be required.");
+
+            if (newPassword == oldPassword)
+            {
+                return new[]{ "The old and the new passwords are the same."}; // Should be validated on client as well.
+            }
+
+            using (var c = new DataConnection())
+            {
+                var user = c.Get<IUser>().Single(u => string.Compare(u.Username, username, StringComparison.InvariantCultureIgnoreCase) == 0);
+                
+                IList<string> errors;
+                if (!PasswordPolicyFacade.ValidatePassword(user, newPassword, out errors))
+                {
+                    return errors.ToArray();
+                }
+
+                UserValidationFacade.FormSetUserPassword(user.Username, newPassword);
+
+                var loginResult = UserValidationFacade.FormValidateUser(username, newPassword);
+                Verify.That(loginResult == LoginResult.Success, "Unexpected login result value after a password change: " + loginResult);
+            }
+
+            return new string[0];
         }
-
-
 
         [WebMethod]
         public bool Logout(bool dummy)
@@ -35,16 +78,13 @@ namespace Composite.Services
             return true;
         }
 
-
-
-
         [WebMethod]
         public bool IsLoggedIn(bool dummy)
         {
-            if (UserValidationFacade.IsLoggedIn() == true
-                && UserValidationFacade.AllUsernames.Contains(UserValidationFacade.GetUsername()) == false)
+            if (UserValidationFacade.IsLoggedIn()
+                && !UserValidationFacade.AllUsernames.Contains(UserValidationFacade.GetUsername()))
             {
-                Composite.Core.Logging.LoggingService.LogInformation("Security", String.Format("Automatic logout executed. Username '{0}' not found in list of usernames", UserValidationFacade.GetUsername()));
+                Log.LogInformation("Security", String.Format("Automatic logout executed. Username '{0}' not found in list of usernames", UserValidationFacade.GetUsername()));
                 UserValidationFacade.Logout();
 
                 return false;
@@ -52,8 +92,5 @@ namespace Composite.Services
 
             return UserValidationFacade.IsLoggedIn();
         }
-
-
-
     }
 }

@@ -33,34 +33,9 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
             InitializeComponent();
         }
 
-        private Type GetInterfaceType()
-        {
-            Type interfaceType;
-
-            var entityToken = EntityToken as AssociatedDataElementProviderHelperEntityToken;
-            if (entityToken != null)
-            {
-                interfaceType = entityToken.GetInterfaceType();
-                var data = entityToken.GetData();
-
-                UpdateBinding("Data", data);
-            }
-            else
-            {
-                var dataEntityToken = (DataEntityToken)EntityToken;
-
-                interfaceType = dataEntityToken.Data.DataSourceId.InterfaceType;
-
-                var data = dataEntityToken.Data;
-                UpdateBinding("Data", data);
-            }
-
-            return interfaceType;
-        }
-
         private void IsDataTypeDescriptorNullTest(object sender, ConditionalEventArgs e)
         {
-            e.Result = BindingExist("DataTypeDescriptor") == false;
+            e.Result = !BindingExist("DataTypeDescriptor");
         }
 
         private void initialCodeActivity_ExecuteCode(object sender, EventArgs e)
@@ -128,14 +103,16 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
             var page = GetBinding<IData>("Data") as IPage;
 
-            var helper = new DataTypeDescriptorFormsHelper(dataTypeDescriptor);
-            helper.LayoutIconHandle = "associated-data-add";
+            var helper = new DataTypeDescriptorFormsHelper(dataTypeDescriptor, true, page.GetDataEntityToken())
+            {
+                LayoutIconHandle = "associated-data-add"
+            };
 
             var generatedTypesHelper = new GeneratedTypesHelper(dataTypeDescriptor);
             helper.AddReadOnlyFields(generatedTypesHelper.NotEditableDataFieldDescriptorNames);
 
             IData newData;
-            if (BindingExist("NewData") == false)
+            if (!BindingExist("NewData"))
             {
                 newData = DataFacade.BuildNew(type);
 
@@ -179,7 +156,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
             var newData = GetBinding<IData>("NewData");
 
-            var helper = new DataTypeDescriptorFormsHelper(dataTypeDescriptor);
+            var helper = new DataTypeDescriptorFormsHelper(dataTypeDescriptor, true, newData.GetDataEntityToken());
 
             var generatedTypesHelper = new GeneratedTypesHelper(dataTypeDescriptor);
             helper.AddReadOnlyFields(generatedTypesHelper.NotEditableDataFieldDescriptorNames);
