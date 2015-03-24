@@ -42,7 +42,7 @@
     <xs:union memberTypes="BuildInAttachmentPointName CustomAttachmentPointName" />
   </xs:simpleType>
 
-    <xs:simpleType name="BuildInAttachmentPointName">
+  <xs:simpleType name="BuildInAttachmentPointName">
     <xs:restriction base="xs:string">
       <xs:enumeration value="Content" />
       <xs:enumeration value="Content.WebsiteItems" />
@@ -97,8 +97,8 @@
   <xs:complexType name="ElementRootType">
     <xs:annotation>
       <xs:documentation>Children of this node is the root children of the points where the tree is inserted</xs:documentation>
-    </xs:annotation>    
-    
+    </xs:annotation>
+
     <xs:all>
       <xs:element name="Children" type="ChildrenType" minOccurs="0" maxOccurs="1"/>
       <xs:element name="Actions" type="ActionsType" minOccurs="0" maxOccurs="1"/>
@@ -147,6 +147,8 @@
       <xs:element name="CustomUrlAction" type="CustomUrlActionType" minOccurs="0" maxOccurs="unbounded" />
       <xs:element name="ConfirmAction" type="ConfirmActionType" minOccurs="0" maxOccurs="unbounded" />
       <xs:element name="WorkflowAction" type="WorkflowActionType" minOccurs="0" maxOccurs="unbounded" />
+
+      <xs:any namespace="##other" processContents="skip" minOccurs="0" />
     </xs:choice>
   </xs:complexType>
 
@@ -164,6 +166,8 @@
       <xs:element name="CustomUrlAction" type="CustomUrlActionType" minOccurs="0" maxOccurs="unbounded" />
       <xs:element name="ConfirmAction" type="ConfirmActionType" minOccurs="0" maxOccurs="unbounded" />
       <xs:element name="WorkflowAction" type="WorkflowActionType" minOccurs="0" maxOccurs="unbounded" />
+
+      <xs:any namespace="##other" processContents="skip" minOccurs="0" />
     </xs:choice>
   </xs:complexType>
 
@@ -219,7 +223,7 @@
     </xs:attribute>
   </xs:attributeGroup>
 
-  
+
   <xs:attributeGroup name="SortDirection">
     <xs:attribute name="SortDirection" use="optional" default="Ascending">
       <xs:simpleType>
@@ -250,7 +254,7 @@
           <xs:enumeration value="Add" />
           <xs:enumeration value="Edit" />
           <xs:enumeration value="Delete" />
-          <xs:enumeration value="Other" />          
+          <xs:enumeration value="Other" />
         </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
@@ -735,10 +739,10 @@
     <xs:attribute name="ViewIcon" use="optional" type="xs:string" >
       <xs:annotation>
         <xs:documentation>The icon of the view</xs:documentation>
-      </xs:annotation>    
+      </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
-  
+
   <xs:attributeGroup name="OpenedIconGroup">
     <xs:attribute name="OpenedIcon" use="optional" type="xs:string" >
       <xs:annotation>
@@ -819,7 +823,7 @@
     <xs:attributeGroup ref="IconGroup" />
 
     <xs:attributeGroup ref="OpenedIconGroup" />
-    
+
   </xs:complexType>
 
 
@@ -894,7 +898,7 @@
         <xs:documentation>When this is set to true, data items not yet localized are shown with a localize action.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
-    
+
     <xs:attributeGroup ref="DisplayGroup" />
 
     <xs:attributeGroup ref="SortDirection" />
@@ -946,7 +950,7 @@
     <xs:attributeGroup ref="IconGroup" />
 
     <xs:attributeGroup ref="OpenedIconGroup" />
-    
+
   </xs:complexType>
 
 
@@ -1195,7 +1199,7 @@
       </xs:annotation>
     </xs:attribute>
 
-    <xs:attributeGroup ref="ViewIconGroup" />    
+    <xs:attributeGroup ref="ViewIconGroup" />
 
     <xs:attribute name="ViewType" use="optional" default="genericview">
       <xs:annotation>

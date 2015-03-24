@@ -153,6 +153,8 @@
     <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordRuleFactory.cs" />
     <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordPolicySettings.cs" />
     <Compile Include="C1Console\Security\UserLockoutReason.cs" />
+    <Compile Include="C1Console\Trees\ITreeActionProvider.cs" />
+    <Compile Include="C1Console\Trees\SortDataTreeActionProvider.cs" />
     <Compile Include="C1Console\Trees\SortDirection.cs" />
     <Compile Include="Core\Application\Job.cs" />
     <Compile Include="Core\Application\SpecialModesFileResolver.cs" />

@@ -29,6 +29,35 @@ namespace Composite.C1Console.Trees.Foundation
         private static readonly List<PermissionType> DefaultEditPermissionTypes = new List<PermissionType> { PermissionType.Edit };
         private static readonly List<PermissionType> DefaultDeletePermissionTypes = new List<PermissionType> { PermissionType.Delete };
 
+        private static readonly IDictionary<XName, ITreeActionProvider> TreeActionProviders = new Dictionary<XName, ITreeActionProvider>();
+
+        static ActionNodeCreatorFactory()
+        {
+            var providerInterface = typeof(ITreeActionProvider);
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    foreach (var type in assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract))
+                    {
+                        if (!providerInterface.IsAssignableFrom(type))
+                        {
+                            continue;
+                        }
+
+                        var instance = Activator.CreateInstance(type) as ITreeActionProvider;
+                        if (instance == null)
+                        {
+                            continue;
+                        }
+
+                        TreeActionProviders.Add(instance.Name, instance);
+                    }
+                }
+                catch { }
+            }
+        }
 
         public static ActionNode CreateActionNode(XElement element, Tree tree)
         {
@@ -126,7 +155,7 @@ namespace Composite.C1Console.Trees.Foundation
                 string dialogTypeValue = dialogTypeAttribute.GetValueOrDefault("message");
                 switch (dialogTypeValue)
                 {
-                    case "message": 
+                    case "message":
                         actionNode.DialogType = DialogType.Message;
                         break;
 
@@ -230,7 +259,7 @@ namespace Composite.C1Console.Trees.Foundation
                         else if (string.IsNullOrWhiteSpace(keyAttribute.Value))
                         {
                             tree.AddValidationError(element.GetXPath(), "TreeValidationError.Common.WrongAttributeValue", "Key");
-                            continue;                            
+                            continue;
                         }
 
                         if (valueAttribute == null)
@@ -284,7 +313,7 @@ namespace Composite.C1Console.Trees.Foundation
                 else
                 {
                     actionNode.RefreshTree = false;
-                }                
+                }
 
                 return actionNode;
             }
@@ -293,7 +322,7 @@ namespace Composite.C1Console.Trees.Foundation
                 WorkflowActionNode actionNode = new WorkflowActionNode();
                 InitializeWithCommonValue(element, tree, actionNode, DefaultWorkflowResourceName);
 
-                XAttribute workflowTypeAttribute = element.Attribute("WorkflowType");                
+                XAttribute workflowTypeAttribute = element.Attribute("WorkflowType");
 
                 if (workflowTypeAttribute == null)
                 {
@@ -304,20 +333,24 @@ namespace Composite.C1Console.Trees.Foundation
                     actionNode.WorkflowType = TypeManager.TryGetType(workflowTypeAttribute.Value);
                     if (actionNode.WorkflowType == null) tree.AddValidationError(element.GetXPath(), "TreeValidationError.Common.UnkownInterfaceType", workflowTypeAttribute.Value);
                 }
-                
+
                 return actionNode;
             }
             else
             {
+                ITreeActionProvider provider;
+                if (TreeActionProviders.TryGetValue(element.Name, out provider))
+                {
+                    return provider.BuildNode(element, tree);
+                }
+
                 tree.AddValidationError(element.GetXPath(), "TreeValidationError.Common.UnknownElement", element.Name);
 
                 return null;
             }
         }
 
-
-
-        private static void InitializeWithCommonValue(XElement element, Tree tree, ActionNode actionNode, string defaultIconName, string defaultLabelName = null, ActionLocation defaultActionLocation = null, List<PermissionType> defaultPermissionTypes = null)
+        public static void InitializeWithCommonValue(XElement element, Tree tree, ActionNode actionNode, string defaultIconName, string defaultLabelName = null, ActionLocation defaultActionLocation = null, List<PermissionType> defaultPermissionTypes = null)
         {
             XAttribute labelAttribute = element.Attribute("Label");
             XAttribute toolTipAttribute = element.Attribute("ToolTip");
@@ -354,12 +387,12 @@ namespace Composite.C1Console.Trees.Foundation
 
             List<PermissionType> permissionTypes = new List<PermissionType>();
             foreach (string permission in permissionTypesStrings)
-            {                
+            {
                 PermissionType permissionType;
                 if (Enum.TryParse<PermissionType>(permission.Trim(), true, out permissionType) == false)
                 {
                     tree.AddValidationError(element.GetXPath(), "TreeValidationError.Common.WrongPermissinValue", permission.Trim());
-                    
+
                     continue;
                 }
 
