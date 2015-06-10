@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Web;
+using System.Web.WebPages;
 using System.Xml.Linq;
-using Composite.AspNet;
 using Composite.C1Console.Security;
 using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
@@ -196,7 +196,7 @@ namespace Composite.Core.WebClient.Renderings
 
         private void InitializeFromHttpContextInternal()
         {
-            HttpContext httpContext = HttpContext.Current;
+            var httpContext = new HttpContextWrapper(HttpContext.Current);
             var request = httpContext.Request;
             var response = httpContext.Response;
 
@@ -223,7 +223,7 @@ namespace Composite.Core.WebClient.Renderings
                 Page = (IPage)HttpRuntime.Cache.Get(_previewKey + "_SelectedPage");
                 C1PageRoute.PageUrlData = new PageUrlData(Page);
 
-                PageRenderer.RenderingReason = (RenderingReason) HttpRuntime.Cache.Get(_previewKey + "_RenderingReason");
+                PageRenderer.RenderingReason = (RenderingReason)HttpRuntime.Cache.Get(_previewKey + "_RenderingReason");
             }
             else
             {
@@ -232,8 +232,8 @@ namespace Composite.Core.WebClient.Renderings
 
                 _cachedUrl = request.Url.PathAndQuery;
 
-                PageRenderer.RenderingReason = new UrlSpace(httpContext).ForceRelativeUrls 
-                    ? RenderingReason.C1ConsoleBrowserPageView 
+                PageRenderer.RenderingReason = new UrlSpace(httpContext).ForceRelativeUrls
+                    ? RenderingReason.C1ConsoleBrowserPageView
                     : RenderingReason.PageView;
             }
 
@@ -275,17 +275,11 @@ namespace Composite.Core.WebClient.Renderings
                 }
             }
 
-            var overWrittenBrowser = httpContext.GetOverriddenBrowser();
-            if (overWrittenBrowser != null)
-            {
-                aspnetPage.Request.Browser = httpContext.GetOverriddenBrowser();
-            }
-
             var pageRenderer = PageTemplateFacade.BuildPageRenderer(Page.TemplateId);
             pageRenderer.AttachToPage(aspnetPage, pageRenderingJob);
         }
 
-        private void ValidateViewUnpublishedRequest(HttpContext httpContext)
+        private void ValidateViewUnpublishedRequest(HttpContextBase httpContext)
         {
             bool isPreviewingUrl = httpContext.Request.Url.OriginalString.Contains(DefaultPageUrlProvider.UrlMarker_RelativeUrl);
             bool isUnpublishedPage = Page != null && Page.DataSourceId.PublicationScope != PublicationScope.Published;

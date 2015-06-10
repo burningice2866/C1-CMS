@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Web;
 using System.Web.UI;
 using Composite.AspNet;
+using Composite.Core.Application;
 using Composite.Core.IO;
 using Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvider;
 
@@ -11,22 +13,22 @@ namespace Composite.Plugins.Functions.FunctionProviders.UserControlFunctionProvi
     internal class UserControlBasedFunction : FileBasedFunction<UserControlBasedFunction>
     {
         public UserControlBasedFunction(
-            string @namespace, 
-            string name, 
+            string @namespace,
+            string name,
             string description,
-            IDictionary<string, FunctionParameter> parameters, 
+            IDictionary<string, FunctionParameter> parameters,
             Type returnType,
-            string virtualPath, 
+            string virtualPath,
             FileBasedFunctionProvider<UserControlBasedFunction> provider)
             : base(@namespace, name, description, parameters, returnType, virtualPath, provider)
         {
         }
 
         public UserControlBasedFunction(
-            string @namespace, 
-            string name, 
-            string description, 
-            string virtualPath, 
+            string @namespace,
+            string name,
+            string description,
+            string virtualPath,
             FileBasedFunctionProvider<UserControlBasedFunction> provider)
             : base(@namespace, name, description, typeof(UserControl), virtualPath, provider)
         {
@@ -50,9 +52,13 @@ namespace Composite.Plugins.Functions.FunctionProviders.UserControlFunctionProvi
             Verify.IsNotNull(httpContext, "HttpContext.Current is null");
 
             Page currentPage = httpContext.Handler as Page;
-            Verify.IsNotNull(currentPage, "The Current HttpContext Handler must be a " + typeof (Page).FullName);
+            Verify.IsNotNull(currentPage, "The Current HttpContext Handler must be a " + typeof(Page).FullName);
 
-            var userControl = currentPage.LoadControl(VirtualPath);
+            var directory = Path.GetDirectoryName(VirtualPath);
+            var function = Path.GetFileNameWithoutExtension(VirtualPath);
+            var virtualPath = SpecialModesFileResolver.ResolveFileInInDirectory(directory, function, ".ascx", new HttpContextWrapper(httpContext));
+
+            var userControl = currentPage.LoadControl(virtualPath);
 
 
             foreach (var param in parameters.AllParameterNames)

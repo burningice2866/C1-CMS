@@ -45,10 +45,10 @@ namespace Composite.AspNet.Razor
                 HttpContext currentContext = HttpContext.Current;
                 if (currentContext != null)
                 {
-                    var dir = Path.GetDirectoryName(virtualPath);
+                    var directory = Path.GetDirectoryName(virtualPath);
                     var function = Path.GetFileNameWithoutExtension(virtualPath);
 
-                    virtualPath = SpecialModesFileResolver.ResolveFileInInDirectory(dir, function, ".cshtml", currentContext.Request.Browser.IsMobileDevice, currentContext.Request.QueryString);
+                    virtualPath = SpecialModesFileResolver.ResolveFileInInDirectory(directory, function, ".cshtml", new HttpContextWrapper(currentContext));
                 }
 
                 webPage = WebPageBase.CreateInstanceFromVirtualPath(virtualPath);

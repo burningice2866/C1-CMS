@@ -6,6 +6,7 @@ using System.Web.UI;
 using System.Web.WebPages;
 using System.Xml.Linq;
 using Composite.AspNet.Razor;
+using Composite.Core.Application;
 using Composite.Core.Collections.Generic;
 using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
@@ -61,9 +62,13 @@ namespace Composite.Plugins.PageTemplates.Razor
             RazorPageTemplate webPage = null;
             try
             {
-                webPage = WebPageBase.CreateInstanceFromVirtualPath(renderingInfo.ControlVirtualPath) as AspNet.Razor.RazorPageTemplate;
-                Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'",
-                                 typeof (AspNet.Razor.RazorPageTemplate).FullName);
+                var directory = Path.GetDirectoryName(renderingInfo.ControlVirtualPath);
+                var template = Path.GetFileNameWithoutExtension(renderingInfo.ControlVirtualPath);
+                var file = SpecialModesFileResolver.ResolveTemplate(directory, _job.Page, template, ".cshtml", new HttpContextWrapper(HttpContext.Current));
+
+                webPage = WebPageBase.CreateInstanceFromVirtualPath(file) as RazorPageTemplate;
+
+                Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'", typeof(RazorPageTemplate).FullName);
 
                 webPage.Configure();
 
@@ -77,7 +82,7 @@ namespace Composite.Plugins.PageTemplates.Razor
 
                 // Executing razor code
                 var httpContext = new HttpContextWrapper(HttpContext.Current);
-                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] {"cshtml"});
+                var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
                 var pageContext = new WebPageContext(httpContext, webPage, startPage);
                 pageContext.PageData.Add(RazorHelper.PageContext_FunctionContextContainer, functionContextContainer);
 
@@ -101,7 +106,7 @@ namespace Composite.Plugins.PageTemplates.Razor
             }
 
             XDocument resultDocument = XDocument.Parse(output);
-            
+
             var controlMapper = (IXElementToControlMapper)functionContextContainer.XEmbedableMapper;
             Control control = PageRenderer.Render(resultDocument, functionContextContainer, controlMapper, _job.Page);
 

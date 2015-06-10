@@ -1,19 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Hosting;
+using System.Web.WebPages;
 
 using Composite.Data;
 using Composite.Data.Types;
 
 namespace Composite.Core.Application
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class SpecialModesFileResolver
     {
-        public static string ResolveTemplate(string rootDirectory, IPage page, string template, string extension, HttpRequest request)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="rootDirectory"></param>
+        /// <param name="page"></param>
+        /// <param name="template"></param>
+        /// <param name="extension"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string ResolveTemplate(string rootDirectory, IPage page, string template, string extension, HttpContextBase context)
         {
             var dirsToTry = new List<string>
             {
@@ -27,7 +39,7 @@ namespace Composite.Core.Application
 
                 foreach (var dir in dirsToTry)
                 {
-                    var specialTemplate = ResolveFileInInDirectory(dir, template, extension, request.Browser.IsMobileDevice, request.QueryString);
+                    var specialTemplate = ResolveFileInInDirectory(dir, template, extension, context);
                     if (specialTemplate != null)
                     {
                         return specialTemplate;
@@ -38,33 +50,27 @@ namespace Composite.Core.Application
             return null;
         }
 
-        public static string ResolveFileInInDirectory(string directory, string file, string extension, bool isMobile, NameValueCollection qs)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="directory"></param>
+        /// <param name="file"></param>
+        /// <param name="extension"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string ResolveFileInInDirectory(string directory, string file, string extension, HttpContextBase context)
         {
             var pathProvider = HostingEnvironment.VirtualPathProvider;
-            var specielModes = new List<string>();
+            var modes = DisplayModeProvider.Instance.GetAvailableDisplayModesForContext(context, null);
 
-            if (isMobile)
+            foreach (var mode in modes)
             {
-                specielModes.Add("mobile");
-            }
+                var specialFile = Path.Combine(directory, String.Format("{0}{1}", file, extension));
 
-            if (qs.AllKeys.Length > 0 && qs.Keys[0] == null && qs[0] == "print")
-            {
-                specielModes.Add("print");
-            }
-
-            foreach (var mode in specielModes)
-            {
-                var specialFile = Path.Combine(directory, String.Format("{0}_{1}{2}", file, mode, extension));
-                if (pathProvider.FileExists(specialFile))
+                var displayInfo = mode.GetDisplayInfo(context, specialFile, pathProvider.FileExists);
+                if (displayInfo != null)
                 {
-                    return specialFile;
-                }
-
-                specialFile = Path.Combine(directory, mode + extension);
-                if (pathProvider.FileExists(specialFile))
-                {
-                    return specialFile;
+                    return displayInfo.FilePath;
                 }
             }
 
