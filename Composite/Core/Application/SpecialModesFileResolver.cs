@@ -75,12 +75,8 @@ namespace Composite.Core.Application
             }
 
             file = Path.Combine(directory, file + extension);
-            if (pathProvider.FileExists(file))
-            {
-                return file;
-            }
-
-            return null;
+            
+            return pathProvider.FileExists(file) ? file : null;
         }
     }
 }

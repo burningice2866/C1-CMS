@@ -59,18 +59,20 @@ namespace Composite.Plugins.PageTemplates.Razor
             string output;
             FunctionContextContainer functionContextContainer;
 
-            RazorPageTemplate webPage = null;
+            WebPageBase webPage = null;
             try
             {
                 var directory = Path.GetDirectoryName(renderingInfo.ControlVirtualPath);
                 var template = Path.GetFileNameWithoutExtension(renderingInfo.ControlVirtualPath);
                 var file = SpecialModesFileResolver.ResolveTemplate(directory, _job.Page, template, ".cshtml", new HttpContextWrapper(HttpContext.Current));
 
-                webPage = WebPageBase.CreateInstanceFromVirtualPath(file) as RazorPageTemplate;
+                webPage = WebPageBase.CreateInstanceFromVirtualPath(file);
 
-                Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'", typeof(RazorPageTemplate).FullName);
-
-                webPage.Configure();
+                var razorTemplate = webPage as RazorPageTemplate;
+                if (razorTemplate != null)
+                {
+                    razorTemplate.Configure();
+                }
 
                 functionContextContainer = PageRenderer.GetPageRenderFunctionContextContainer();
 
@@ -99,9 +101,9 @@ namespace Composite.Plugins.PageTemplates.Razor
             }
             finally
             {
-                if (webPage != null)
+                if (webPage is IDisposable)
                 {
-                    webPage.Dispose();
+                    ((IDisposable)webPage).Dispose();
                 }
             }
 

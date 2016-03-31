@@ -34,7 +34,7 @@ namespace Composite.AspNet.Razor
         /// <param name="functionContextContainer">The function context container</param>
         /// <returns></returns>
         public static object ExecuteRazorPage(
-            string virtualPath, 
+            string virtualPath,
             Action<WebPageBase> setParameters,
             Type resultType,
             FunctionContextContainer functionContextContainer)
@@ -59,7 +59,7 @@ namespace Composite.AspNet.Razor
             {
                 if (webPage is IDisposable)
                 {
-                    (webPage as IDisposable).Dispose();
+                    ((IDisposable)webPage).Dispose();
                 }
             }
         }
@@ -74,14 +74,14 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public static object ExecuteRazorPage(
             WebPageBase webPage,
-            Action<WebPageBase> setParameters, 
-            Type resultType, 
+            Action<WebPageBase> setParameters,
+            Type resultType,
             FunctionContextContainer functionContextContainer)
         {
             HttpContext currentContext = HttpContext.Current;
 
             var startPage = StartPage.GetStartPage(webPage, "_PageStart", new[] { "cshtml" });
-            
+
             // IEnumerable<PageExecutionListener> pageExecutionListeners;
             HttpContextBase httpContext;
 
@@ -110,7 +110,7 @@ namespace Composite.AspNet.Razor
 
                 setParameters(webPage);
             }
-                
+
             var sb = new StringBuilder();
             using (var writer = new StringWriter(sb))
             {
@@ -131,27 +131,27 @@ namespace Composite.AspNet.Razor
             }
 
             string output = sb.ToString();
-            
 
-			if (resultType == typeof(XhtmlDocument))
-			{
-			    if (string.IsNullOrWhiteSpace(output)) return new XhtmlDocument();
 
-				try
+            if (resultType == typeof(XhtmlDocument))
+            {
+                if (string.IsNullOrWhiteSpace(output)) return new XhtmlDocument();
+
+                try
                 {
                     return OutputToXhtmlDocument(output);
-				}
-				catch (XmlException ex)
-				{
-				    string[] codeLines = output.Split(new [] { Environment.NewLine, "\n" }, StringSplitOptions.None);
+                }
+                catch (XmlException ex)
+                {
+                    string[] codeLines = output.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
 
-				    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, codeLines, ex.LineNumber);
+                    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, codeLines, ex.LineNumber);
 
-				    throw;
-				}
-			}
+                    throw;
+                }
+            }
 
-			return ValueTypeConverter.Convert(output, resultType);
+            return ValueTypeConverter.Convert(output, resultType);
         }
 
 
@@ -202,11 +202,11 @@ namespace Composite.AspNet.Razor
         /// <param name="functionContextContainer">The function context container.</param>
         /// <returns></returns>
         public static ResultType ExecuteRazorPage<ResultType>(
-            string virtualPath, 
-            Action<WebPageBase> setParameters, 
-            FunctionContextContainer functionContextContainer = null) where ResultType: class
+            string virtualPath,
+            Action<WebPageBase> setParameters,
+            FunctionContextContainer functionContextContainer = null) where ResultType : class
         {
-            return (ResultType) ExecuteRazorPage(virtualPath, setParameters, typeof(ResultType), functionContextContainer);
+            return (ResultType)ExecuteRazorPage(virtualPath, setParameters, typeof(ResultType), functionContextContainer);
         }
     }
 }
