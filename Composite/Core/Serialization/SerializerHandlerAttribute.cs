@@ -4,7 +4,7 @@
 namespace Composite.Core.Serialization
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, Inherited = false)]
-    internal sealed class SerializerHandlerAttribute : Attribute
+    public sealed class SerializerHandlerAttribute : Attribute
     {
         public SerializerHandlerAttribute(Type serializerHandlerType)
         {

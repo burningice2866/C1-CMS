@@ -1,6 +1,6 @@
 ﻿namespace Composite.Core.Serialization
 {
-	internal interface ISerializerHandler
+    public interface ISerializerHandler
 	{
         string Serialize(object objectToSerialize);
         object Deserialize(string serializedObject);
