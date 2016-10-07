@@ -35,8 +35,6 @@ namespace Composite.Services
             }
         }
 
-
-
         [WebMethod]
         public string TranslateToInternalUrl(string url)
         {
@@ -54,7 +52,7 @@ namespace Composite.Services
 
             return PageUrls.BuildUrl(pageUrlData, UrlKind.Renderer, new UrlSpace());
         }
-        
+
         [WebMethod]
         public string ConvertRelativePageUrlToAbsolute(string pageUrl)
         {

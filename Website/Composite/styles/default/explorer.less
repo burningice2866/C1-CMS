@@ -1,0 +1,166 @@
+ui|explorerbody,
+ui|explorermenu,
+ui|explorertoolbar,
+ui|explorertoolbarbutton,
+ui|explorerbar,
+ui|explorerbarbutton {
+	display: block;
+}
+
+.explorermenucover {
+	margin-left: @explorer-width;
+	display: none;
+}
+
+ui|explorer {
+	float: left;
+	margin-top: -30px;
+	padding-top: 30px;
+}
+
+ui|explorermenu {
+	background: @explorer-bg-color;
+	float: left;
+	width: @explorer-width;
+	height: 100%;
+	overflow: hidden;
+	overflow-y: auto;
+
+	ui|toolbarbutton {
+		background: none !important;
+		filter: none;
+		color: @explorer-icon-color;
+		box-shadow: none;
+	}
+
+	ui|toolbar {
+		border: none;
+	}
+
+	.menu-toggle {
+		margin-top: 8px;
+
+		ui|labelbox {
+			padding: 0;
+		}
+	}
+
+	ui|labeltext {
+		display: none;
+	}
+}
+
+ui|explorerbody {
+	height: 100%;
+	overflow: hidden;
+}
+
+ui|explorertoolbar {
+	padding: 0;
+
+	ui|toolbarbody, ui|toolbargroup {
+		float: none;
+	}
+
+	ui|toolbargroup {
+		margin: 0;
+		padding: 0;
+	}
+}
+
+ui|explorertoolbarbutton {
+	filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 10+, Firefox on Android */
+	filter: gray; /* IE6-9 */
+	filter: grayscale(100%); /* Chrome 19+, Safari 6+, Safari 6+ iOS */
+	&.hover, &.active {
+		filter: none;
+	}
+}
+
+ui|explorermenu ui|toolbarbutton,
+ui|explorertoolbarbutton {
+	float: left;
+	margin: 0;
+	padding: 21px 15px;
+	width: 100%;
+	border: none;
+
+	ui|labelbody {
+		color: @explorer-icon-color;
+		text-transform: uppercase;
+		font-weight: bold;
+		font-family: Arial;
+	}
+
+	ui|labelbox {
+
+		&.image-and-text {
+			ui|labeltext {
+				margin-left: 38px;
+			}
+		}
+	}
+
+	ui|labeltext {
+		line-height: 22px;
+		font-weight: bold;
+		color: @explorer-text-color;
+	}
+
+	&.active, &.hover {
+		border: none;
+
+		ui|labelbody {
+			color: @explorer-text-active-color;
+		}
+
+		ui|labeltext {
+			color: @explorer-text-active-color;
+		}
+	}
+}
+
+ui|explorerdecks {
+	display: none;
+}
+.exploler-expanded-visible {
+	display: none;
+}
+
+.exploler-expanded-hide {
+	display: block;
+}
+
+.exploler-expanded {
+
+	.exploler-expanded-visible {
+		display: block;
+	}
+
+	.exploler-expanded-hide { 
+		display: none;
+	}
+
+
+	ui|explorermenu {
+		width: @explorer-expanded-width;
+
+		ui|labeltext {
+			display: block;
+		}
+	}
+
+	ui|stagecontainer {
+		padding-right: @explorer-expanded-width;
+		margin-right: -@explorer-expanded-width;
+	}
+
+	.system-toolbar {
+		left: @explorer-expanded-width !important;
+	}
+
+	ui|cover.explorermenucover {
+		margin-left: @explorer-expanded-width;
+		display: block;
+	}
+}

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
+using Composite.Core.Application;
 using Composite.Data;
 using Composite.Functions.Foundation;
 using Composite.Core.Instrumentation;
@@ -56,7 +57,7 @@ namespace Composite.Functions
 
                 try
                 {                    
-                    ParameterList parameters = new ParameterList(contextContainer);
+                    var parameters = new ParameterList(contextContainer);
 
                     foreach (ParameterProfile parameterProfile in _function.ParameterProfiles)
                     {
@@ -77,7 +78,15 @@ namespace Composite.Functions
 
                         if (parameterProfile.IsRequired)
                         {
-                            throw new ArgumentException("Missing parameter '" + parameterProfile.Name + "' (type of " + parameterProfile.Type.FullName + ")");
+                            var injectedValue = TryGetInjectedValue(parameterProfile.Type);
+
+                            if (injectedValue == null)
+                            {
+                                throw new ArgumentException("Missing parameter '{0}' (type of {1})".FormatWith(parameterProfile.Name, parameterProfile.Type.FullName));
+                            }
+
+                            parameters.AddConstantParameter(parameterProfile.Name, injectedValue, parameterProfile.Type);
+                            continue;
                         }
 
                         BaseValueProvider valueProvider = parameterProfile.FallbackValueProvider;
@@ -102,7 +111,7 @@ namespace Composite.Functions
                         string functionName = _function.CompositeName();
                         if (functionName != "Composite.Utils.GetInputParameter")
                         {
-                            measurement = Profiler.Measure(functionName ?? "<unknown function>");
+                            measurement = Profiler.Measure(functionName ?? "<unknown function>", () => _function.EntityToken);
                         }
 
                         result = _function.Execute(parameters, contextContainer);
@@ -128,14 +137,21 @@ namespace Composite.Functions
             }
         }
 
+        private static object TryGetInjectedValue(Type type)
+        {
+            var services = ServiceLocator.RequestServices ?? ServiceLocator.ApplicationServices;
+            if (services != null)
+            {
+                return services.GetService(type);
+            }
 
+            return null;
+        }
 
         /// <exclude />
         public override IEnumerable<string> GetAllSubFunctionNames()
         {
-            List<string> names = new List<string>();
-
-            names.Add(_function.CompositeName());
+            var names = new List<string> { _function.CompositeName() };
 
             foreach (BaseParameterRuntimeTreeNode parameter in this.Parameters)
             {
@@ -157,7 +173,7 @@ namespace Composite.Functions
 
             foreach (ParameterProfile parameterProfile in _function.ParameterProfiles)
             {
-                BaseParameterRuntimeTreeNode parameterRuntimeTreeNode = this.Parameters.Where(ptn => ptn.Name == parameterProfile.Name).FirstOrDefault();
+                BaseParameterRuntimeTreeNode parameterRuntimeTreeNode = this.Parameters.FirstOrDefault(ptn => ptn.Name == parameterProfile.Name);
 
                 if (parameterRuntimeTreeNode != null)
                 {

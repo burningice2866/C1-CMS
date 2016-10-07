@@ -1,3 +1,5 @@
+var page = require('webpage').create();
+
 function getPlaceholdersLocationInfo(placeholderElementName) {
     var ret = [];
 
@@ -11,9 +13,15 @@ function getPlaceholdersLocationInfo(placeholderElementName) {
 };
 
 function BuildFunctionPreview(system, console, address, output, authCookie, mode) {
-    var page = require('webpage').create();
     var globalTimeout = null;
-    
+
+    var clearGlobalTimeout = function() {
+        if (globalTimeout != null) {
+            clearTimeout(globalTimeout);
+            globalTimeout = null;
+        }
+    };
+
 	if(authCookie != null) {
 		phantom.deleteCookie(authCookie.name);
 		
@@ -34,40 +42,56 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
     
 	page.onResourceTimeout = function (request) {
 	    if (request.id == 1) {
-	        if (globalTimeout != null) {
-	            clearTimeout(globalTimeout);
-	            globalTimeout = null;
-	        }
-	        console.log('ERROR, page.onResourceTimeout: ' + JSON.stringify(request.errorString) + ', URL: ' + JSON.stringify(request.url));
-	        
-            phantom.exit(); // TODO: optimize, no exit needed
+	        clearGlobalTimeout();
+
+	        var errorMessage = 'TIMEOUT: page.onResourceTimeout: ' + JSON.stringify(request.errorString) + ', URL: ' + JSON.stringify(request.url);
+
+	        console.log(errorMessage);
+	        WaitForInput(system, console);
 	    }
 	};
 
     // if js errors happen on the page 
 	page.onError = function (msg, trace) {
-        // ignore in page js errors - some dev writing sloppy js, should not affect us
+	    // ignore in page js errors - some dev writing sloppy js, should not affect us
 	}
 
     // redirects ...
 	page.onResourceReceived = function (response) {
-	    if (response.id == 1 && (response.status == 301 || response.status == 302)) {
-	        console.log('REDIRECT: ' + response.url);
-	        phantom.exit(); // TODO: optimize, no exit needed
-	    }
+	    if (response.id == 1) {
+	        var closePage = false;
 
-	    if (response.id == 1 && response.status == 503) {
-	        console.log('503 Service Unavailable.');
-	        phantom.exit(); // TODO: optimize, no exit needed
+	        if (response.status == 301 || response.status == 302) {
+	            console.log('REDIRECT: ' + response.url);
+	            closePage = true;
+	        }
+
+            if (response.status >= 400) {
+                var description  = 'HTTP Status-Code ' + response.status + '.';
+
+                if (response.status == 500) {
+                    description = '500 Internal Server Error.';
+                }
+                else if (response.status == 503) {
+                    description = '503 Service Unavailable.';
+                }
+
+                console.log('ERROR: ' + description);
+
+                closePage = true;
+            }
+
+	        if (closePage) {
+	            clearGlobalTimeout();
+	            WaitForInput(system, console);
+	        }
 	    }
 	}
 
     // called by our custom js injected in the rendered page
 	page.onCallback = function (data) {
-	    if (globalTimeout != null) {
-	        clearTimeout(globalTimeout);
-	        globalTimeout = null;
-	    }
+	    clearGlobalTimeout();
+
 	    if (mode == "function") {
 	        var previewElementId = "CompositeC1FunctionPreview";
 
@@ -86,7 +110,6 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
 	        }
 
 	        page.render(output);
-	        page.close();
 
 	        console.log('SUCCESS: ' + address);
 	    } else if (mode == "template") {
@@ -94,12 +117,10 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
 	        var placeholdersInfo = page.evaluate(getPlaceholdersLocationInfo, 'placeholderpreview');
 
 	        page.render(output);
-	        page.close();
 
 	        console.log('templateInfo:' + placeholdersInfo);
 	    } else {
 	        page.render(output);
-	        page.close();
 
 	        console.log('SUCCESS');
 	    }
@@ -110,35 +131,43 @@ function BuildFunctionPreview(system, console, address, output, authCookie, mode
     try {
         page.open(address, function (status) {
             if (status !== 'success') {
-                if (globalTimeout != null) {
-                    clearTimeout(globalTimeout);
-                    globalTimeout = null;
-                }
+                clearGlobalTimeout();
                 console.log('ERROR, page.open: ' + status);
-                page.close();
+
                 WaitForInput(system, console);
             } else {
                 if (mode == "test") {
-                    if (globalTimeout != null) {
-                        clearTimeout(globalTimeout);
-                        globalTimeout = null;
-                    }
+                    clearGlobalTimeout();
 
                     page.render(output);
-                    page.close();
+
                     console.log('SUCCESS');
 
                     WaitForInput(system, console);
+                } else {
+                    var previewJsExecuted = page.evaluate(function () {
+                        return window.previewJsInitialized == true;
+                    });
+
+                    // If "preview.js" isn't inserted, closing the page, as the default callback will not be called
+                    if (!previewJsExecuted) {
+                        clearGlobalTimeout();
+
+                        console.log('ERROR: preview.js script is not present in the response body');
+
+                        WaitForInput(system, console);
+                    }
                 }
             }
         });
     } finally {
+        var timeoutInSeconds = 60;
+
         globalTimeout = setTimeout(function () {
-            console.log("Max execution time - 60 seconds - exceeded");
+            console.log("TIMEOUT: Max execution time - " + timeoutInSeconds + " seconds - exceeded");
             globalTimeout = null;
-            page.close();
             WaitForInput(system, console);
-        }, 60000);
+        }, timeoutInSeconds * 1000);
     }
 }
 
@@ -186,7 +215,7 @@ function WaitForInput(system, console) {
 		  return;
 	   }
 	   else {
-		  console.log('Usage: {Authentication cookie information}|{url}|{out put file name}. Where {Authentication cookie information} = {name},{value},{domain}');
+		  console.log('Usage: {Authentication cookie information}|{url}|{out put file name}|{mode}. Where {Authentication cookie information} = {name},{value},{domain}');
 	   }
    }
 }

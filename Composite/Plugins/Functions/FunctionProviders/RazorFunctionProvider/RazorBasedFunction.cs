@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using System.Web.Hosting;
 using System.Web.WebPages;
 using Composite.AspNet.Razor;
 using Composite.Core.Extensions;
@@ -48,12 +47,14 @@ namespace Composite.Plugins.Functions.FunctionProviders.RazorFunctionProvider
 		{
 		    Action<WebPageBase> setParametersAction = webPageBase =>
 		    {
-                    foreach (var param in parameters.AllParameterNames)
-			        {
-				        var value = parameters.GetParameter(param);
+                foreach (var param in parameters.AllParameterNames)
+                {
+                    var parameter = Parameters[param];
 
-				        Parameters[param].SetValue(webPageBase, value);
-			        }
+                    object parameterValue = parameters.GetParameter(param);
+
+                    parameter.SetValue(webPageBase, parameterValue);
+			    }
 		    };
 
             try
@@ -90,7 +91,7 @@ namespace Composite.Plugins.Functions.FunctionProviders.RazorFunctionProvider
                 {
                     var sourceCode = C1File.ReadAllLines(fileName);
 
-                    XhtmlErrorFormatter.EmbedSouceCodeInformation(ex, sourceCode, frame.GetFileLineNumber());
+                    XhtmlErrorFormatter.EmbedSourceCodeInformation(ex, sourceCode, frame.GetFileLineNumber());
                     return;
                 }
             }

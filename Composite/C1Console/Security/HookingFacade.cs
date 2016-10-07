@@ -59,7 +59,7 @@ namespace Composite.C1Console.Security
             {
                 Log.LogCritical("HookingFacade", ex);
 
-                GlobalInitializerFacade.FatalResetTheSytem();
+                GlobalInitializerFacade.FatalResetTheSystem();
 
                 throw;
             }
@@ -81,7 +81,7 @@ namespace Composite.C1Console.Security
             {
                 Log.LogCritical("HookingFacade", ex);
 
-                GlobalInitializerFacade.FatalResetTheSytem();
+                GlobalInitializerFacade.FatalResetTheSystem();
 
                 throw;
             }
@@ -103,7 +103,7 @@ namespace Composite.C1Console.Security
             {
                 Log.LogCritical("HookingFacade", ex);
 
-                GlobalInitializerFacade.FatalResetTheSytem();
+                GlobalInitializerFacade.FatalResetTheSystem();
 
                 throw;
             }
@@ -114,22 +114,7 @@ namespace Composite.C1Console.Security
         /// <exclude />
         public static void RemoveHook(EntityTokenHook entityTokenHook)
         {
-            try
-            {
-                using (GlobalInitializerFacade.CoreIsInitializedScope)
-                {
-                    _hookingFacade.RemoveHook(entityTokenHook);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.LogCritical("HookingFacade", ex);
-
-                GlobalInitializerFacade.FatalResetTheSytem();
-
-                throw;
-            }
-
+            RemoveHooks(new [] { entityTokenHook});
         }
 
 
@@ -148,7 +133,7 @@ namespace Composite.C1Console.Security
             {
                 Log.LogCritical("HookingFacade", ex);
 
-                GlobalInitializerFacade.FatalResetTheSytem();
+                GlobalInitializerFacade.FatalResetTheSystem();
 
                 throw;
             }
@@ -159,21 +144,7 @@ namespace Composite.C1Console.Security
         /// <exclude />
         public static void AddHook(EntityTokenHook entityTokenHook)
         {
-            try
-            {
-                using (GlobalInitializerFacade.CoreIsInitializedScope)
-                {
-                    _hookingFacade.AddHook(entityTokenHook);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.LogCritical("HookingFacade", ex);
-
-                GlobalInitializerFacade.FatalResetTheSytem();
-
-                throw;
-            }
+            AddHooks(new[] {entityTokenHook});
         }
 
 
@@ -193,7 +164,7 @@ namespace Composite.C1Console.Security
             {
                 Log.LogCritical("HookingFacade", ex);
 
-                GlobalInitializerFacade.FatalResetTheSytem();
+                GlobalInitializerFacade.FatalResetTheSystem();
 
                 throw;
             }

@@ -6,11 +6,13 @@
     <cms:binding name="NewTypeNamespace" type="System.String" />
     <cms:binding name="NewTypeTitle" type="System.String" />
     <cms:binding name="DataFieldDescriptors" type="System.Object" />
-    <!--<cms:binding name="HasVersioning" type="System.Boolean" />-->
     <cms:binding name="HasCaching" type="System.Boolean" />
     <cms:binding name="HasPublishing" type="System.Boolean" />
     <cms:binding name="HasLocalization" type="System.Boolean" />
+    <cms:binding name="KeyFieldName" type="System.String" />
     <cms:binding name="LabelFieldName" type="System.String" optional="true" />
+    <cms:binding name="InternalUrlPrefix" type="System.String" optional="true" />
+    <cms:binding name="KeyFieldReadOnly" type="System.Boolean" />
   </cms:bindings>
   <cms:layout iconhandle="generated-type-add">
     <TabPanels>
@@ -31,9 +33,15 @@
                Help="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.HelpTypeName}" Type="ProgrammingIdentifier">
             <cms:bind source="NewTypeName" />
           </TextBox>
+          
           <TextBox Label="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.LabelTypeNamespace}" Help="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.HelpTypeNamespace}" Type="ProgrammingNamespace">
             <cms:bind source="NewTypeNamespace" />
           </TextBox>
+
+          <TextBox Label="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.InternalUrlPrefixLabel}" Help="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.InternalUrlPrefixHelp}" Type="programmingidentifier">
+            <cms:bind source="InternalUrlPrefix" />
+          </TextBox>
+          
           <PlaceHolder Label="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.ServicesLabel}">
             <CheckBox Label="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.HasCaching}" ItemLabel="${Composite.Plugins.GeneratedDataTypesElementProvider, EditorCommon.HasCaching}">
               <CheckBox.Checked>
@@ -57,9 +65,15 @@
         <internal:TypeFieldDesigner.Fields>
           <cms:bind source="DataFieldDescriptors" />
         </internal:TypeFieldDesigner.Fields>
+        <internal:TypeFieldDesigner.KeyFieldName>
+          <cms:bind source="KeyFieldName" />
+        </internal:TypeFieldDesigner.KeyFieldName>
         <internal:TypeFieldDesigner.LabelFieldName>
           <cms:bind source="LabelFieldName" />
         </internal:TypeFieldDesigner.LabelFieldName>
+        <internal:TypeFieldDesigner.KeyFieldReadOnly>
+          <cms:bind source="KeyFieldReadOnly" />
+        </internal:TypeFieldDesigner.KeyFieldReadOnly>
       </internal:TypeFieldDesigner>
     </TabPanels>
   </cms:layout>

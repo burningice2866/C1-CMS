@@ -2,7 +2,7 @@
 <Scripts>
 	<Type name="sub">
 		<Mode name="operate">
-			<Script filename="${root}/scripts/compressed/sub.js.aspx"/>
+			<Script filename="${root}/scripts/compressed/sub.js"/>
 		</Mode>
 		<Mode name="develop">
 			<Script filename="${root}/scripts/source/page/updates/UpdateManager.js"/>
@@ -22,8 +22,8 @@
 	</Type>
 	<Type name="top">
 		<Mode name="operate">
-			<Script filename="${root}/scripts/compressed/toplevelclassnames.js.aspx"/>
-			<Script filename="${root}/scripts/compressed/top.js.aspx"/>
+			<Script filename="${root}/scripts/compressed/toplevelclassnames.js"/>
+			<Script filename="${root}/scripts/compressed/top.js"/>
 		</Mode>
 		<Mode name="develop">
 			<Script filename="${root}/scripts/source/top/interfaces/IAcceptable.js"/>
@@ -56,6 +56,7 @@
 			<Script filename="${root}/scripts/source/top/util/List.js"/>
 			<Script filename="${root}/scripts/source/top/util/Map.js"/>
 			<Script filename="${root}/scripts/source/top/util/SystemNodeList.js"/>
+			<Script filename="${root}/scripts/source/top/util/LocalStorage.js"/>
 			<Script filename="${root}/scripts/source/top/core/BroadcastMessages.js"/>
 			<Script filename="${root}/scripts/source/top/core/EventBroadcaster.js"/>
 			<Script filename="${root}/scripts/source/top/core/Constants.js"/>
@@ -141,7 +142,6 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/data/DataBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/roots/RootBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/roots/StyleBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/matrixes/MatrixBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/flexboxes/FlexBoxBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/flexboxes/ScrollBoxBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/labels/LabelBinding.js"/>
@@ -153,11 +153,9 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/buttons/clickbutton/ClickButtonBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/buttons/radiobutton/RadioButtonBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/buttons/checkbutton/CheckButtonBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/buttons/checkbutton/CheckButtonImageProfile.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/buttons/viewbutton/ViewButtonBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/controls/ControlGroupBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/controls/ControlBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/controls/ControlImageProfile.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/controls/ControlBoxBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/menus/MenuContainerBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/menus/MenuBarBinding.js"/>
@@ -172,14 +170,12 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogHeadBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogBodyBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogMatrixBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogSetBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogBorderBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogCoverBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogTitleBarBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogTitleBarBodyBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogControlBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogControlImageProfile.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/dialogs/DialogTitleBarPopupBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/windows/WindowBindingHighlightNodeCrawler.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/windows/WindowBinding.js"/>
@@ -253,14 +249,12 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/trees/TreeContentBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/trees/TreePositionIndicatorBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/trees/TreeCrawler.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockControlImageProfile.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockTabsButtonBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockTabsBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockTabBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockPanelsBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockPanelBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockControlBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/docks/DockTabPopupBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/views/ViewSetBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/views/ViewBinding.js"/>
@@ -295,9 +289,6 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/stage/menus/StageViewMenuItemBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/stage/statusbar/StageStatusBarBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerDecksBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerDeckBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerSplitterBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerMenuBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerToolBarBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/explorer/ExplorerToolBarButtonBinding.js"/>
@@ -315,7 +306,6 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/editors/visualeditor/multieditor/VisualMultiTemplateEditorBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/editors/CodeMirrorEditor/CodeMirrorEditorPopupBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/editors/CodeMirrorEditor/CodeMirrorEditorBinding.js"/>
-			<Script filename="${root}/scripts/source/top/ui/bindings/throbber/ThrobberBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/progressbar/ProgressBarBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/start/StartMenuItemBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/keys/KeySetBinding.js"/>
@@ -327,6 +317,8 @@
 			<Script filename="${root}/scripts/source/top/ui/bindings/persistance/PersistanceBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/localization/LocalizationSelectorBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/bindings/response/ResponseBinding.js"/>
+			<Script filename="${root}/scripts/source/top/ui/bindings/genericview/GenericViewBinding.js"/>
+			<Script filename="${root}/scripts/source/top/ui/bindings/branding/BrandSnippetBinding.js"/>
 			<Script filename="${root}/scripts/source/top/ui/UserInterfaceMapping.js"/>
 			<Script filename="${root}/scripts/source/top/ui/UserInterface.js"/>
 			<Script filename="${root}/scripts/source/top/soap/SOAPMessage.js"/>

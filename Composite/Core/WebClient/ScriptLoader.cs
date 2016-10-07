@@ -13,6 +13,7 @@ using System.Xml.Linq;
 using Composite.Core.IO;
 using Composite.Core.Xml;
 
+
 namespace Composite.Core.WebClient
 {
     
@@ -83,18 +84,18 @@ namespace Composite.Core.WebClient
         /// <exclude />
         public string Render()
         {
-            StringBuilder _builder = new StringBuilder();
+            var builder = new StringBuilder();
             switch (_mode)
             {
                 case CompositeScriptMode.OPERATE:
                 case CompositeScriptMode.DEVELOP:
-                    RenderMarkup(_builder);
+                    RenderMarkup(builder);
                     break;
                 case CompositeScriptMode.COMPILE:
-                    CompileScript(_builder);
+                    CompileScript(builder);
                     break;
             }
-            return _builder.ToString();
+            return builder.ToString();
         }
 
 
@@ -142,10 +143,17 @@ namespace Composite.Core.WebClient
 
             foreach (string ss in _defaultscripts)
             {
-                string scriptsource = ss.Replace("${root}", root);
+                string relativeLink = ss.Replace("${root}", root);
+
+                string filePath = PathUtil.Resolve(ss.Replace("${root}", "~/Composite"));
+                if (C1File.Exists(filePath))
+                {
+                    DateTime lastModified = C1File.GetLastWriteTimeUtc(filePath);
+                    relativeLink += "?timestamp=" + lastModified.GetHashCode();
+                }
 
                 builder.AppendLine(
-                    scriptMarkup.Replace("${scriptsource}", scriptsource)
+                    scriptMarkup.Replace("${scriptsource}", relativeLink)
                 );
             }
 
@@ -155,22 +163,23 @@ namespace Composite.Core.WebClient
                 _ctx.Response.Cache.SetExpires(DateTime.Now.AddYears(-10));
                 _ctx.Response.Cache.SetCacheability(HttpCacheability.Private);
 
-                _hasServerToServerConnection = HasServerToServerConnection();
+                var url = _ctx.Request.Url;
+                bool isLocalHost = url.Host.ToLowerInvariant() == "localhost";
+
+                _hasServerToServerConnection = HasServerToServerConnection(); 
+
                 builder.AppendLine(@"<script type=""text/javascript"">");
-                builder.AppendLine(string.Format(@"Application.hasExternalConnection = {0};", _hasServerToServerConnection.ToString().ToLower()));
+
+                Func<bool, string> toJson = b => b.ToString().ToLowerInvariant();
+
+                builder.AppendFormat(@"Application.hasExternalConnection = {0};", toJson(_hasServerToServerConnection));
+                builder.AppendFormat(@"Application.isDeveloperMode = {0};", toJson(_mode == CompositeScriptMode.DEVELOP));
+                builder.AppendFormat(@"Application.isLocalHost = {0};", toJson(isLocalHost));
+                builder.AppendFormat(@"Application.isOnPublicNet = {0};", toJson(UrlIsOnPublicNet(url)));
+
                 builder.AppendLine(@"</script>");
 
-                if (_mode == CompositeScriptMode.DEVELOP)
-                {
-                    bool isLocalHost = (_ctx.Request.Url.Host.ToLowerInvariant() == "localhost");
-                    string boolean = isLocalHost ? "true" : "false";
-
-                    builder.AppendLine(@"<script type=""text/javascript"">");
-                    builder.AppendLine(@"Application.isDeveloperMode = true;");
-                    builder.AppendLine(@"Application.isLocalHost = " + boolean + ";");
-                    builder.AppendLine(@"</script>");
-                }
-            }
+			}
             else
             {
                 if (!_updateManagerDisabled)
@@ -201,7 +210,7 @@ namespace Composite.Core.WebClient
         }
 
         /**
-         * Attempt remote connection. We stress-test the connection by 
+         * Attempt remote connection. We test the connection by 
          * looking for the exact document title "Start" in the response. 
          */
         [SuppressMessage("Composite.IO", "Composite.DoNotUseConfigurationManagerClass:DoNotUseConfigurationManagerClass")]
@@ -211,6 +220,11 @@ namespace Composite.Core.WebClient
             try
             {
                 string uri = ConfigurationManager.AppSettings["Composite.StartPage.Url"];
+
+                if (string.IsNullOrEmpty(uri))
+                {
+                    return false;
+                }
 
                 XDocument loaded = null;
                 Task task = Task.Factory.StartNew(() => loaded = TryLoad(uri));
@@ -224,6 +238,25 @@ namespace Composite.Core.WebClient
             }
             catch (Exception) { }
             return result;
+        }
+
+
+        private bool UrlIsOnPublicNet(Uri currentUri)
+        {
+            if (currentUri.HostNameType != UriHostNameType.Dns) return false;
+
+            string hostname = currentUri.Host.ToLowerInvariant();
+
+            if (hostname.IndexOf('.') == -1) return false;
+
+            var dnsResult = System.Net.Dns.GetHostEntry(hostname);
+            if (dnsResult.AddressList.Length == 0)
+            {
+                return false;
+            }
+
+            var address = dnsResult.AddressList.First().MapToIPv6();
+            return !address.IsIPv6SiteLocal && !address.IsIPv6LinkLocal;
         }
 
         /// <exclude />

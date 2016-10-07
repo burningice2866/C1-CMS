@@ -17,6 +17,11 @@ function FunctionEditorPageBinding () {
 	 */
 	this._isSourceMode = false;
 	
+	/**
+	 * Enable flexbox behavior.
+	 * @type {boolean}
+	 */
+	this.isFlexible = true;
 	/*
 	 * Returnable.
 	 */
@@ -56,7 +61,11 @@ FunctionEditorPageBinding.prototype.handleAction = function ( action ) {
 			break;
 		
 		case PageBinding.ACTION_DOPOSTBACK :
-			if ( action.target.getID () == "switchbutton" ) {
+			if (action.target.getID() == "switchbutton") {
+
+				//fix crashing Chrome if svg icon set, workarround
+				action.target.setImage();
+
 				if ( !this._isSourceMode ) {
 					this._cover ( false );
 					var decks = this.bindingWindow.bindingMap.decks;
@@ -96,10 +105,10 @@ FunctionEditorPageBinding.prototype._buildSwitchButton = function ( editor ) {
 	button.isEditorControlBinding = false;
 	button.setLabel( "${string:Composite.Web.FormControl.FunctionCallsDesigner:ToolBar.LabelDesign}" );
 	button.flip ( true );
-	button.imageProfile = new ImageProfile ({
-		image : "${icon:editor-designview}",
-		imageDisabled : "${icon:editor-designview-disabled}" 
-	});
+	//button.imageProfile = new ImageProfile ({
+	//	image : "${icon:editor-designview}",
+	//	imageDisabled : "${icon:editor-designview-disabled}" 
+	//});
 
 	var self = this;
 	button.oncommand = function () {

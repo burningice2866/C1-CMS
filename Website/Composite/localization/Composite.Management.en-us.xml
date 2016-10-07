@@ -276,8 +276,7 @@
 	<string key="VirtualElementProviderElementProvider.RootActions.SendMessageTooltip" value="Send a message to all running consoles" />
 	<string key="VirtualElementProviderElementProvider.RootActions.RestartApplicationLabel" value="Restart server" />
 	<string key="VirtualElementProviderElementProvider.RootActions.RestartApplicationTooltip" value="Restart the server" />
-	<string key="SendMessageToConsolesWorkflow.Layout.Label" value="Broadcast Message to All C1 Consoles" />
-	<string key="SendMessageToConsolesWorkflow.FieldGroup.Label" value="Message to broadcast" />
+	<string key="SendMessageToConsolesWorkflow.Layout.Label" value="Broadcast Message to All {applicationname} Consoles" />
 	<string key="SendMessageToConsolesWorkflow.TitleTextBox.Label" value="Title" />
 	<string key="SendMessageToConsolesWorkflow.TitleTextBox.Help" value="Dialog title of broadcast message" />
 	<string key="SendMessageToConsolesWorkflow.MessageTextArea.Label" value="Message" />
@@ -340,7 +339,7 @@
 	<!-- WEBSITE -->
 	<string key="Website.General.LabelVersionNumber" value="Version No." />
 	<string key="Website.Application.DialogReload.Title" value="Restart?" />
-	<string key="Website.Application.DialogReload.Text" value="Restart Composite C1? All unsaved changes will be lost." />
+	<string key="Website.Application.DialogReload.Text" value="Restart {applicationname}? All unsaved changes will be lost." />
 	<string key="WebSite.Application.DialogSaveResource.Title" value="Save Resource?" />
 	<string key="WebSite.Application.DialogSaveResource.Text" value="&quot;${resourcename}&quot; has been modified. Save changes?" />
 	<string key="Website.Dialogs.SaveAll.LabelSaveResources" value="Save Resources?" />
@@ -350,7 +349,7 @@
 	<string key="Website.Dialogs.LabelAccept" value="OK" />
 	<string key="Website.Dialogs.LabelCancel" value="Cancel" />
 	<string key="Website.Dialogs.LabelDisclosure" value="More Info" />
-	<string key="Website.Dialogs.About.Title" value="About Composite C1" />
+	<string key="Website.Dialogs.About.Title" value="About {applicationname}" />
 	<string key="Website.Dialogs.About.LabelCredits" value="Credits" />
 	<string key="Website.Dialogs.About.LabelBack" value="Back" />
 	<string key="Website.Dialogs.About.LabelCredits2" value="Credits" />
@@ -437,7 +436,9 @@
 	<string key="ServerLog.LabelButtonDeleteOld" value="Delete old" />
 	<string key="ServerLog.LabelButtonRefresh" value="Refresh" />
 	<string key="ServerLog.EmptyLabel" value="No log data available..." />
-	<string key="ServerLog.LogEntry.DateLabel" value="Date" />
+  <string key="ServerLog.LogEntriesRemovedBrowserViewLabel" value="Only the {0} most recent log entries are shown. Open the log for more entries." />
+  <string key="ServerLog.LogEntriesRemovedLabel" value="Only the {0} most recent log entries are shown. {1} entries exists for the current search. Either narrow the search or use the log viewer tool from http://docs.composite.net/Configuration/Logging for full log access." />
+  <string key="ServerLog.LogEntry.DateLabel" value="Date" />
 	<string key="ServerLog.LogEntry.MessageLabel" value="Message" />
 	<string key="ServerLog.LogEntry.TitleLabel" value="Title" />
 	<string key="ServerLog.LogEntry.EventTypeLabel" value="EventType" />
@@ -521,16 +522,17 @@
 	<string key="Website.App.LabelFileClose" value="Close" />
 	<string key="Website.App.LabelFileCloseAll" value="Close All" />
 	<string key="Website.App.LabelFileSaveAll" value="Save All..." />
-	<string key="Website.App.LabelFileExit" value="Exit" />
+	<string key="Website.App.LabelFileExit" value="Sign out" />
 	<string key="Website.App.LabelView" value="View" />
 	<string key="Website.App.LabelViewCompositeStart" value="Composite Start" />
 	<string key="Website.App.LabelSystemLog" value="System Log" />
 	<string key="Website.App.LabelDeveloperPanel" value="Developer Panel" />
 	<string key="Website.App.LabelTools" value="Tools" />
 	<string key="Website.App.LabelHelp" value="Help" />
+  <string key="Website.App.LabelSettings" value="Settings" />
 	<string key="Website.App.LabelHelpContents" value="Help Contents" />
 	<string key="Website.App.LabelFeedback" value="Provide Feedback..." />
-	<string key="Website.App.LabelAboutComposite" value="About Composite C1" />
+	<string key="Website.App.LabelAbout" value="About {applicationname}" />
 	<string key="Website.App.LabelCut" value="Cut" />
 	<string key="Website.App.LabelCopy" value="Copy" />
 	<string key="Website.App.LabelPaste" value="Paste" />
@@ -553,7 +555,6 @@
 	<string key="Website.App.StatusBar.Ready" value="Ready!" />
 	<string key="Website.App.StatusBar.ErrorInField" value="Error in" />
 	<string key="Website.Forms.Administrative.AddNewMediaFile.Layout.Label" value="Add New Media File" />
-	<string key="Website.Forms.Administrative.AddNewMediaFile.FieldGroup.Label" value="Media Properties" />
 	<string key="Website.Forms.Administrative.AddNewMediaFile.FileUpload.Label" value="Filename" />
 	<string key="Website.Forms.Administrative.AddNewMediaFile.FileUpload.Help" value="Select the file to upload" />
 	<string key="Website.Forms.Administrative.AddNewMediaFile.OverwriteCheckBox.Label" value="Allow overwrite" />
@@ -578,7 +579,6 @@
 	<string key="Website.Forms.Administrative.AddNewMediaFolder.FolderNameTooLong" value="The total length of the folder name is too long" />
 	<string key="Website.Forms.Administrative.AddNewMediaFolder.FolderNotOnlySlash" value="The folder name can not only be '/' or '\'" />
 	<string key="Website.Forms.Administrative.AddZipMediaFile.LabelDialog" value="Upload Multiple Files via a Zip File" />
-	<string key="Website.Forms.Administrative.AddZipMediaFile.LabelFieldGroup" value="Select Zip file containing files to extract" />
 	<string key="Website.Forms.Administrative.AddZipMediaFile.LabelFile" value="Zip file" />
 	<string key="Website.Forms.Administrative.AddZipMediaFile.HelpFile" value="Create a Zip file (right click local folder and select Send to -&gt; Compressed folder) and select it using the Browse button" />
 	<string key="Website.Forms.Administrative.AddZipMediaFile.LabelRecreateStructure" value="Create folders" />

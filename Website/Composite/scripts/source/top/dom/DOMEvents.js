@@ -3,10 +3,9 @@
  * Gateway for common DOM event management, emulating   
  * DOM2 EventListener interface for Internet Explorer
  */
-function _DOMEvents () {}
+function _DOMEvents() { }
 
 _DOMEvents.prototype = {
-
 	_logger: SystemLogger.getLogger("DOMEvents"),
 
 	/*
@@ -37,6 +36,8 @@ _DOMEvents.prototype = {
 	DOM: "DOMContentLoaded",
 	DRAGOVER: "dragover",
 	DROP: "drop",
+	WHEEL: "wheel",
+	HASHCHANGE: "hashchange",
 
 	TOUCHSTART: "touchstart",
 	TOUCHEND: "touchend",
@@ -90,8 +91,7 @@ _DOMEvents.prototype = {
 		* Clearing eventlisteners on unload. This should 
 		* in theory minimize memory leaks (clearly not!).
 		*/
-		if (!Client.isExplorer &&  !Client.isExplorer11)
-		{
+		if (!Client.isExplorer && !Client.isExplorer11) {
 			if (target && typeof target.nodeType != Types.UNDEFINED) {
 				if (target.nodeType == Node.ELEMENT_NODE) {
 					var win = DOMUtil.getParentWindow(target);
@@ -196,9 +196,9 @@ _DOMEvents.prototype = {
 		return e.button == 2 ? true : false;
 	},
 
-    /**
-    * @param {MouseEvent} e
-    */
+	/**
+	* @param {MouseEvent} e
+	*/
 	isButtonPressed: function (e) {
 		if ((Client.isFirefox || Client.isExplorer11) && e.buttons === 0)
 			return false;
@@ -266,7 +266,26 @@ _DOMEvents.prototype = {
 			if (typeof event != Types.UNDEFINED) {
 				var action = this._getAction(isAdd);
 				if (target[action]) {
-					if (Client.isExplorer || Client.isExplorer11) {
+					if (Client.isPad && event == DOMEvents.DOUBLECLICK) {
+						if (isAdd) {
+							var lastTouch = null;
+							var doubletaphandler = {
+								handleEvent: function (e) {
+									var now = new Date().getTime();
+									if (lastTouch && now - lastTouch < 500) {
+										DOMEvents.stopPropagation(e); //?
+										DOMEvents.preventDefault(e); //?
+										var newevent = new MouseEvent(DOMEvents.DOUBLECLICK, e);
+										handler.handleEvent(newevent);
+										lastTouch = null;
+										return;
+									}
+									lastTouch = now;
+								}
+							}
+							target[action](DOMEvents.TOUCHSTART, doubletaphandler, isReverse ? true : false);
+						}
+					} else if (Client.isExplorer || Client.isExplorer11) {
 						switch (event) {
 							case DOMEvents.MOUSEDOWN:
 							case DOMEvents.MOUSEUP:
@@ -288,7 +307,7 @@ _DOMEvents.prototype = {
 							* event though the IE native behavior is emulated. This 
 							* implies that you have to listen for both "mouseover" 
 							* and "mouseenter" event event though only the latter was added!
-							*/ 
+							*/
 							case DOMEvents.MOUSEENTER:
 							case DOMEvents.MOUSELEAVE:
 								event = event == DOMEvents.MOUSEENTER ? DOMEvents.MOUSEOVER : DOMEvents.MOUSEOUT;
@@ -416,4 +435,4 @@ _DOMEvents.prototype = {
  * The instance that does it.
  * @type {_DOMEvents}
  */
-var DOMEvents = new _DOMEvents ();
+var DOMEvents = new _DOMEvents();

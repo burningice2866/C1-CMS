@@ -13,6 +13,11 @@
 		<script type="text/javascript">
 		    DocumentManager.isDocumentSelectable = true;
 		</script>
+        <% if(IsBrowserView) { %>
+            <style>
+                #toolbar { display: none; }
+            </style>
+        <% } %>
 	</head>
 	<body>
 		<form id="Form1" runat="server">
@@ -26,19 +31,19 @@
 						</ui:toolbargroup>
 						<ui:toolbargroup>
 						    
-                            <div class="left">
+                            <div class="pull-left">
                                 <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Critical}" ID="chkCritical" Checked="True" AutoPostBack="true" />
                             </div>
-                            <div class="left">
+                            <div class="pull-left">
                                 <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Error}" ID="chkError" Checked="True" AutoPostBack="true" />
                             </div>
-                            <div class="left">
+                            <div class="pull-left">
                                 <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Warning}" ID="chkWarning" Checked="True" AutoPostBack="true" />
                             </div>
-                            <div class="left">
+                            <div class="pull-left">
                                 <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Information}" ID="chkInformation" Checked="True" AutoPostBack="true" />
                             </div>
-                            <div class="left">
+                            <div class="pull-left">
                                 <aspui:CheckBox runat="server" ItemLabel="${string:ServerLog.Severity.Verbose}" ID="chkVerbose" Checked="False" AutoPostBack="true" />
                             </div>
                             
@@ -46,10 +51,13 @@
 					</ui:toolbarbody>
 				</ui:toolbar>
 				<ui:scrollbox id="scrollbox">
-					<asp:PlaceHolder ID="LogHolder" runat="server" />
+					<asp:PlaceHolder  runat="server" ID="LogHolder" />
 					<asp:PlaceHolder runat="server" ID="EmptyLabelPlaheHolder" Visible="false">
 						<div id="emptylabel"><ui:text label="${string:ServerLog.EmptyLabel}"/></div>
 					</asp:PlaceHolder>
+                    <asp:PlaceHolder runat="server" ID="LogEntriesRemovedPlaceHolder">
+                        <div id="logentriesremovedlabel"><asp:Label runat="server" ID="LogEntriesRemovedLabel" /></div>
+                    </asp:PlaceHolder>
 				</ui:scrollbox>
 			</ui:page>
 		</form>

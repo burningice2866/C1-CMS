@@ -88,30 +88,31 @@ _Resolver.prototype = {
 	 * @param {string} string
 	 * @return {string}
 	 */
-	_resolveImage : function ( string ) {
-		
+	_resolveImage: function (string) {
+
 		var result = null;
 		var provider = null;
 		var resource = null;
 		var size = null;
-		
-		resource = string.split ( "${icon:" )[ 1 ].split ( "}" )[ 0 ];
-		
-		if ( resource.indexOf ( ":" ) >-1 ) {
-			provider = resource.split ( ":" ) [ 0 ];
-			resource = resource.split ( ":" ) [ 1 ];
+
+		resource = string.split("${icon:")[1].split("}")[0];
+
+		if (resource.indexOf(":") > -1) {
+			provider = resource.split(":")[0];
+			resource = resource.split(":")[1];
 		} else {
 			provider = ImageProvider.UI;
 		}
-		if ( resource.indexOf ( "(" ) >-1 ) {
-			size = resource.split ( "(" ) [ 1 ].split ( ")" )[ 0 ];
-			resource = resource.split ( "(" ) [ 0 ];
+		if (resource.indexOf("(") > -1) {
+			size = resource.split("(")[1].split(")")[0];
+			resource = resource.split("(")[0];
 		}
-		result = ImageProvider.getImageURL ({
-			ResourceNamespace : provider,
-			ResourceName : resource
-		}, size );
-		
+
+		result = ImageProvider.getImageURL({
+			ResourceNamespace: provider,
+			ResourceName: resource
+		}, size);
+
 		return result;
 	},
 

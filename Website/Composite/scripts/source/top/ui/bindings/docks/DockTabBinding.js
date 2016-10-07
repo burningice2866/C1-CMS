@@ -11,6 +11,7 @@ DockTabBinding.NODENAME_TABBOX = "dock";
 DockTabBinding.LABEL_TABLOADING = "${string:Website.App.LabelLoading}";
 DockTabBinding.LABEL_TABDEFAULT = "${string:Website.App.LabelLoaded}";
 DockTabBinding.LABEL_TABSAVED = "${string:Website.App.LabelSaved}";
+DockTabBinding.LABEL_OVERFLOWED_CLASSNAME = "overflowed";
 
 DockTabBinding.IMG_TABLOADING = "${icon:loading}";
 DockTabBinding.IMG_TABDEFAULT = "${icon:default}";
@@ -47,6 +48,11 @@ function DockTabBinding () {
 	 * @type {boolean}
 	 */
 	this.isDirty = false;
+
+	/**
+	 * @type {boolean}
+	 */
+	this.isPinned = false;
 	
 	/**
 	 * Flipped when DockTabs have invoked the "manage" routine.
@@ -188,13 +194,19 @@ DockTabBinding.prototype.buildDOMContent = function () {
 
 	DockTabBinding.superclass.buildDOMContent.call ( this );
 
-	this._controlGroupBinding = this.labelBinding.add (
-		ControlGroupBinding.newInstance ( this.bindingDocument ) 
-	);
-	var controlBinding = DialogControlBinding.newInstance ( this.bindingDocument );
-	controlBinding.setControlType ( ControlBinding.TYPE_CLOSE );
-	this._controlGroupBinding.add ( controlBinding );
-	this._controlGroupBinding.attachRecursive ();
+	if (this.getProperty("pinned") != true) {
+
+		this._controlGroupBinding = this.labelBinding.add(
+			ControlGroupBinding.newInstance(this.bindingDocument)
+		);
+		var controlBinding = DialogControlBinding.newInstance(this.bindingDocument);
+		controlBinding.setControlType(ControlBinding.TYPE_CLOSE);
+		controlBinding.attachClassName("closecontrol");
+		this._controlGroupBinding.add(controlBinding);
+		this._controlGroupBinding.attachRecursive();
+	} else {
+		this.isPinned = true;
+	}
 }
 
 /**
@@ -580,9 +592,9 @@ DockTabBinding.prototype.select = function ( isManaged ) {
 	/*
 	 * Update tree focus.
 	 */
-	if ( isManaged != true ) {
+	//if ( isManaged != true ) {
 		this._updateTree ();
-	}
+	//}
 	
 	/*
 	 * TODO: Technically this should only be done when the dock is activated...
@@ -596,7 +608,9 @@ DockTabBinding.prototype.select = function ( isManaged ) {
  */
 DockTabBinding.prototype.close = function () {
 	
-	this.containingTabBoxBinding.closeTab ( this );
+	if (!this.isPinned) {
+		this.containingTabBoxBinding.closeTab(this);
+	}
 }
 
 /**

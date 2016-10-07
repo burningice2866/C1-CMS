@@ -80,6 +80,21 @@ List.prototype.addFirst = function ( object ) {
 }
 
 /**
+ * Delete entry by key.
+ * @param {int} index
+ */
+List.prototype.remove = function (entry) {
+	var i = 0, e;
+	while ((e = this._array[i++]) !== undefined) {
+		if (e == entry) {
+			this._array.splice(i - 1, 1);
+			break;
+		}
+	}
+	
+}
+
+/**
  * @param {int} index
  * @return {object}
  */
@@ -326,7 +341,11 @@ List.prototype.getLast = function () {
  * Amazing.
  */
 List.prototype.toString = function () {
-	
+	// To avoid errors that popup in Firebug
+    if (typeof this._array === 'undefined') {
+        return null;
+    }
+
 	return this._array.toString ();
 }
 

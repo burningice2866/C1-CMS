@@ -10,19 +10,12 @@ using Composite.Core.IO;
 using Composite.Core.PackageSystem;
 using Composite.Core.Parallelization;
 using Composite.Data.Plugins.DataProvider.Streams;
+using Composite.Plugins.Security.LoginSessionStores.HttpContextBasedLoginSessionStore;
 using Timer = System.Timers.Timer;
 using System.Threading.Tasks;
 
 namespace Composite.Core.WebClient
 {
-    internal class BrowserRenderException : InvalidOperationException
-    {
-        public BrowserRenderException(string message)
-            : base(message)
-        {
-        }
-    }
-
     internal static partial class BrowserRender
     {
         private static readonly string LogTitle = typeof (BrowserRender).Name;
@@ -46,22 +39,35 @@ namespace Composite.Core.WebClient
         private static volatile bool ServerAvailabilityChecked;
         private static readonly AsyncLock _serverAvailabilityCheckLock = new AsyncLock();
 
+        public enum RenderingResultStatus
+        {
+            Success = 0,
+            Redirect = 1,
+            Error = 2,
+            Timeout = 3,
+            PhantomServerTimeout = 4,
+            PhantomServerIncorrectResponse = 5
+        }
+
         public class RenderingResult
         {
+            public RenderingResultStatus Status { get; set; }
             public string FilePath { get; set; }
             public string Output { get; set; }
+            public string RedirectUrl { get; set; }
         }
 
         /// <summary>
         /// Ensures that the BrowserRenderer service is launched, without blocking the current thread
         /// </summary>
-        public static void EnsureReadyness()
+        public static void EnsureReadiness()
         {
             _lastUsageDate = DateTime.Now;
             if (ServerAvailabilityChecked) return;
 
-            HttpContext context = HttpContext.Current;
-            HttpCookie authenticationCookie = context.Request.Cookies[CookieHandler.GetApplicationSpecificCookieName(".CMSAUTH")];
+            var context = HttpContext.Current;
+
+            HttpCookie authenticationCookie = GetAuthenticationCooke(context);
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(EnsureReadinessDelay_ms);
@@ -83,7 +89,7 @@ namespace Composite.Core.WebClient
         }
 
         /// <summary>
-        /// Renders a url and return a full path to a rendered image, or <value>null</value> when rendering process is failing or inaccessable.
+        /// Renders a url and return a full path to a rendered image, or <value>null</value> when rendering process is failing or inaccessible.
         /// </summary>
         public static async Task<RenderingResult> RenderUrlAsync(HttpContext context, string url, string mode)
         {
@@ -98,23 +104,15 @@ namespace Composite.Core.WebClient
             string outputImageFileName = Path.Combine(dropFolder, urlHash + ".png");
             string outputFileName = Path.Combine(dropFolder, urlHash + ".output");
             string errorFileName = Path.Combine(dropFolder, urlHash + ".error");
-            string output;
 
             if (C1File.Exists(outputImageFileName) || C1File.Exists(outputFileName))
             {
 #if BrowserRender_NoCache
                 File.Delete(outputFileName);
 #else
-                if (C1File.Exists(outputFileName))
-                {
-                    output = C1File.ReadAllText(outputFileName);
-                }
-                else
-                {
-                    output = null;
-                }
+                string output = C1File.Exists(outputFileName) ? C1File.ReadAllText(outputFileName) : null;
 
-                return new RenderingResult { FilePath = outputImageFileName, Output = output };
+                return new RenderingResult { FilePath = outputImageFileName, Output = output, Status = RenderingResultStatus.Success};
 #endif
             }
 
@@ -123,25 +121,24 @@ namespace Composite.Core.WebClient
                 return null;
             }
 
-            try
-            {
-                output =  await MakePreviewRequestAsync(context, url, outputImageFileName, mode);
-            }
-            catch (BrowserRenderException ex)
-            {
-                C1File.WriteAllText(errorFileName, ex.Message);
+            var result = await MakePreviewRequestAsync(context, url, outputImageFileName, mode);
 
-                throw;
+            if (result.Status >= RenderingResultStatus.Error)
+            {
+                C1File.WriteAllText(errorFileName, result.Output);
             }
 
-            if (!Enabled && output == null)
+            if (!Enabled)
             {
                 return null;
             }
 
-            C1File.WriteAllText(outputFileName, output);
+            if (result.Status == RenderingResultStatus.Success)
+            {
+                C1File.WriteAllText(outputFileName, result.Output);
+            }
 
-            return new RenderingResult { FilePath = outputImageFileName, Output = output };
+            return result;
         }
 
 
@@ -162,10 +159,9 @@ namespace Composite.Core.WebClient
             return CacheImagesFolder + "\\" + mode;
         }
 
-        private static async Task<string> MakePreviewRequestAsync(HttpContext context, string url, string outputFileName, string mode)
+        private static async Task<RenderingResult> MakePreviewRequestAsync(HttpContext context, string url, string outputFileName, string mode)
         {
-            HttpCookie authenticationCookie = context.Request.Cookies[CookieHandler.GetApplicationSpecificCookieName(".CMSAUTH")];
-
+            var authenticationCookie = GetAuthenticationCooke(context);
             await CheckServerAvailabilityAsync(context, authenticationCookie);
 
             if (!Enabled)
@@ -175,15 +171,15 @@ namespace Composite.Core.WebClient
 
             _lastUsageDate = DateTime.Now;
 
-            try
-            {
-                return await PhantomServer.RenderUrlAsync(authenticationCookie, url, outputFileName, mode);
-            }
-            catch (Exception ex)
-            {
-                Log.LogWarning(LogTitle, ex);
-                throw;
-            }
+            return await PhantomServer.RenderUrlAsync(authenticationCookie, url, outputFileName, mode);
+        }
+
+        private static HttpCookie GetAuthenticationCooke(HttpContext context)
+        {
+            // TODO: generate a short life cookie
+            string authenticationCookieName = CookieHandler.GetApplicationSpecificCookieName(HttpContextBasedLoginSessionStore.AuthCookieName);
+
+            return context.Request.Cookies[authenticationCookieName];
         }
 
 

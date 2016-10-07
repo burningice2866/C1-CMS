@@ -37,21 +37,31 @@ ViewBinding.TIMEOUT = 15;
 ViewBinding._instances = new Map ();
 
 /**
+ * Has Instance?
+ * @param {string} handle
+ * @return {Boolean};
+ */
+ViewBinding.hasInstance = function (handle) {
+
+	return ViewBinding._instances.has(handle);
+}
+
+/**
  * Get instance by handle.
  * @param {string} handle
- * @return {ViewBinding}ViewBinding._instances.set ( this._viewDefinition.handle, this );
+ * @return {ViewBinding}
  */
 ViewBinding.getInstance = function ( handle ) {
 	
 	var result = ViewBinding._instances.get ( handle );
-	if ( !result ) {
-		var cry = "ViewBinding.getInstance: No such instance: " + handle;
-		SystemLogger.getLogger ( "ViewBinding [static]" ).error ( cry );
-		SystemDebug.stack ( arguments );
-		if ( Application.isDeveloperMode ) {
-			alert ( cry );
-		}
-	}
+	//if ( !result ) {
+	//	var cry = "ViewBinding.getInstance: No such instance: " + handle;
+	//	SystemLogger.getLogger ( "ViewBinding [static]" ).error ( cry );
+	//	SystemDebug.stack ( arguments );
+	//	if ( Application.isDeveloperMode ) {
+	//		alert ( cry );
+	//	}
+	//}
 	return result;
 }
 
@@ -202,6 +212,11 @@ ViewBinding.prototype.onBindingAttach = function () {
 			CoverBinding.newInstance ( this.bindingDocument ) 
 		);
 		this._coverBinding.attach ();
+	}
+
+	if (this._viewDefinition && this._viewDefinition.position == DockBinding.START)
+	{
+		this.setProperty("position", DockBinding.START);
 	}
 	
 	/*
@@ -771,7 +786,7 @@ ViewBinding.prototype.setDimension = function ( dimension ) {
  * TODO: create an interface to check for.
  * @param {Binding} binding
  */
-ViewBinding.prototype.snapToBinding = function ( binding ) {
+ViewBinding.prototype.snapToBinding = function (binding, floating) {
 	
 	// Disable standard flexbox behavior. 
 	// TODO: enable for floating docks????????????????????????????????????????????
@@ -791,7 +806,7 @@ ViewBinding.prototype.snapToBinding = function ( binding ) {
 	}
 	this._snapBinding = binding;
 	this._snapBinding.viewBinding = this;
-	this.isFreeFloating = true;
+	this.isFreeFloating = floating !== false; // dafault is true
 	
 	// Initialize when first shown, creating and loading the WindowBinding
 	if ( !this._isViewBindingInitialized ) {

@@ -110,7 +110,7 @@ namespace CompositeTypeFieldDesigner {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::Composite.Core.WebClient.UiControlLib.Selector TypeSelector;
-        
+
         /// <summary>
         /// TypeDetailsPlaceHolder control.
         /// </summary>
@@ -209,5 +209,23 @@ namespace CompositeTypeFieldDesigner {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::Composite.Core.WebClient.UiControlLib.PostBackDialog btnDefaultValueFunctionMarkup;
+
+        protected global::Composite.Core.WebClient.UiControlLib.Selector lstKeyType;
+
+        protected global::Composite.Core.WebClient.UiControlLib.DataInput txtKeyFieldName;
+
+        protected global::Composite.Core.WebClient.UiControlLib.CheckBox chkShowInDataUrl;
+
+        protected global::System.Web.UI.WebControls.PlaceHolder plhKeyFieldProperties;
+
+        protected global::System.Web.UI.WebControls.PlaceHolder plhFieldProperties;
+
+        protected global::System.Web.UI.WebControls.PlaceHolder plhDataUrl;
+
+        protected global::System.Web.UI.WebControls.PlaceHolder plhAdvancedFieldProperties;
+
+        protected global::Composite.Core.WebClient.UiControlLib.Selector lstDataUrlOrder;
+
+        protected global::Composite.Core.WebClient.UiControlLib.Selector lstDataUrlDateFormat;
     }
 }

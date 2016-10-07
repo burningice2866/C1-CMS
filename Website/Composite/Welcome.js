@@ -10,7 +10,8 @@ var Welcome = new function () {
 	var hasLength = false;
 
 	var tabindex = 0;
-
+	var progressNotchIndex = 1;
+	var progressLoading = null;
 	/**
 	* @type {String}
 	*/
@@ -143,6 +144,7 @@ var Welcome = new function () {
 				prepareForm("loginform");
 				setConsoleLanguage();
 				break;
+
 		}
 
 		bindingMap.introdecks.select(id);
@@ -152,7 +154,7 @@ var Welcome = new function () {
 		var spans = new List(p.getElementsByTagName("span"));
 		spans.each(function (span) {
 			if (span.id == "crumb" + id) {
-				span.className = "selected";
+				span.className = "text-primary";
 			} else {
 				span.className = "";
 			}
@@ -166,18 +168,16 @@ var Welcome = new function () {
 	function getLanguages() {
 
 		var langs = new List(SetupService.GetLanguages(true));
-		var markup = "<select id=\"websitelanguage\">";
+		var markup = "";
 		langs.each(function (lang) {
 			markup += "<option value=\"" + lang.Key + "\"" + (lang.Selected ? " selected=\"selected\"" : "") + ">" + lang.Title + "</option>";
 		});
-		markup += "</select>";
-
+		
 		var selector = document.getElementById("websitelanguage");
-		selector.parentNode.innerHTML = markup;
+		selector.innerHTML = markup;
 
-		markup = markup.replace("websitelanguage", "consolelanguage");
 		selector = document.getElementById("consolelanguage");
-		selector.parentNode.innerHTML = markup;
+		selector.innerHTML = markup;
 	}
 
 	/**
@@ -297,7 +297,7 @@ var Welcome = new function () {
 		if (username.value != "") {
 			if (password.value.length >= 6 && passcheck.value.length >= 6) {
 				if (password.value == passcheck.value) {
-					if (isRFC822ValidEmail(email.value) || newsletter.checked == false) {
+					if (isRFC822ValidEmail(email.value)) {
 						isValid = true;
 					}
 				}
@@ -512,9 +512,9 @@ var Welcome = new function () {
 	* Login!
 	*/
 	this.login = function () {
-
+	
+		var self = this;
 		var serial = DOMSerializer.serialize(clone, true);
-
 		var username = document.getElementById("username").value;
 		var password = document.getElementById("password").value;
 		var email = document.getElementById("email").value;
@@ -526,27 +526,40 @@ var Welcome = new function () {
 		select = document.getElementById("consolelanguage");
 		var consolelanguage = select.options[select.selectedIndex].value;
 
-		top.bindingMap.offlinetheatre.play();
-		if (Client.isExplorer) {
-			top.bindingMap.introcover.show();
-		} else {
-			CoverBinding.fadeIn(top.bindingMap.introcover);
-		}
+		self.loading();
 
-		setTimeout(function () {
-			SetupService.SetUp(serial, username, email, password, websitelanguage, consolelanguage, newsletter,
+		SetupService.SetUp(serial, username, email, password, websitelanguage, consolelanguage, newsletter,
 				function (response) {
 					if (response) {
 						Application.reload(true);
 					} else {
-						top.bindingMap.introcover.hide();
-						top.bindingMap.offlinetheatre.stop();
+						clearInterval(progressLoading);
 						alert("An unfortunate error has occurred.");
 					}
 				}
 			);
-		}, Client.isExplorer ? 0 : 500);
+	}
 
-
+	/**
+	* Show Loading Deck with progress bar
+	* Progress bar goes from 0 to 100 in 45 seconds - and then restart after 5 seconds (if things are still working).
+	*/
+	this.loading = function () {
+		bindingMap.introdecks.select("loading");
+		bindingMap.cover.attachClassName("loading-cover");
+		bindingMap.navdecks.hide();
+		var current = new Date().getTime();
+		var end = current + 50000; // total 45 seconds + wait 5 seconds
+		ProgressBarBinding.notch(1);
+		progressLoading = setInterval(function () {
+			if (current > end) {
+				ProgressBarBinding.reload();
+				progressNotchIndex = 0;
+				end = current + 50000;
+			}
+			ProgressBarBinding.notch(1);
+			current = new Date().getTime();
+			progressNotchIndex++;
+		}, 2250); // 20 notches * 2.25 seconds = 45 seconds
 	}
 }

@@ -18,9 +18,19 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
 
     private string SelectedDateStr
     {
+        get { return Request.Form["Pager"]; }
+    }
+
+    protected bool IsBrowserView
+    {
+        get { return Request.QueryString["browserView"] == "true"; }
+    }
+
+    protected int MaxEntriesToShow
+    {
         get
         {
-            return System.Web.HttpContext.Current.Request.Form["Pager"];
+            return IsBrowserView ? 1000 : 10000;
         }
     }
 
@@ -63,6 +73,8 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
         DateTime fromDate = selectedDate;
 
         const int bulkSize = 5000;
+        bool logEntriesRemoved = false;
+        int totalExistingLogEntries = 0;
 
         while (true)
         {
@@ -74,6 +86,14 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
                                                           || (includeError && entry.Severity == "Error")
                                                           || (includeCritical && entry.Severity == "Critical")));
 
+            totalExistingLogEntries += logEntries.Count;
+
+            if (logEntries.Count > MaxEntriesToShow)
+            {
+                logEntries.RemoveRange(0, logEntries.Count - MaxEntriesToShow);
+                logEntriesRemoved = true;
+            }
+
             if (entriesPart.Length < bulkSize)
             {
                 break;
@@ -81,7 +101,17 @@ public partial class Composite_content_views_log_log : System.Web.UI.Page
 
             fromDate = entriesPart[entriesPart.Length - 1].TimeStamp.AddMilliseconds(0.5);
         }
-        
+
+        if (logEntriesRemoved) 
+        {
+            string label = StringResourceSystemFacade.GetString("Composite.Management", IsBrowserView ? "ServerLog.LogEntriesRemovedBrowserViewLabel" : "ServerLog.LogEntriesRemovedLabel"); 
+            LogEntriesRemovedLabel.Text = String.Format(label, this.MaxEntriesToShow, totalExistingLogEntries);
+            LogEntriesRemovedPlaceHolder.Visible = true;
+        }
+        else
+        {
+            LogEntriesRemovedPlaceHolder.Visible = false;
+        }
 
         if (logEntries.Count > 0)
         {

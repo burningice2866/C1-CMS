@@ -1,0 +1,52 @@
+﻿.text-primary {
+	color: @primary-color;
+}
+
+.text-error {
+	color: @field-error-color;
+}
+
+.text-center {
+	text-align: center;
+}
+
+.hide {
+	display: none;
+}
+
+.pull-left {
+	float: left;
+}
+
+.pull-right, .alignright {
+	float: right;
+}
+
+.padded {
+	padding: 30px 30px 0px 40px;
+
+	&>*:last-child {
+		margin-bottom: 30px; // FF ignore padding bottom for overflow: scroll
+	}
+}
+
+.padded-sm {
+	padding: 18px 20px 0 20px;
+
+	&>*:last-child {
+		margin-bottom: 18px; // FF ignore padding bottom for overflow: scroll
+	}
+}
+
+.clearfix, .clearfloatelement {
+	.clearfix();
+}
+
+// Margins
+.mt-20 {
+	margin-top: 20px;
+}
+
+.mt-40 {
+	margin-top: 40px;
+}

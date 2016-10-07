@@ -98,6 +98,7 @@ _BroadcastMessages.prototype = {
 	SYSTEMTREEBINDING_REFRESHALL		: "systemtree refresh all",
 	SYSTEMTREEBINDING_REFRESHING		: "systemtree refreshing",
 	SYSTEMTREEBINDING_REFRESHED			: "systemtree refreshed",
+	SYSTEMTREEBINDING_REFRESHED_AFTER	: "systemtree refreshed after",
 	SYSTEMTREEBINDING_FOCUS				: "systemtree focus",
 	SYSTEMTREEBINDING_CUT  				: "systemtree cut",
 	SYSTEMTREEBINDING_COPY				: "systemtree copy",
@@ -171,7 +172,7 @@ _BroadcastMessages.prototype = {
 	BIND_TOKEN_TO_VIEW					: "bind entitytoken to view",
 	STAGEDIALOG_OPENED					: "stage dialog opened",
 	INVOKE_DEFAULT_ACTION				: "invoke default action",
-	
+	STAGEDECK_CHANGED					: "stage deck changed",
 	/*
 	 * Server messages for EventBroadcaster.
 	 */

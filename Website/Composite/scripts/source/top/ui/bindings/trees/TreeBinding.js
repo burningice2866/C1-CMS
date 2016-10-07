@@ -199,7 +199,15 @@ TreeBinding.prototype.onBindingAttach = function () {
 	if ( focusable != null ) {
 		this._isFocusable = focusable;
 	}
-	
+
+	if (!this._treeBodyBinding && this.bindingElement.childElementCount === 0) {
+		this._treeBodyBinding = TreeBodyBinding.newInstance(this.bindingDocument);
+		this.bindingElement.appendChild(
+			this._treeBodyBinding.bindingElement
+		);
+		this._treeBodyBinding.attach();
+	}
+
 	if ( !this._treeBodyBinding ) {
 		this._treeBodyBinding = this.addMember ( 
 			this.getChildBindingByLocalName ( "treebody" )
@@ -911,8 +919,10 @@ TreeBinding.prototype._navigateByKey = function ( key ) {
 				break;
 			
 			case KeyEventCodes.VK_LEFT :
-				if ( node.isContainer && node.isOpen ) {
-					node.close ();
+				if (node.isContainer && node.isOpen) {
+					node.close();
+				} else {
+					next = node.getAncestorBindingByLocalName("treenode");
 				}
 				break;
 		}
@@ -1089,6 +1099,14 @@ TreeBinding.prototype.getDropIndex = function () {
 TreeBinding.prototype.getRootTreeNodeBindings = function () {
 	
 	return this._treeBodyBinding.getChildBindingsByLocalName ( "treenode" );
+}
+
+/**
+ * Get tree body binding.
+ */
+TreeBinding.prototype.getTreeBodyBinding = function () {
+
+	return this._treeBodyBinding;
 }
 
 /**

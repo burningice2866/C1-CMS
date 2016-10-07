@@ -21,15 +21,13 @@ WindowBinding.getMarkup = function ( windowBinding ) {
 	var result = null;
 	if ( windowBinding.isAttached ) {
 		var doc = windowBinding.getContentDocument ();
-		if ( doc != null ) {
-			var root = doc.getElementsByTagName ( "html" ).item ( 0 ); // IE6 compliant documentElement
-			var html = "<html xmlns=\"" + Constants.NS_XHTML + "\">" + root.innerHTML + "</html>";
-			WebServiceProxy.isFaultHandler = false;
-			result = top.MarkupFormatService.HtmlToXhtml ( html );
-			WebServiceProxy.isFaultHandler = true;
-			if ( result instanceof SOAPFault ) {
-				result = null;
+		if (doc != null) {
+			if (Client.isAnyExplorer) {
+				result = doc.documentElement.outerHTML;
+			} else {
+				result = new XMLSerializer().serializeToString(doc);
 			}
+
 		}
 	}
 	return result;
@@ -126,6 +124,12 @@ function WindowBinding () {
 	 */
 	this._hasLoadActionFired = false;
 	
+	/**
+	 * indicate that iframe should not part of framework
+	 * @type {Boolean}
+	 */
+	this._native = false;
+
 	/*
 	 * Returnable.
 	 */
@@ -169,6 +173,9 @@ WindowBinding.prototype.onBindingRegister = function () {
  * @overloads {Binding#onBindingAttach}
  */
 WindowBinding.prototype.onBindingAttach = function () {
+
+	if (this.getProperty("native"))
+		this._native = this.getProperty("native");
 
 	this.buildDOMContent ();
 	WindowBinding.superclass.onBindingAttach.call ( this );
@@ -401,8 +408,8 @@ WindowBinding.prototype.onWindowLoaded = function ( win ) {
 		if ( !this._hasLoadActionFired ) {
 			if ( win != null && win.document != null && win.document.body != null ) {
 				win.document.body.style.border = "none";
-				if ( win.WindowManager == undefined ) {
-					Application.framework ( win.document );
+				if ( win.WindowManager == undefined && !this._native) {
+					Application.framework(win.document);
 				}
 				if ( this._isReloading == true ) {
 					this._isReloading = false;

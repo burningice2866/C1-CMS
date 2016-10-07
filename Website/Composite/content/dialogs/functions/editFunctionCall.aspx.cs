@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Web.UI;
 using System.Xml.Linq;
 using Composite;
 using Composite.C1Console.Forms;
@@ -84,7 +85,7 @@ namespace CompositeEditFunctionCall
 	        string functionName = (string) functionMarkup.Attribute("name");
 	        IFunction function = FunctionFacade.GetFunction(functionName);
 
-	        if (!function.ParameterProfiles.Any())
+	        if (function.ParameterProfiles.All(p => p.WidgetFunction == null))
 	        {
 	            plhNoParameters.Visible = true;
                 return true;
@@ -124,7 +125,7 @@ namespace CompositeEditFunctionCall
                 "",
                 WebManagementChannel.Identifier);
 
-            IWebUiControl webUiControl = (IWebUiControl)formTreeCompiler.UiControl;
+            var webUiControl = (IWebUiControl)formTreeCompiler.UiControl;
 
             var webControl = webUiControl.BuildWebControl();
 
@@ -136,6 +137,8 @@ namespace CompositeEditFunctionCall
 	            return true;
 	        }
 
+            // Loading control's post data
+	        LoadPostBackData(webControl);
 
 	        var validationErrors = formTreeCompiler.SaveAndValidateControlProperties();
 
@@ -196,6 +199,23 @@ namespace CompositeEditFunctionCall
 
             return true;
 	    }
+
+
+
+	    private void LoadPostBackData(Control control)
+	    {
+            if (control is IPostBackDataHandler)
+            {
+                (control as IPostBackDataHandler).LoadPostData(control.UniqueID, Request.Form);
+            }
+
+            foreach (Control childControl in control.Controls)
+            {
+                LoadPostBackData(childControl);
+            }
+	    }
+
+
 
         private void ShowServerValidationErrors(FormTreeCompiler formTreeCompiler, Dictionary<string, Exception> serverValidationErrors)
         {
@@ -258,7 +278,7 @@ namespace CompositeEditFunctionCall
                 return false;
             }
             
-            return !function.ParameterProfiles.Any(p => p.IsRequired && p.WidgetFunction == null);
+            return !function.ParameterProfiles.Any(p => p.IsRequired && p.WidgetFunction == null && !p.IsInjectedValue);
 	    }
 
 		private void SetDesignerParameters()
@@ -282,11 +302,6 @@ namespace CompositeEditFunctionCall
 		    var state = new FunctionCallEditorStateSimple();
 
 		    IEnumerable<XElement> functionCalls = GetFunctionElementsFromQueryString();
-		    if (IsWidgetSelection)
-		    {
-		        functionCalls = ConvertToFunctions(functionCalls);
-		    }
-
 		    var functionCallsEvaluated = functionCalls.Evaluate();
 
             state.FunctionCallsXml = new XElement("functions", functionCallsEvaluated).ToString();
@@ -426,13 +441,6 @@ namespace CompositeEditFunctionCall
 				}
 				(state as FunctionCallEditorStateSimple).FunctionCallsXml = new XElement("functions", GetFunctionElements(value)).ToString(); ;
 				SessionStateManager.DefaultProvider.SetState<IFunctionCallEditorState>(SessionStateId, state, DateTime.Now.AddDays(7.0));
-			}
-		}
-		private IEnumerable<XElement> ConvertToFunctions(IEnumerable<XElement> functionCalls)
-		{
-			foreach (XElement element in functionCalls)
-			{
-				yield return element;
 			}
 		}
 	}

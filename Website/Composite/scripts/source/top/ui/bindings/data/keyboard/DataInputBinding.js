@@ -17,7 +17,7 @@ function DataInputBinding () {
 	 * @type {string}
 	 */
 	this.type = null;
-	
+
 	/**
 	 * @type {boolean}
 	 */
@@ -291,6 +291,11 @@ DataInputBinding.prototype._buildDOMContent = function () {
 	this.bindingElement.appendChild(
 		this.shadowTree.box
 	);
+
+	var placeholder = this.getProperty("placeholder");
+	if (placeholder) {
+		this.shadowTree.input.setAttribute("placeholder", Resolver.resolve ( placeholder ));
+	}
 
 	if (this.spellcheck && Client.hasSpellcheck) {
 		var currentLang = Localization.currentLang();

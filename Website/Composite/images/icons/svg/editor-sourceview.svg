@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="18px" height="18px" viewBox="0 0 20 13"
+     version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+  <!-- Generator: Sketch 3.3.2 (12043) - http://www.bohemiancoding.com/sketch -->
+  <title>HTML_view</title>
+  <desc>Created with Sketch.</desc>
+  <defs></defs>
+  <g  fill="#666" stroke="#666">
+    <g id="editor-sourceview"  viewBox="0 0 20 13" >
+      <g  transform="translate(-266.000000, -5.000000)" stroke-linecap="round" stroke-linejoin="round">
+        <g id="HTML_view" transform="translate(266.000000, 5.000000)">
+          <path d="M5.52960217,4.55474862 L2.50347912,8.4640502 L-0.503845099,4.55474862" fill="none" id="Stroke-7696" transform="translate(2.512879, 6.509399) rotate(-270.000000) translate(-2.512879, -6.509399) "></path>
+          <path d="M20.5296022,4.55474862 L17.5034791,8.4640502 L14.4961549,4.55474862" fill="none" id="Stroke-7696-Copy" transform="translate(17.512879, 6.509399) rotate(-90.000000) translate(-17.512879, -6.509399) "></path>
+          <path d="M7.50000003,12.5 L12.5000002,0.5" id="Stroke-7697"></path>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

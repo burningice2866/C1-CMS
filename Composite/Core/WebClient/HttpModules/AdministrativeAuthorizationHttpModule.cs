@@ -23,6 +23,7 @@ namespace Composite.Core.WebClient.HttpModules
     {
         private static readonly List<string> _allAllowedPaths = new List<string>();
         private static string _adminRootPath;
+        private static string _servicesPath;
         private static string _loginPagePath;
         private static object _lock = new object();
         private static bool _allowC1ConsoleRequests;
@@ -51,13 +52,24 @@ namespace Composite.Core.WebClient.HttpModules
 
         static AdministrativeAuthorizationHttpModule()
         {
-            if (C1Directory.Exists(HostingEnvironment.MapPath(UrlUtils.AdminRootPath)))
+            _allowC1ConsoleRequests = false;
+            string adminRootPath = HostingEnvironment.MapPath(UrlUtils.AdminRootPath);
+            bool adminFolderExists = false;
+
+            try
+            {
+                adminFolderExists = C1Directory.Exists(adminRootPath);
+            }
+            catch (Exception)
+            {
+                // we fail misserably here when write permissions are missing, also the default exception is exceptionally crappy
+                throw new IOException("Please ensure that the web application process has permissions to read and modify the entire web app directory structure.");
+            }
+
+            if (adminFolderExists)
             {
                 LoadConfiguration();
-            }
-            else
-            {
-                _allowC1ConsoleRequests = false;
+                _allowC1ConsoleRequests = true;
             }
         }
 
@@ -109,6 +121,7 @@ namespace Composite.Core.WebClient.HttpModules
                 string iePadding = new String('!', 512);
                 context.Response.Write(string.Format(c1ConsoleRequestsNotAllowedHtmlTemplate, iePadding));
                 context.Response.End();
+                return;
             }
 
             // https check
@@ -121,20 +134,27 @@ namespace Composite.Core.WebClient.HttpModules
             }
 
             // access check
-            if (currentPath.Length > _adminRootPath.Length && !UserValidationFacade.IsLoggedIn())
+            if (currentPath.Length > _adminRootPath.Length && !UserValidationFacade.IsLoggedIn()
+                && !_allAllowedPaths.Any(p => currentPath.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
             {
-                if (!_allAllowedPaths.Any(p => currentPath.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                if (currentPath.StartsWith(_servicesPath))
                 {
-                    Log.LogWarning("Authorization", "DENIED {0} access to {1}", context.Request.UserHostAddress, currentPath);
-                    string redirectUrl = string.Format("{0}?ReturnUrl={1}", _loginPagePath, HttpUtility.UrlEncode(context.Request.Url.PathAndQuery, Encoding.UTF8));
-                    context.Response.Redirect(redirectUrl, true);
+                    context.Response.StatusCode = 403;
+                    context.Response.End();
+                    return;
                 }
+
+                Log.LogWarning("Authorization", "DENIED {0} access to {1}", context.Request.UserHostAddress, currentPath);
+                string redirectUrl = string.Format("{0}?ReturnUrl={1}", _loginPagePath, HttpUtility.UrlEncode(context.Request.Url.PathAndQuery, Encoding.UTF8));
+                context.Response.Redirect(redirectUrl, true);
+                return;
+                
             }
 
             // On authenticated request make sure these resources gets compiled / launched. 
             if (ApplicationOnlineHandlerFacade.IsApplicationOnline && GlobalInitializerFacade.SystemCoreInitialized && !GlobalInitializerFacade.SystemCoreInitializing && SystemSetupFacade.IsSystemFirstTimeInitialized)
             {
-                BrowserRender.EnsureReadyness();
+                BrowserRender.EnsureReadiness();
                 BuildManagerHelper.InitializeControlPreLoading();
             }
         }
@@ -162,9 +182,11 @@ namespace Composite.Core.WebClient.HttpModules
 
                 if (!_adminRootPath.EndsWith("/"))
                 {
-                    _adminRootPath = string.Format("{0}/", _adminRootPath);
+                    _adminRootPath = $"{_adminRootPath}/";
                 }
-                    
+
+                _servicesPath = _adminRootPath + "services/";
+
                 LoadAllowedPaths();
                 _allowC1ConsoleRequests = true;
                 LoadC1ConsoleAccessConfig();

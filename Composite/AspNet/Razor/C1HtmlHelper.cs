@@ -38,7 +38,7 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public IHtmlString PageUrl(IPage page)
         {
-            return PageUrl(page.Id.ToString());
+            return PageUrl(page.Id);
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public IHtmlString PageUrl(DataReference<IPage> page)
         {
-            return PageUrl(((Guid) page.KeyValue).ToString());
+            return PageUrl(((Guid) page.KeyValue));
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public IHtmlString PageUrl(IPage page, object querystring)
         {
-            return PageUrl(page.Id.ToString(), querystring);
+            return PageUrl(page.Id, querystring);
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public IHtmlString PageUrl(IPage page, IDictionary<string, string> querystring)
         {
-            return PageUrl(page.Id.ToString(), querystring);
+            return PageUrl(page.Id, querystring);
         }
 
 
@@ -81,6 +81,31 @@ namespace Composite.AspNet.Razor
         /// <param name="querystring">The querystring.</param>
         /// <returns></returns>
         public IHtmlString PageUrl(string pageId, object querystring = null)
+        {
+            return PageUrl(new Guid(pageId), querystring);
+        }
+
+
+
+        /// <summary>
+        /// Returns a URL for a specific C1 page
+        /// </summary>
+        /// <param name="pageId">The page id.</param>
+        /// <returns></returns>
+        public IHtmlString PageUrl(Guid pageId)
+        {
+            return PageUrl(pageId, null);
+        }
+
+
+
+        /// <summary>
+        /// Returns a URL for a specific C1 page
+        /// </summary>
+        /// <param name="pageId">The page id.</param>
+        /// <param name="querystring">The querystring.</param>
+        /// <returns></returns>
+        public IHtmlString PageUrl(Guid pageId, object querystring)
         {
             var dict = Functions.ObjectToDictionary(querystring);
 
@@ -97,15 +122,27 @@ namespace Composite.AspNet.Razor
         /// <returns></returns>
         public IHtmlString PageUrl(string pageId, IDictionary<string, object> querystring)
         {
+            return PageUrl(new Guid(pageId), querystring);
+        }
+
+
+        /// <summary>
+        /// Returns a URL for a specific C1 page
+        /// </summary>
+        /// <param name="pageId">The page id.</param>
+        /// <param name="querystring">The querystring.</param>
+        /// <returns></returns>
+        public IHtmlString PageUrl(Guid pageId, IDictionary<string, object> querystring)
+        {
             string relativeUrl = "~/page(" + pageId + ")";
-            string absoulteUrl = VirtualPathUtility.ToAbsolute(relativeUrl);
+            string absoluteUrl = VirtualPathUtility.ToAbsolute(relativeUrl);
 
             if (querystring != null && querystring.Keys.Count > 0)
             {
-                absoulteUrl += "?" + SerializeQueryString(querystring);
+                absoluteUrl += "?" + SerializeQueryString(querystring);
             }
 
-            return _helper.Raw(absoulteUrl);
+            return _helper.Raw(absoluteUrl);
         }
 
 
@@ -266,14 +303,14 @@ namespace Composite.AspNet.Razor
         public IHtmlString MediaUrl(string keyPath, IDictionary<string, object> querystring)
         {
             string relativeUrl = "~/media(" + keyPath + ")";
-            string absoulteUrl = VirtualPathUtility.ToAbsolute(relativeUrl);
+            string absoluteUrl = VirtualPathUtility.ToAbsolute(relativeUrl);
 
             if (querystring != null && querystring.Keys.Count > 0)
             {
-                absoulteUrl += "?" + SerializeQueryString(querystring);
+                absoluteUrl += "?" + SerializeQueryString(querystring);
             }
 
-            return _helper.Raw(absoulteUrl);
+            return _helper.Raw(absoluteUrl);
         }
 
 
@@ -286,16 +323,16 @@ namespace Composite.AspNet.Razor
         public IHtmlString MediaUrl(string keyPath, ResizingOptions resizingOptions)
         {
             string relativeUrl = "~/media(" + keyPath + ")";
-            string absoulteUrl = VirtualPathUtility.ToAbsolute(relativeUrl);
+            string absoluteUrl = VirtualPathUtility.ToAbsolute(relativeUrl);
 
             string queryString = resizingOptions.ToString();
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                absoulteUrl += "?" + queryString.Replace("&", "&amp;");
+                absoluteUrl += "?" + queryString.Replace("&", "&amp;");
             }
 
-            return _helper.Raw(absoulteUrl);
+            return _helper.Raw(absoluteUrl);
         }
 
 
@@ -425,8 +462,8 @@ namespace Composite.AspNet.Razor
 
             if (functionContext.XEmbedableMapper == null)
             {
-                throw new ArgumentException("functionContext",
-                                            "Failed to insert UserControl. functionContextContainer.XEmbedableMapper is null");
+                throw new ArgumentException("Failed to insert UserControl. functionContextContainer.XEmbedableMapper is null",
+                                            "functionContext");
             }
 
             XNode resultNode;

@@ -85,6 +85,11 @@ namespace Composite.Data.DynamicTypes
 
 
         /// <summary>
+        /// Describe how this field should be part of a URL
+        /// </summary>
+        public DataUrlProfile DataUrlProfile { get; set; }
+
+        /// <summary>
         /// Describe how this field should influence ordering of items in a tree view
         /// </summary>
         public DataFieldTreeOrderingProfile TreeOrderingProfile { get; set; }
@@ -130,8 +135,10 @@ namespace Composite.Data.DynamicTypes
             set
             {
                 _storeType = value;
-                if (_defaultValue != null && _defaultValue.IsAssignableTo(_storeType) == false)
+                if (_defaultValue != null && !_defaultValue.IsAssignableTo(_storeType))
+                {
                     _defaultValue = null;
+                }
             }
         }
 
@@ -167,13 +174,12 @@ namespace Composite.Data.DynamicTypes
             {
                 if (value)
                 {
-                    if (this.InstanceType.IsEnum) throw new InvalidOperationException("The associated instance type is an enum, which is not nullable");
-                    if (this.InstanceType.IsValueType)
+                    var type = InstanceType;
+
+                    if (type.IsEnum) throw new InvalidOperationException("The associated instance type is an enum, which is not nullable");
+                    if (type.IsValueType && (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(Nullable<>)))
                     {
-                        if (this.InstanceType.IsGenericType == false || this.InstanceType.GetGenericTypeDefinition() != typeof(Nullable<>))
-                        {
-                            throw new InvalidOperationException(string.Format("The associated instante type '{0}' is a value type, which is not nullable", this.InstanceType.Name));
-                        }
+                        throw new InvalidOperationException(string.Format("The associated instante type '{0}' is a value type, which is not nullable", type.Name));
                     }
                 }
                 _isNullable = value;
@@ -204,7 +210,7 @@ namespace Composite.Data.DynamicTypes
 
 
         /// <summary>
-        /// Function markup that can deliver validators for this field. They will execute and valudate if values set on this field is valid.
+        /// Function markup that can deliver validators for this field. They will execute and validate if values set on this field is valid.
         /// </summary>
         public List<string> ValidationFunctionMarkup
         {
@@ -231,23 +237,29 @@ namespace Composite.Data.DynamicTypes
         /// <returns>The clone.</returns>
         public DataFieldDescriptor Clone()
         {
-            DataFieldDescriptor dataFieldDescriptor = new DataFieldDescriptor(this.Id, this.Name, this.StoreType, this.InstanceType);
-
-            if (this.DefaultValue != null)
+            return new DataFieldDescriptor(this.Id, this.Name, this.StoreType, this.InstanceType)
             {
-                dataFieldDescriptor.DefaultValue = this.DefaultValue.Clone();
-            }
-            dataFieldDescriptor.ForeignKeyReferenceTypeName = this.ForeignKeyReferenceTypeName;
-            dataFieldDescriptor.FormRenderingProfile = new DataFieldFormRenderingProfile { HelpText = this.FormRenderingProfile.HelpText, Label = this.FormRenderingProfile.Label, WidgetFunctionMarkup = this.FormRenderingProfile.WidgetFunctionMarkup };
-            dataFieldDescriptor.TreeOrderingProfile = new DataFieldTreeOrderingProfile { OrderPriority = this.TreeOrderingProfile.OrderPriority, OrderDescending = this.TreeOrderingProfile.OrderDescending };
-            dataFieldDescriptor.GroupByPriority = this.GroupByPriority;
-            dataFieldDescriptor.Inherited = this.Inherited;
-            dataFieldDescriptor.IsNullable = this.IsNullable;
-            dataFieldDescriptor.Position = this.Position;
-            dataFieldDescriptor.ValidationFunctionMarkup = this.ValidationFunctionMarkup != null ? new List<string>(this.ValidationFunctionMarkup) : null;
-            dataFieldDescriptor.NewInstanceDefaultFieldValue = this.NewInstanceDefaultFieldValue;
-
-            return dataFieldDescriptor;
+                ForeignKeyReferenceTypeName = this.ForeignKeyReferenceTypeName,
+                FormRenderingProfile = new DataFieldFormRenderingProfile
+                {
+                    HelpText = this.FormRenderingProfile.HelpText,
+                    Label = this.FormRenderingProfile.Label,
+                    WidgetFunctionMarkup = this.FormRenderingProfile.WidgetFunctionMarkup
+                },
+                TreeOrderingProfile = new DataFieldTreeOrderingProfile
+                {
+                    OrderPriority = this.TreeOrderingProfile.OrderPriority,
+                    OrderDescending = this.TreeOrderingProfile.OrderDescending
+                },
+                GroupByPriority = this.GroupByPriority,
+                Inherited = this.Inherited,
+                IsNullable = this.IsNullable,
+                Position = this.Position,
+                ValidationFunctionMarkup = this.ValidationFunctionMarkup != null ? new List<string>(this.ValidationFunctionMarkup) : null,
+                NewInstanceDefaultFieldValue = this.NewInstanceDefaultFieldValue,
+                DataUrlProfile = this.DataUrlProfile != null ? this.DataUrlProfile.Clone() : null,
+                DefaultValue = this.DefaultValue != null ? this.DefaultValue.Clone() : null
+            };
         }
 
 
@@ -258,17 +270,16 @@ namespace Composite.Data.DynamicTypes
         /// <returns>Serialized field descriptor.</returns>
         public XElement ToXml()
         {
-            XElement element = new XElement("DataFieldDescriptor");
-
-            element.Add(new XAttribute("id", this.Id));
-            element.Add(new XAttribute("name", this.Name));
-            element.Add(new XAttribute("isNullable", this.IsNullable));
-            element.Add(new XAttribute("position", this.Position));
-            element.Add(new XAttribute("groupByPriority", this.GroupByPriority));
-            element.Add(new XAttribute("inherited", this.Inherited));
-            element.Add(new XAttribute("instanceType", TypeManager.SerializeType(this.InstanceType)));
-            element.Add(new XAttribute("storeType", this.StoreType.Serialize()));
-            element.Add(new XAttribute("isReadOnly", this.IsReadOnly));
+            var element = new XElement("DataFieldDescriptor",
+                new XAttribute("id", this.Id),
+                new XAttribute("name", this.Name),
+                new XAttribute("isNullable", this.IsNullable),
+                new XAttribute("position", this.Position),
+                new XAttribute("groupByPriority", this.GroupByPriority),
+                new XAttribute("inherited", this.Inherited),
+                new XAttribute("instanceType", TypeManager.SerializeType(this.InstanceType)),
+                new XAttribute("storeType", this.StoreType.Serialize()),
+                new XAttribute("isReadOnly", this.IsReadOnly));
             
             if (this.NewInstanceDefaultFieldValue != null)
             {
@@ -303,12 +314,18 @@ namespace Composite.Data.DynamicTypes
                 element.Add(formRenderingProfileElement);
             }
 
+            if (this.DataUrlProfile != null)
+            {
+                element.Add(new XElement("DataUrlProfile",
+                    new XAttribute("Order", this.DataUrlProfile.Order),
+                    this.DataUrlProfile.Format != null ? new XAttribute("Format", this.DataUrlProfile.Format) : null));
+            }
+
             if (this.TreeOrderingProfile != null && this.TreeOrderingProfile.OrderPriority.HasValue)
             {
-                XElement treeOrderingProfileElement = new XElement("TreeOrderingProfile");
-                treeOrderingProfileElement.Add(new XAttribute("orderPriority", this.TreeOrderingProfile.OrderPriority));
-                treeOrderingProfileElement.Add(new XAttribute("orderDescending", this.TreeOrderingProfile.OrderDescending));
-                element.Add(treeOrderingProfileElement);
+                element.Add(new XElement("TreeOrderingProfile", 
+                    new XAttribute("orderPriority", this.TreeOrderingProfile.OrderPriority),
+                    new XAttribute("orderDescending", this.TreeOrderingProfile.OrderDescending)));
             }
 
             if (this.ValidationFunctionMarkup != null)
@@ -334,7 +351,7 @@ namespace Composite.Data.DynamicTypes
         /// <returns></returns>
         public static DataFieldDescriptor FromXml(XElement element)
         {
-            if (element.Name != "DataFieldDescriptor") throw new ArgumentException("The xml is not correctly formattet");
+            if (element.Name != "DataFieldDescriptor") throw new ArgumentException("The xml is not correctly formatted");
 
             Guid id = (Guid)element.GetRequiredAttribute("id");
             string name = element.GetRequiredAttributeValue("name");
@@ -356,6 +373,7 @@ namespace Composite.Data.DynamicTypes
             XElement formRenderingProfileElement = element.Element("FormRenderingProfile");
             XElement treeOrderingProfileElement = element.Element("TreeOrderingProfile");
             XElement validationFunctionMarkupsElement = element.Element("ValidationFunctionMarkups");
+            XElement dataUrlProfileElement = element.Element("DataUrlProfile");
 
             
             
@@ -411,11 +429,24 @@ namespace Composite.Data.DynamicTypes
 
                 if (widgetFunctionMarkupAttribute != null)
                 {
-
                     dataFieldFormRenderingProfile.WidgetFunctionMarkup = widgetFunctionMarkupAttribute.Value;
                 }
 
                 dataFieldDescriptor.FormRenderingProfile = dataFieldFormRenderingProfile;
+            }
+
+            if (dataUrlProfileElement != null)
+            {
+                int order = (int)dataUrlProfileElement.GetRequiredAttribute("Order");
+                var formatStr = (string)dataUrlProfileElement.Attribute("Format");
+                DataUrlSegmentFormat? format = null;
+
+                if (formatStr != null)
+                {
+                    format = (DataUrlSegmentFormat) Enum.Parse(typeof(DataUrlSegmentFormat), formatStr);
+                }
+
+                dataFieldDescriptor.DataUrlProfile = new DataUrlProfile {Order = order, Format = format};
             }
 
             if (treeOrderingProfileElement != null)
@@ -455,9 +486,7 @@ namespace Composite.Data.DynamicTypes
         /// <exclude />
         public bool Equals(DataFieldDescriptor dataFieldDescriptor)
         {
-            if (dataFieldDescriptor == null) return false;
-
-            return dataFieldDescriptor.Id == this.Id;
+            return dataFieldDescriptor != null && dataFieldDescriptor.Id == Id;
         }
 
 

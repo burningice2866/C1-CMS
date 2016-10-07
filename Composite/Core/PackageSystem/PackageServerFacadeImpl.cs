@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.ServiceModel;
 using Composite.Core.PackageSystem.Foundation;
 using Composite.Core.PackageSystem.WebServiceClient;
@@ -71,6 +72,12 @@ namespace Composite.Core.PackageSystem
                 {
                     if (ValidatePackageDescriptor(packageDescriptor))
                     {
+                        var subscriptionList = new List<Subscription>();
+                        if (packageDescriptor.Subscriptions !=null)
+                        {
+                            subscriptionList = packageDescriptor.Subscriptions.Select(f => new Subscription { Name = f.Name, DetailsUrl = f.DetailsUrl, Purchasable = f.Purchasable }).ToList();
+                        }
+
                         packageDescriptions.Add(new PackageDescription
                         {
                             PackageFileDownloadUrl = packageDescriptor.PackageFileDownloadUrl,
@@ -90,9 +97,11 @@ namespace Composite.Core.PackageSystem
                             PriceCurrency = packageDescriptor.PriceCurrency,
                             ReadMoreUrl = packageDescriptor.ReadMoreUrl,
                             TechicalDetails = packageDescriptor.TechicalDetails,
-                            TrialPeriodDays = packageDescriptor.TrialPeriodDays,
+                            TrialPeriodDays = packageDescriptor.TrialPeriodDays ?? 0,
                             UpgradeAgreementMandatory = packageDescriptor.UpgradeAgreementMandatory,
-                            Vendor = packageDescriptor.Author
+                            Vendor = packageDescriptor.Author,
+                            ConsoleBrowserUrl = packageDescriptor.ConsoleBrowserUrl,
+                            AvailableInSubscriptions = subscriptionList
                         });
                     }
                 }

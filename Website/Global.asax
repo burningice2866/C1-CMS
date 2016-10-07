@@ -1,12 +1,18 @@
 <%@ Application Language="C#" %>
 <%@ Import Namespace="System.Web.Routing" %>
+<%@ Import Namespace="Composite.Core.Application" %>
 <%@ Import Namespace="Composite.Core.Routing" %>
 <%@ Import Namespace="Composite.Core.WebClient" %>
+<%@ Import Namespace="Microsoft.Framework.DependencyInjection" %>
 
 
 <script RunAt="server">
+
+
     void Application_Start(object sender, EventArgs e)
     {
+        ConfigureServices(ServiceLocator.ServiceCollection);
+        
         ApplicationLevelEventHandlers.LogRequestDetails = false;
         ApplicationLevelEventHandlers.LogApplicationLevelErrors = true;
         
@@ -15,6 +21,13 @@
         RegisterRoutes(RouteTable.Routes);
     }
 
+    
+    void ConfigureServices(IServiceCollection serviceCollection)
+    {
+        // Define your dependencies here
+    }
+    
+    
     public static void RegisterRoutes(RouteCollection routes)
     {
         Routes.RegisterPageRoute(routes);
@@ -23,7 +36,6 @@
         
         Routes.Register404Route(routes);
     }
-
 
     
     void Application_End(object sender, EventArgs e)
@@ -53,5 +65,6 @@
     {
         return ApplicationLevelEventHandlers.GetVaryByCustomString(context, custom) ?? base.GetVaryByCustomString(context, custom);
     }
+
 </script>
 

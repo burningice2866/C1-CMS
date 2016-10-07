@@ -17,10 +17,13 @@ function _Client () {
 	this.isMozilla = isMozilla;
 	this.isFirefox = agent.indexOf("firefox") > -1;
 	this.isWebKit = agent.indexOf("webkit") > -1;
+	this.isPerformanceTest = agent.indexOf("performance") > -1;
 	this.isExplorer = isExplorer;
 	this.isExplorer6 = this.isExplorer && ( agent.indexOf ( "msie 6.0" ) > -1 || agent.indexOf ( "msie 6.1" ) > -1 );
 	this.isExplorer8 = this.isExplorer && window.XDomainRequest != null;
-	this.isExplorer11 = !!navigator.userAgent.match(/Trident\/7\./); 
+	this.isExplorer11 = !!navigator.userAgent.match(/Trident\/7\./);
+	this.isEdge = !!navigator.userAgent.match(/Edge\/\d+/g);
+	this.isAnyExplorer = this.isExplorer || this.isExplorer11 || this.isEdge;
 	this.isPrism = isPrism;
 	this.isWindows = platform.indexOf ( "win" ) > -1;
 	this.isVista = this.isWindows && agent.indexOf("windows nt 6") > -1;
@@ -34,7 +37,7 @@ function _Client () {
 
 	this.canvas = !!document.createElement('canvas').getContext;
 
-	this.hasSpellcheck = this.isFirefox || this.isExplorer && document.documentElement.spellcheck;
+	this.hasSpellcheck = true;
 	this.hasXSLTProcessor = this.isMozilla && !this.isExplorer11;
 
 	return this;

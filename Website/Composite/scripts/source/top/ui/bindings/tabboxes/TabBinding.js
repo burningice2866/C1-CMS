@@ -1,6 +1,6 @@
-TabBinding.prototype = new MatrixBinding;
+TabBinding.prototype = new Binding;
 TabBinding.prototype.constructor = TabBinding;
-TabBinding.superclass = MatrixBinding.prototype;
+TabBinding.superclass = Binding.prototype;
 
 TabBinding.ACTION_SELECTED = "tabselected";
 TabBinding.ACTION_UNSELECTED = "tabunselected";
@@ -262,6 +262,17 @@ TabBinding.prototype.unselect = function () {
 	this.isSelected = false;
 	this.deleteProperty ( "selected" );
 	this.bindingElement.className = "default";
+}
+
+/**
+ * @param {boolean} isHighlight
+ */
+TabBinding.prototype.highlight = function (isHighlight) {
+	if (isHighlight) {
+		this.shadowTree.labelBinding.attachClassName("highlighted");
+	} else {
+		this.shadowTree.labelBinding.detachClassName("highlighted");
+	}
 }
 
 /**

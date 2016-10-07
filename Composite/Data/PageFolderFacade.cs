@@ -20,8 +20,9 @@ namespace Composite.Data
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
     public static class PageFolderFacade
     {
+        private static readonly string PageFolderType_PageIdFieldName = "PageId";
         private static readonly string PageFolderType_IdFieldName = "Id";
-        private static readonly string PageFolderType_PageReferenceFieldName = "PageId";
+        
 
 
         /// <summary>
@@ -42,10 +43,9 @@ namespace Composite.Data
         /// <returns></returns>
         public static bool HasFolderDefinitions(this IPage page)
         {
-            return
-                DataFacade.GetData<IPageFolderDefinition>().
-                Where(f => f.PageId == page.Id).
-                Any();
+            Verify.ArgumentNotNull(page, "page");
+
+            return DataFacade.GetData<IPageFolderDefinition>().Any(f => f.PageId == page.Id);
         }
 
 
@@ -57,6 +57,8 @@ namespace Composite.Data
         /// <returns></returns>
         public static IEnumerable<Type> GetDefinedFolderTypes(this IPage page)
         {
+            Verify.ArgumentNotNull(page, "page");
+
             IEnumerable<Guid> typeIds =
                 DataFacade.GetData<IPageFolderDefinition>().
                 Where(f => f.PageId == page.Id).
@@ -65,7 +67,8 @@ namespace Composite.Data
 
             foreach (Guid typeId in typeIds)
             {
-                DataTypeDescriptor dataTypeDescriptor = DynamicTypeManager.GetDataTypeDescriptor(typeId);
+                var dataTypeDescriptor = DynamicTypeManager.GetDataTypeDescriptor(typeId);
+                Verify.IsNotNull(dataTypeDescriptor, "Missing a page data folder type with id '{0}', referenced by a IPageFolderDefinition record", typeId);
 
                 yield return TypeManager.GetType(dataTypeDescriptor.TypeManagerTypeName);
             }
@@ -81,6 +84,8 @@ namespace Composite.Data
         /// <returns></returns>
         public static Guid GetFolderDefinitionId(this IPage page, Type folderType)
         {
+            Verify.ArgumentNotNull(page, "page");
+
             return GetFolderDefinitionId(page, folderType.GetImmutableTypeId());
         }
 
@@ -94,6 +99,8 @@ namespace Composite.Data
         /// <returns></returns>
         public static Guid GetFolderDefinitionId(this IPage page, Guid folderTypeId)
         {
+            Verify.ArgumentNotNull(page, "page");
+
             return
                 DataFacade.GetData<IPageFolderDefinition>().
                 Where(f => f.PageId == page.Id && f.FolderTypeId == folderTypeId).
@@ -106,6 +113,8 @@ namespace Composite.Data
         /// <exclude />
         public static bool HasFolderData(this IPage page, Type pageFolderType)
         {
+            Verify.ArgumentNotNull(page, "page");
+
             //TODO: Consider caching here            
             ParameterExpression parameterExpression = Expression.Parameter(pageFolderType);
 
@@ -138,6 +147,8 @@ namespace Composite.Data
         /// <returns></returns>
         public static IEnumerable<IData> GetFolderData(this IPage page, Type pageFolderType)
         {
+            Verify.ArgumentNotNull(page, "page");
+
             return GetFolderData(page.Id, pageFolderType);
         }
 
@@ -168,9 +179,9 @@ namespace Composite.Data
 
             Expression whereExpression = ExpressionCreator.Where(DataFacade.GetData(pageFolderType).Expression, lambdaExpression);
 
-            IEnumerable<IData> datas = ExpressionHelper.GetCastedObjects<IData>(pageFolderType, whereExpression);
+            IEnumerable<IData> dataset = ExpressionHelper.GetCastedObjects<IData>(pageFolderType, whereExpression);
 
-            return datas;
+            return dataset;
         }
 
 
@@ -228,7 +239,7 @@ namespace Composite.Data
         /// <param name="dataFolderTypeId"></param>
         public static void AddFolderDefinition(this IPage page, Guid dataFolderTypeId)
         {
-            IPageFolderDefinition pageFolderDefinition = DataFacade.BuildNew<IPageFolderDefinition>();
+            var pageFolderDefinition = DataFacade.BuildNew<IPageFolderDefinition>();
             pageFolderDefinition.Id = Guid.NewGuid();
             pageFolderDefinition.PageId = page.Id;
             pageFolderDefinition.FolderTypeId = dataFolderTypeId;
@@ -286,9 +297,8 @@ namespace Composite.Data
         private static void RemoveFolderDefinitionInternal(Guid pageId, Guid dataFolderTypeId)
         {
             IPageFolderDefinition pageFolderDefinition =
-                    DataFacade.GetData<IPageFolderDefinition>().
-                    Where(f => f.PageId == pageId && f.FolderTypeId == dataFolderTypeId).
-                    FirstOrDefault();
+                    DataFacade.GetData<IPageFolderDefinition>()
+                    .FirstOrDefault(f => f.PageId == pageId && f.FolderTypeId == dataFolderTypeId);
 
             Verify.IsNotNull(pageFolderDefinition, "Page folder definition does not exist");
 
@@ -330,26 +340,49 @@ namespace Composite.Data
 
 
         /// <summary>
-        /// Updates the given page folder item with new Id and setting the page folder defintion id and defining item id
+        /// Updates the given page folder item with new Id and setting the page folder definition id and defining item id
         /// </summary>
         /// <param name="pageFolderData"></param>        
         /// <param name="definingPage"></param>
         public static void AssignFolderDataSpecificValues(IData pageFolderData, IPage definingPage)
         {
-            Type interfaceType = pageFolderData.DataSourceId.InterfaceType;
-            PropertyInfo idPropertyInfo = interfaceType.GetPropertiesRecursively().Where(f => f.Name == PageFolderType_IdFieldName).SingleOrDefault();
-            idPropertyInfo.SetValue(pageFolderData, Guid.NewGuid(), null);
+            var pageRelatedData = pageFolderData as IPageRelatedData;
+            if (pageRelatedData != null)
+            {
+                pageRelatedData.PageId = definingPage.Id;
+            }
+            else
+            {
+                // Backward compatibility
+                Type interfaceType = pageFolderData.DataSourceId.InterfaceType;
+                PropertyInfo pageReferencePropertyInfo = GetDefinitionPageReferencePropertyInfo(interfaceType);
+                pageReferencePropertyInfo.SetValue(pageFolderData, definingPage.Id, null);
+            }
 
-            PropertyInfo pageReferencePropertyInfo = GetDefinitionPageReferencePropertyInfo(interfaceType);
-            pageReferencePropertyInfo.SetValue(pageFolderData, definingPage.Id, null);
+            var pageData = pageFolderData as IPageData;
+            if (pageData != null)
+            {
+                pageData.Id = Guid.NewGuid();
+            }
+            else
+            {
+                // Backward compatibility
+                Type interfaceType = pageFolderData.DataSourceId.InterfaceType;
+                PropertyInfo idPropertyInfo = interfaceType.GetPropertiesRecursively()
+                    .FirstOrDefault(f => f.Name == PageFolderType_IdFieldName);
+
+                if (idPropertyInfo != null && idPropertyInfo.PropertyType == typeof(Guid))
+                {
+                    idPropertyInfo.SetValue(pageFolderData, Guid.NewGuid(), null);
+                }
+            }
         }
-
 
 
         /// <exclude />
         public static PropertyInfo GetDefinitionPageReferencePropertyInfo(Type pageFolderType)
         {
-            return pageFolderType.GetPropertiesRecursively().Where(f => f.Name == PageFolderType_PageReferenceFieldName).Single();
+            return pageFolderType.GetPropertiesRecursively().Last(f => f.Name == PageFolderType_PageIdFieldName);
         }
     }
 }

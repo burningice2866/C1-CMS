@@ -19,6 +19,7 @@ using Composite.Core.IO;
 using Composite.Core.Instrumentation;
 using Composite.Core.Logging;
 using Composite.Core.PackageSystem;
+using Composite.Core.Routing;
 using Composite.Core.Threading;
 using Composite.Core.Types;
 using Composite.Data.Foundation;
@@ -44,8 +45,9 @@ namespace Composite
         private static bool _initializing;
         private static bool _typesAutoUpdated;
         private static bool _unhandledExceptionLoggingInitialized;
-        private static Exception _exceptionThrownDurringInitialization;
-        private static DateTime _exceptionThrownDurringInitializationTimeStamp;
+        private static bool _preInitHandlersRunning;
+        private static Exception _exceptionThrownDuringInitialization;
+        private static DateTime _exceptionThrownDuringInitializationTimeStamp;
         private static int _fatalErrorFlushCount = 0;
         private static readonly ReaderWriterLock _readerWriterLock = new ReaderWriterLock();
         private static Thread _hookingFacadeThread; // This is used to wait on the the thread if a reinitialize is issued
@@ -64,7 +66,7 @@ namespace Composite
         public static bool SystemCoreInitialized { get { return _coreInitialized; } }
 
         /// <summary>
-        /// This is true durring a total flush of the system (re-initialize).
+        /// This is true during a total flush of the system (re-initialize).
         /// </summary>
         public static bool IsReinitializingTheSystem { get; private set; }
 
@@ -92,19 +94,22 @@ namespace Composite
         /// </summary>
         public static void InitializeTheSystem()
         {
-            // if (AppDomain.CurrentDomain.Id == 3) SimpleDebug.AddEntry(string.Format("INITIALIZING {0} {1} {2}", Thread.CurrentThread.ManagedThreadId, _initializing, _coreInitialized));
+            Verify.That(!_preInitHandlersRunning, "DataFacade related methods should not be called in OnBeforeInitialize() method of a startup handler. Please move the code to OnInitialized() instead.");
 
-            if (_exceptionThrownDurringInitialization != null)
+            // if (AppDomain.CurrentDomain.Id == 3) SimpleDebug.AddEntry(string.Format("INITIALIZING {0} {1} {2}", Thread.CurrentThread.ManagedThreadId, _initializing, _coreInitialized));
+            
+
+            if (_exceptionThrownDuringInitialization != null)
             {
-                TimeSpan timeSpan = DateTime.Now - _exceptionThrownDurringInitializationTimeStamp;
+                TimeSpan timeSpan = DateTime.Now - _exceptionThrownDuringInitializationTimeStamp;
                 if (timeSpan < TimeSpan.FromMinutes(5.0))
                 {
                     Log.LogCritical(LogTitleNormal, "Exception recorded:" + timeSpan + " ago");
 
-                    throw new Exception("Failed to initialize the system", _exceptionThrownDurringInitialization);
+                    throw new Exception("Failed to initialize the system", _exceptionThrownDuringInitialization);
                 }
 
-                _exceptionThrownDurringInitialization = null;
+                _exceptionThrownDuringInitialization = null;
             }
 
             if (!_initializing && !_coreInitialized)
@@ -133,8 +138,8 @@ namespace Composite
                         }
                         catch (Exception ex)
                         {
-                            _exceptionThrownDurringInitialization = ex;
-                            _exceptionThrownDurringInitializationTimeStamp = DateTime.Now;
+                            _exceptionThrownDuringInitialization = ex;
+                            _exceptionThrownDuringInitializationTimeStamp = DateTime.Now;
 
                             var shutdownReason = HostingEnvironment.ShutdownReason;
 
@@ -241,10 +246,15 @@ namespace Composite
             }
 
 
+            using (new LogExecutionTime(LogTitle, "Initializing internal urls"))
+            {
+                InternalUrls.Initialize_PostDataTypes();
+            }
+            
+
             using (new LogExecutionTime(LogTitle, "Initializing functions"))
             {
                 MetaFunctionProviderRegistry.Initialize_PostDataTypes();
-
             }
 
 
@@ -317,21 +327,21 @@ namespace Composite
 
 
         /// <exclude />
-        public static void ReinitializeTheSystem(RunInWriterLockScopeDelegage runInWriterLockScopeDelegage)
+        public static void ReinitializeTheSystem(RunInWriterLockScopeDelegate runInWriterLockScopeDelegate)
         {
-            ReinitializeTheSystem(runInWriterLockScopeDelegage, false);
+            ReinitializeTheSystem(runInWriterLockScopeDelegate, false);
         }
 
 
 
-        internal static void ReinitializeTheSystem(RunInWriterLockScopeDelegage runInWriterLockScopeDelegage, bool initializeHooksInTheSameThread)
+        internal static void ReinitializeTheSystem(RunInWriterLockScopeDelegate runInWriterLockScopeDelegate, bool initializeHooksInTheSameThread)
         {
             if (_hookingFacadeThread != null)
             {
                 _hookingFacadeThread.Join(TimeSpan.FromSeconds(30));
                 if (_hookingFacadeException != null)
                 {
-                    throw new InvalidOperationException("The initilization of the HookingFacade failed before this reinitialization was issued", _hookingFacadeException);
+                    throw new InvalidOperationException("The initialization of the HookingFacade failed before this reinitialization was issued", _hookingFacadeException);
                 }
             }
 
@@ -339,11 +349,11 @@ namespace Composite
             {
                 IsReinitializingTheSystem = true;
 
-                runInWriterLockScopeDelegage();
+                runInWriterLockScopeDelegate();
 
                 _coreInitialized = false;
                 _initializing = false;
-                _exceptionThrownDurringInitialization = null;
+                _exceptionThrownDuringInitialization = null;
 
                 Verify.That(_fatalErrorFlushCount <= 1, "Failed to reload the system. See the log for the details.");
 
@@ -359,8 +369,7 @@ namespace Composite
                     }
                     else
                     {
-                        _hookingFacadeThread = new Thread(EnsureHookingFacade);
-                        _hookingFacadeThread.Name = "EnsureHookingFacade";
+                        _hookingFacadeThread = new Thread(EnsureHookingFacade) {Name = "EnsureHookingFacade"};
                         _hookingFacadeThread.Start(new KeyValuePair<TimeSpan, StackTrace>(TimeSpan.FromSeconds(1), new StackTrace()));
                     }
                 }
@@ -416,7 +425,7 @@ namespace Composite
 
 
         /// <exclude />
-        public static void FatalResetTheSytem()
+        public static void FatalResetTheSystem()
         {
             Log.LogWarning(LogTitle, "Unhandled error occurred, reinitializing the system!");
 
@@ -426,22 +435,40 @@ namespace Composite
 
 
         /// <exclude />
-        public static void UninitializeTheSystem(RunInWriterLockScopeDelegage runInWriterLockScopeDelegage)
+        public static void UninitializeTheSystem(RunInWriterLockScopeDelegate runInWriterLockScopeDelegate)
         {
             using (GlobalInitializerFacade.CoreLockScope)
             {
                 using (new LogExecutionTime(LogTitle, "Uninitializing the system"))
                 {
-                    runInWriterLockScopeDelegage();
+                    runInWriterLockScopeDelegate();
                 }
 
                 _coreInitialized = false;
                 _initializing = false;
-                _exceptionThrownDurringInitialization = null;
+                _exceptionThrownDuringInitialization = null;
             }
         }
 
 
+        internal static IDisposable GetPreInitHandlersScope()
+        {
+            return new PreInitHandlersScope();
+        }
+
+
+        private class PreInitHandlersScope : IDisposable
+        {
+            public PreInitHandlersScope()
+            {
+                _preInitHandlersRunning = true;
+            }
+
+            public void Dispose()
+            {
+                _preInitHandlersRunning = false;
+            }
+        }
 
 
         #region Package installation
@@ -595,26 +622,26 @@ namespace Composite
         #region Locking
 
         /// <exclude />
-        public delegate void RunInWriterLockScopeDelegage();
+        public delegate void RunInWriterLockScopeDelegate();
 
         /// <exclude />
-        public static void RunInWriterLockScope(RunInWriterLockScopeDelegage runInWriterLockScopeDelegage)
+        public static void RunInWriterLockScope(RunInWriterLockScopeDelegate runInWriterLockScopeDelegate)
         {
             using (GlobalInitializerFacade.CoreLockScope)
             {
-                runInWriterLockScopeDelegage();
+                runInWriterLockScopeDelegate();
             }
         }
 
 
         /// <summary>
-        /// Locks the initialization token untill disposed. Use this in a using {} statement. 
+        /// Locks the initialization token until disposed. Use this in a using {} statement. 
         /// </summary>
         internal static IDisposable CoreLockScope
         {
             get
             {
-                StackTrace stackTrace = new StackTrace();
+                var stackTrace = new StackTrace();
                 StackFrame stackFrame = stackTrace.GetFrame(1);
                 string lockSource = string.Format("{0}.{1}", stackFrame.GetMethod().DeclaringType.Name, stackFrame.GetMethod().Name);
                 return new LockerToken(true, lockSource);
@@ -632,7 +659,7 @@ namespace Composite
             get
             {
                 // This line ensures that the system is always initialized. 
-                // Even if the InitializeTheSystem method is NOT called durring
+                // Even if the InitializeTheSystem method is NOT called during
                 // application startup.
                 InitializeTheSystem();
 
@@ -734,7 +761,7 @@ namespace Composite
 
 
         /// <summary>
-        /// Encaplulates calls to [Actuare|Release][Reader|Writer]Lock(), keeps log of writer locks
+        /// Encapsulates calls to [Acquire|Release][Reader|Writer]Lock(), keeps log of writer locks
         /// </summary>
         private sealed class LockerToken : IDisposable
         {

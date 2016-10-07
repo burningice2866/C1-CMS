@@ -40,6 +40,16 @@ function SystemToolBarBinding () {
 	this._moreActions = null;
 
 	/**
+	 * @type {SystemNode}
+	 */
+	this._node = null;
+
+	/**
+	 * @type {string}
+	 */
+	this._syncHandle = null;
+
+	/**
 	* Tree position 
 	* @type {int}
 	*/
@@ -74,6 +84,10 @@ SystemToolBarBinding.prototype.onBindingAttach = function () {
 		this.addActionListener ( ButtonBinding.ACTION_COMMAND );
 	} else {
 		this.hide ();
+	}
+
+	if (this.getProperty("target") === "perspective") {
+		this._syncHandle = StageBinding.perspectiveNode.getHandle();
 	}
 }
 
@@ -129,35 +143,37 @@ SystemToolBarBinding.prototype.handleBroadcast = function (broadcast, arg) {
 		case BroadcastMessages.SYSTEM_ACTIONPROFILE_PUBLISHED:
 
 			var self = this;
-			if (arg != null) {
-				if (arg.activePosition == this.getActivePosition()) {
-					if (arg.actionProfile != null && arg.actionProfile.hasEntries()) {
-						this._actionProfile = arg.actionProfile;
-						var key = this._getProfileKey();
-						if (key != this._currentProfileKey) {
+			if (arg != null && arg.syncHandle == this.getSyncHandle()) {
+				if (arg.actionProfile != null && arg.actionProfile.hasEntries()) {
+					this._actionProfile = arg.actionProfile;
+					//TODO: refactor with updating API
+					this._node = arg.actionProfile.Node;
+					var key = this._getProfileKey();
+					if (key != this._currentProfileKey) {
 
-							/*
+						/*
 							* Timeout prevents "freezing" tree selection.
 							*/
-							setTimeout(function () {
-								self.emptyLeft();
-								self._actionFolderNames = {};
-								self.buildLeft();
-								self._currentProfileKey = key;
-							}, 0);
-						}
-					} else {
-						setTimeout(function () {
+						setTimeout(function() {
 							self.emptyLeft();
 							self._actionFolderNames = {};
-							self._currentProfileKey = null;
-							var mores = self.bindingWindow.bindingMap.moreactionstoolbargroup;
-							if (mores != null) {
-								mores.hide();
-							}
+							self.buildLeft();
+							self._currentProfileKey = key;
 						}, 0);
 					}
+				} else {
+					setTimeout(function() {
+						self.emptyLeft();
+						self._actionFolderNames = {};
+						self._currentProfileKey = null;
+						self._node = null;
+						var mores = self.bindingWindow.bindingMap.moreactionstoolbargroup;
+						if (mores != null) {
+							mores.hide();
+						}
+					}, 0);
 				}
+
 			}
 			break;
 
@@ -170,9 +186,11 @@ SystemToolBarBinding.prototype.handleBroadcast = function (broadcast, arg) {
 
 		case BroadcastMessages.INVOKE_DEFAULT_ACTION:
 			var self = this;
-			setTimeout(function () { // timeout because binding attachment may happen now
-				self._invokeDefaultAction();
-			}, 0);
+			if (arg != null && arg.syncHandle == this.getSyncHandle()) {
+					setTimeout(function() { // timeout because binding attachment may happen now
+						self._invokeDefaultAction();
+					}, 0);
+			}
 			break;
 	}
 }
@@ -221,12 +239,13 @@ SystemToolBarBinding.prototype.handleAction = function ( action ) {
 SystemToolBarBinding.prototype._handleSystemAction = function ( action ) {
 	
 	if ( action != null ) {
-		var list = ExplorerBinding.getFocusedTreeNodeBindings ();
-		if ( list.hasEntries ()) {
-			var treeNodeBinding = list.getFirst ();
-			var systemNode = treeNodeBinding.node;
-		}
-		SystemAction.invoke ( action, systemNode );
+		//var list = ExplorerBinding.getFocusedTreeNodeBindings ();
+		//if ( list.hasEntries ()) {
+		//	var treeNodeBinding = list.getFirst ();
+		//	var systemNode = treeNodeBinding.node;
+		//}
+		//SystemAction.invoke ( action, systemNode );
+		SystemAction.invoke(action, this._node);
 	}
 }
 
@@ -277,16 +296,19 @@ SystemToolBarBinding.prototype.buildLeft = function () {
 
 /**
  * Contain all buttons. Overflowing buttons are moved to a popup. 
- * The margin between buttons and groups are not accounted for...
  */
 SystemToolBarBinding.prototype._containAllButtons = function () {
 	
-	var tools = this.bindingWindow.bindingMap.toolsbutton;
-	var mores = this.bindingWindow.bindingMap.moreactionstoolbargroup;
-	var avail = tools.bindingElement.offsetLeft - this._moreActionsWidth;
-	if (Localization.isUIRtl) {
-		avail = this.bindingElement.offsetWidth - tools.bindingElement.offsetWidth - this._moreActionsWidth;
+    var mores = this.bindingWindow.bindingMap.moreactionstoolbargroup;
+    var paddings = CSSComputer.getPadding(this.bindingElement);
+    var avail = this.bindingElement.offsetWidth - paddings.left - paddings.right;
+ 	if (Localization.isUIRtl) {
+ 		avail = this.bindingElement.offsetWidth - paddings.left - paddings.right;
 	}
+
+	if (avail <= 0)
+		return;
+
 	var total = 0;
 	var hides = new List ();
 	
@@ -295,8 +317,9 @@ SystemToolBarBinding.prototype._containAllButtons = function () {
 		if ( !button.isVisible ) {
 			button.show ();
 		}
-		total += button.boxObject.getDimension ().w;
-		if ( total >= avail ) {
+		var margin = CSSComputer.getMargin(button.bindingElement);
+		total += button.boxObject.getDimension().w + margin.left + margin.right;
+		if (total >= avail || (total + this._moreActionsWidth >= avail && buttons.hasNext())) {
 			hides.add ( button );
 			button.hide ();
 		}
@@ -388,11 +411,8 @@ SystemToolBarBinding.prototype.getToolBarButtonBinding = function ( action ) {
 	var image 		= action.getImage ();
 	var isDisabled	= action.isDisabled ();
 	
-	if ( image && image.indexOf ( "size=" ) ==-1 ) {
-		image = image + "&size=" + this.getImageSize ();
-		binding.imageProfile = new ImageProfile ({ 
-			image : image
-		});
+	if (image) {
+		binding.setImage(image);
 	}
 	if ( label ) {
 		binding.setLabel ( label );
@@ -443,4 +463,54 @@ SystemToolBarBinding.newInstance = function ( ownerDocument ) {
 
 	var element = DOMUtil.createElementNS ( Constants.NS_UI, "ui:toolbar", ownerDocument );
 	return UserInterface.registerBinding ( element, SystemToolBarBinding );
+}
+
+
+/**
+ * @param {Point} point
+ */
+SystemToolBarBinding.prototype.setPosition = function (point) {
+
+	this.bindingElement.style.left = point.x + "px";
+	this.bindingElement.style.top = point.y + "px";
+}
+
+/**
+ * @param {Dimension} dimension
+ */
+SystemToolBarBinding.prototype.setDimension = function (dimension) {
+
+	dimension.h -= ViewBinding.VERTICAL_ADJUST;
+	dimension.w -= ViewBinding.HORIZONTAL_ADJUST;
+
+	/*
+	 * Something hardcoded here...
+	 */
+	dimension.w -= 1;
+
+	if (dimension.h < 0) { // not sure why this happens...
+		dimension.h = 0;
+	}
+	if (dimension.w < 0) {
+		dimension.w = 0;
+	}
+	this.bindingElement.style.width = String(dimension.w) + "px";
+	this.bindingElement.style.height = String(dimension.h) + "px";
+}
+
+/**
+ * set SyncHandle
+ * @param {string} dimensionsyncHandle
+ */
+SystemToolBarBinding.prototype.setSyncHandle = function (syncHandle) {
+	this._syncHandle = syncHandle;
+
+}
+
+/**
+ * get SyncHandle
+ */
+SystemToolBarBinding.prototype.getSyncHandle = function () {
+	return this._syncHandle;
+
 }

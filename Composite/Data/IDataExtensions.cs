@@ -21,6 +21,9 @@ namespace Composite.Data
         private static ConcurrentDictionary<Type, IReadOnlyCollection<DataScopeIdentifier>> _supportedDataScopes
             = new ConcurrentDictionary<Type, IReadOnlyCollection<DataScopeIdentifier>>();
 
+        private static MethodInfo ToDataReferenceMethodInfo =
+            StaticReflection.GetGenericMethodInfo(() => ToDataReference<IData>(null));
+
         /// <summary>
         /// Copies all changed properties from sourceData to targetData.
         /// </summary>
@@ -190,13 +193,44 @@ namespace Composite.Data
 
 
         /// <summary>
-        /// Returns the data item's key field's value. If the key is compound, an exeption will be thrown.
+        /// Returns the data item's key field's value. If the key is compound, an exception will be thrown.
         /// </summary>
         /// <param name="data"></param>       
         /// <returns></returns>
         public static T GetUniqueKey<T>(this IData data)
         {
+            Verify.ArgumentNotNull(data, "data");
+
             return (T)data.GetUniqueKey();
+        }
+
+
+
+        /// <summary>
+        /// Converts a data item into a data reference
+        /// </summary>
+        /// <param name="data">The data item</param>
+        /// <returns></returns>
+        public static IDataReference ToDataReference(this IData data)
+        {
+            Verify.ArgumentNotNull(data, "data");
+
+            var interfaceType = data.DataSourceId.InterfaceType;
+
+            return (IDataReference) ToDataReferenceMethodInfo
+                .MakeGenericMethod(new[] {interfaceType}).Invoke(null, new object[] {data});
+        }
+
+
+
+        /// <summary>
+        /// Converts a data item into a data reference
+        /// </summary>
+        /// <param name="data">The data item</param>
+        /// <returns></returns>
+        public static DataReference<T> ToDataReference<T>(T data) where T : class, IData
+        {
+            return new DataReference<T>(data);
         }
 
 
@@ -251,15 +285,9 @@ namespace Composite.Data
 
         private static IReadOnlyCollection<DataScopeIdentifier> GetSupportedDataScopesInt(Type interfaceType)
         {
-            var dataScopes = new List<DataScopeIdentifier>();
             IEnumerable<DataScopeAttribute> attributes = interfaceType.GetCustomInterfaceAttributes<DataScopeAttribute>();
 
-            foreach (DataScopeAttribute attribute in attributes)
-            {
-                dataScopes.Add(attribute.Identifier);
-            }
-
-            return dataScopes.Distinct().ToList();
+            return attributes.Select(attribute => attribute.Identifier).Distinct().ToList();
         }
 
         /// <summary>    
@@ -269,16 +297,9 @@ namespace Composite.Data
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
         public static List<IData> ToDataList(this IQueryable queryable)
         {
-            if (queryable == null) throw new ArgumentNullException("queryable");
+            Verify.ArgumentNotNull(queryable, "queryable");
 
-            var datas = new List<IData>();
-
-            foreach (object obj in queryable)
-            {
-                datas.Add((IData)obj);
-            }
-
-            return datas;
+            return Enumerable.Cast<IData>(queryable).ToList();
         }
 
 
@@ -286,20 +307,15 @@ namespace Composite.Data
         /// <exclude />
         public static IEnumerable<IData> ToDataEnumerable(this IQueryable queryable)
         {
-            if (queryable == null) throw new ArgumentNullException("queryable");
+            Verify.ArgumentNotNull(queryable, "queryable");
 
-
-            foreach (object obj in queryable)
-            {
-                yield return (IData)obj;
-            }
+            return Enumerable.Cast<IData>(queryable);
         }
-
 
 
         internal static IEnumerable ToCastedDataEnumerable(this IEnumerable<IData> datas, Type interfaceType)
         {
-            MethodInfo methodInfo = typeof(Enumerable).GetMethods().Where(f => f.Name == "Cast").Single();
+            MethodInfo methodInfo = typeof(Enumerable).GetMethods().Single(f => f.Name == "Cast");
             methodInfo = methodInfo.MakeGenericMethod(interfaceType);
 
             return (IEnumerable)methodInfo.Invoke(null, new object[] { datas });
@@ -312,7 +328,7 @@ namespace Composite.Data
         {
             if (datas == null) throw new ArgumentNullException("datas");
 
-            Dictionary<string, List<T>> result = new Dictionary<string, List<T>>();
+            var result = new Dictionary<string, List<T>>();
 
             foreach (T data in datas)
             {
@@ -338,12 +354,12 @@ namespace Composite.Data
         {
             if (datas == null) throw new ArgumentNullException("datas");
 
-            Dictionary<string, Dictionary<Type, List<IData>>> result = new Dictionary<string, Dictionary<Type, List<IData>>>();
+            var result = new Dictionary<string, Dictionary<Type, List<IData>>>();
 
             foreach (IData data in datas)
             {
                 Dictionary<Type, List<IData>> dictionary;
-                if (result.TryGetValue(data.DataSourceId.ProviderName, out dictionary) == false)
+                if (!result.TryGetValue(data.DataSourceId.ProviderName, out dictionary))
                 {
                     dictionary = new Dictionary<Type, List<IData>>();
 
@@ -351,7 +367,7 @@ namespace Composite.Data
                 }
 
                 List<IData> dataList;
-                if (dictionary.TryGetValue(data.DataSourceId.InterfaceType, out dataList) == false)
+                if (!dictionary.TryGetValue(data.DataSourceId.InterfaceType, out dataList))
                 {
                     dataList = new List<IData>();
 
@@ -364,12 +380,17 @@ namespace Composite.Data
             return result;
         }
 
-
-
         /// <exclude />
+        [Obsolete("Use GetDataPropertyRecursively instead")]
         public static PropertyInfo GetDataPropertyRecursivly(this Type dataType, string propertyName)
         {
-            if (dataType == null) throw new ArgumentNullException("dataType");
+            return GetDataPropertyRecursively(dataType, propertyName);
+        }
+
+        /// <exclude />
+        public static PropertyInfo GetDataPropertyRecursively(this Type dataType, string propertyName)
+        {
+            Verify.ArgumentNotNull(dataType, "dataType");
 
             PropertyInfo propertyInfo = dataType.GetProperty(propertyName);
 
@@ -377,8 +398,8 @@ namespace Composite.Data
 
             foreach (Type superInterface in dataType.GetInterfaces())
             {
-                if ((superInterface != typeof(IData)) &&
-                    (typeof(IData).IsAssignableFrom(superInterface)))
+                if (superInterface != typeof(IData) &&
+                    typeof(IData).IsAssignableFrom(superInterface))
                 {
                     PropertyInfo propInfo = superInterface.GetDataPropertyRecursivly(propertyName);
 
@@ -396,19 +417,25 @@ namespace Composite.Data
 
         internal static List<PropertyInfo> GetAllProperties(this Type dataType)
         {
-            if (dataType == null) throw new ArgumentNullException("dataType");
+            Verify.ArgumentNotNull(dataType, "dataType");
 
-            List<PropertyInfo> result = new List<PropertyInfo>();
+            var result = new List<PropertyInfo>();
 
             result.AddRange(dataType.GetProperties());
 
             foreach (Type superInterface in dataType.GetInterfacesRecursively())
             {
-                if ((superInterface != typeof(IData)) &&
-                    (typeof(IData).IsAssignableFrom(superInterface)))
+                if (superInterface != typeof(IData) &&
+                    typeof(IData).IsAssignableFrom(superInterface))
                 {
                     result.AddRange(superInterface.GetProperties());
                 }
+            }
+
+            // A compatibility fix, returning the same "PageId" property twice usually leads to an error
+            if (typeof(IPageData).IsAssignableFrom(dataType))
+            {
+                result.RemoveAll(p => p.Name == "PageId" && p.DeclaringType == typeof(IPageData));
             }
 
             return result;
@@ -419,14 +446,14 @@ namespace Composite.Data
         /// <exclude />
         public static void SetValues(this IData data, Dictionary<string, string> values)
         {
-            if (data == null) throw new ArgumentNullException("data");
-            if (values == null) throw new ArgumentNullException("values");
+            Verify.ArgumentNotNull(data, "data");
+            Verify.ArgumentNotNull(values, "values");
 
             List<PropertyInfo> properties = data.DataSourceId.InterfaceType.GetPropertiesRecursively();
 
             foreach (var kvp in values)
             {
-                PropertyInfo propertyInfo = properties.Where(f => f.Name == kvp.Key).Single();
+                PropertyInfo propertyInfo = properties.Single(f => f.Name == kvp.Key);
 
                 object convertedValue = ValueTypeConverter.Convert(kvp.Value, propertyInfo.PropertyType);
 

@@ -45,6 +45,11 @@ function TreeSelectorDialogPageBinding () {
 	 * @type {SystemTreeBinding}
 	 */
 	this._treeBinding = null;
+
+	/**
+	 * @type {GenericViewBinding}
+	 */
+	this._genericViewBinding = null;
 	
 	/**
 	 * The name of the treenode property on which to base tree selection.
@@ -122,7 +127,7 @@ TreeSelectorDialogPageBinding.prototype.setPageArgument = function (arg) {
 	}
 	else if (arg.selectedResult) {
 		var compositeUrl = new Uri(arg.selectedResult);
-		if (compositeUrl.isMedia || compositeUrl.isPage) {
+		if (compositeUrl.isMedia || compositeUrl.isPage || compositeUrl.isInternalUrl) {
 			this._selectedToken = TreeService.GetCompositeEntityToken(arg.selectedResult);
 		}
 	}
@@ -146,10 +151,14 @@ TreeSelectorDialogPageBinding.prototype.onBindingRegister = function () {
 
 	//Subscribe to double click action
 	this.addActionListener(TreeNodeBinding.ACTION_COMMAND);
+
 	/*
 	* File subscriptions.
 	*/
 	this.subscribe(BroadcastMessages.SYSTEMTREEBINDING_REFRESH);
+	this.subscribe(BroadcastMessages.SYSTEMTREEBINDING_REFRESHED_AFTER);
+	this.subscribe(BroadcastMessages.SYSTEM_ACTIONPROFILE_PUBLISHED);
+
 }
 
 /**
@@ -172,7 +181,27 @@ TreeSelectorDialogPageBinding.prototype.handleBroadcast = function (broadcast, a
 					return;
 				}
 			}
+			break;
 
+		case BroadcastMessages.SYSTEMTREEBINDING_REFRESHED_AFTER:
+			if (arg.syncHandle == this.getSyncHandle()) {
+				this.refreshView();
+			}
+			break;
+
+		case BroadcastMessages.SYSTEM_ACTIONPROFILE_PUBLISHED:
+			if (arg.syncHandle == this.getSyncHandle()) {
+				if (this._genericViewBinding && arg.source !== this._genericViewBinding && arg.actionProfile) {
+					var node = arg.actionProfile.Node;
+					var entityToken = node.getEntityToken();
+					if (entityToken) {
+						if (this._entityToken != entityToken) {
+							this._entityToken = entityToken;
+							this._genericViewBinding.setNode(node);
+						}
+					}
+				}
+			}
 			break;
 	}
 
@@ -205,10 +234,38 @@ TreeSelectorDialogPageBinding.prototype.onBeforePageInitialize = function () {
 
 	StageBinding.treeSelector = this._treeBinding;
 
+
+	if (this.bindingWindow.bindingMap.genericview) {
+		this._genericViewBinding = this.bindingWindow.bindingMap.genericview;
+		this._genericViewBinding.addActionListener(TreeBinding.ACTION_SELECTIONCHANGED, this);
+		this._genericViewBinding.addActionListener(TreeBinding.ACTION_NOSELECTION, this);
+		this._genericViewBinding.addActionListener(GenericViewBinding.ACTION_COMMAND, this);
+
+		this._genericViewBinding.setSelectable(true);
+		this._genericViewBinding.setSelectionProperty(this._selectionProperty);
+		this._genericViewBinding.setSelectionValue(this._selectionValue);
+		this._genericViewBinding.setActionGroup(this._actionGroup);
+
+	}
+
 	TreeSelectorDialogPageBinding.superclass.onBeforePageInitialize.call ( this );
 }
 
+/**
+ * Refresh Generic View
+ */
+TreeSelectorDialogPageBinding.prototype.refreshView = function () {
 
+	if (this._genericViewBinding);
+	{
+		var selectedTreeNode = this._treeBinding.getFocusedTreeNodeBindings().getFirst();
+		if (selectedTreeNode) {
+			this._genericViewBinding.setNode(selectedTreeNode.node);
+		} else {
+			this._genericViewBinding.setNode(undefined);
+		}
+	}
+}
 
 /**
  * Inject root nodes in tree.
@@ -323,12 +380,20 @@ TreeSelectorDialogPageBinding.prototype.handleAction = function (action) {
 			case TreeNodeBinding.ACTION_COMMAND:
 				bindingMap.buttonAccept.fireCommand();
 				break;
-
 			case TreeBinding.ACTION_SELECTIONCHANGED :
-				this._updateDisplayAndResult ();
+				this._updateDisplayAndResult (action.target);
 				break;
 			case TreeBinding.ACTION_NOSELECTION :
 				this._clearDisplayAndResult ();
+				break;
+
+			case GenericViewBinding.ACTION_COMMAND:
+				if (action.target.node.hasChildren()) {
+					this._treeBinding.handleBroadcast(BroadcastMessages.SYSTEMTREEBINDING_FOCUS, action.target.node.getEntityToken());
+				} else {
+					bindingMap.buttonAccept.fireCommand();
+				}
+				
 				break;
 		}
 		
@@ -352,9 +417,10 @@ TreeSelectorDialogPageBinding.prototype._saveOpenedSystemNodes = function () {
 /**
  * Update selections display and store result.
  */
-TreeSelectorDialogPageBinding.prototype._updateDisplayAndResult = function () {
+TreeSelectorDialogPageBinding.prototype._updateDisplayAndResult = function (tree) {
 
-	var selections 	= this._treeBinding.getSelectedTreeNodeBindings ();
+	
+	var selections 	= tree.getSelectedTreeNodeBindings ();
 	var dataInput	= this.bindingWindow.DataManager.getDataBinding ( "treeselectionresult" );
 	var okButton	= bindingMap.buttonAccept;
 	var result 		= new List ();
@@ -414,4 +480,8 @@ TreeSelectorDialogPageBinding.prototype.onDialogResponse = function () {
 
 	TreeSelectorDialogPageBinding.superclass.onDialogResponse.call(this);
 
+}
+
+TreeSelectorDialogPageBinding.prototype.getSyncHandle = function () {
+	return this.getID();
 }

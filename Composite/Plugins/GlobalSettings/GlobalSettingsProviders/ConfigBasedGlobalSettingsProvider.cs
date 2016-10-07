@@ -40,6 +40,11 @@ namespace Composite.Plugins.GlobalSettings.GlobalSettingsProviders
         }
 
 
+        public string BrandedVersionAssemblySource
+        {
+            get { return _configurationData.BrandedVersionAssemblySource; }
+        }
+
 
         public string DefaultCultureName
         {
@@ -210,6 +215,22 @@ namespace Composite.Plugins.GlobalSettings.GlobalSettingsProviders
                 return _configurationData.ImageQuality;
             }
         }
+
+        public bool PrettifyPublicMarkup
+        {
+            get
+            {
+                return _configurationData.PrettifyPublicMarkup;
+            }
+        }
+        
+        public bool PrettifyRenderFunctionExceptions
+        {
+            get
+            {
+                return _configurationData.PrettifyRenderFunctionExceptions;
+            }
+        }
     }
 
     internal class ConfigCachingSettings: ICachingSettings
@@ -261,13 +282,13 @@ namespace Composite.Plugins.GlobalSettings.GlobalSettingsProviders
     {
         private readonly string _resourceCacheDirectory;
         private readonly int _serverChacheMinutes;
-        private readonly int _clientCacheinutes;
+        private readonly int _clientCacheMinutes;
 
         internal ConfigResourceCacheSettings(string resourceCacheDirectory, int serverCacheMinutes, int clientCacheMinutes)
         {
             _resourceCacheDirectory = resourceCacheDirectory;
             _serverChacheMinutes = serverCacheMinutes;
-            _clientCacheinutes = clientCacheMinutes;
+            _clientCacheMinutes = clientCacheMinutes;
         }
 
         public string ResourceCacheDirectory
@@ -284,7 +305,7 @@ namespace Composite.Plugins.GlobalSettings.GlobalSettingsProviders
 
         public int ClientCacheMinutes
         {
-            get { return _clientCacheinutes; }
+            get { return _clientCacheMinutes; }
             set { throw new NotSupportedException(GetType().ToString()); }
         }
     }
@@ -307,12 +328,21 @@ namespace Composite.Plugins.GlobalSettings.GlobalSettingsProviders
     internal sealed class ConfigBasedGlobalSettingsProviderData : GlobalSettingsProviderData
     {
         private const string _applicationNamePropertyName = "applicationName";
-        [ConfigurationProperty(_applicationNamePropertyName, IsRequired = true, DefaultValue = "Composite Management Console")]
+        [ConfigurationProperty(_applicationNamePropertyName, IsRequired = true, DefaultValue = "Composite C1")]
         public string ApplicationName
         {
             get { return (string)base[_applicationNamePropertyName]; }
             set { base[_applicationNamePropertyName] = value; }
         }
+
+        private const string _brandedVersionAssemblySourcePropertyName = "brandedVersionAssemblySource";
+        [ConfigurationProperty(_brandedVersionAssemblySourcePropertyName, IsRequired = false, DefaultValue = "Composite")]
+        public string BrandedVersionAssemblySource
+        {
+            get { return (string)base[_brandedVersionAssemblySourcePropertyName]; }
+            set { base[_brandedVersionAssemblySourcePropertyName] = value; }
+        }
+        
 
 
         private const string _defaultCultureNamePropertyName = "defaultCultureName";
@@ -604,6 +634,24 @@ namespace Composite.Plugins.GlobalSettings.GlobalSettingsProviders
         {
             get { return (int)base[_imageQualityPropertyName]; }
             set { base[_imageQualityPropertyName] = value; }
+        }
+
+                
+        private const string _prettifyPublicMarkupPropertyName = "prettifyPublicMarkup";
+        [ConfigurationProperty(_prettifyPublicMarkupPropertyName, DefaultValue = true)]
+        public bool PrettifyPublicMarkup
+        {
+            get { return (bool)base[_prettifyPublicMarkupPropertyName]; }
+            set { base[_prettifyPublicMarkupPropertyName] = value; }
+        }
+
+
+        private const string _prettifyRenderFunctionExceptionsPropertyName = "prettifyRenderFunctionExceptions";
+        [ConfigurationProperty(_prettifyRenderFunctionExceptionsPropertyName, DefaultValue = true)]
+        public bool PrettifyRenderFunctionExceptions
+        {
+            get { return (bool)base[_prettifyRenderFunctionExceptionsPropertyName]; }
+            set { base[_prettifyRenderFunctionExceptionsPropertyName] = value; }
         }
     }
 

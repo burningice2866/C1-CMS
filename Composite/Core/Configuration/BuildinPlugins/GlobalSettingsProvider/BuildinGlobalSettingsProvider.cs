@@ -9,6 +9,7 @@ namespace Composite.Core.Configuration.BuildinPlugins.GlobalSettingsProvider
     internal sealed class BuildinGlobalSettingsProvider : IGlobalSettingsProvider
     {
         private string _applicationName = "Freja";
+        private string _brandedVersionAssemblySource = "Composite";
         private string _configurationDirectory = "~";
         private string _generatedAssembliesDirectory = "~";
         private string _serializedWorkflowsDirectory = "~";
@@ -29,12 +30,18 @@ namespace Composite.Core.Configuration.BuildinPlugins.GlobalSettingsProvider
         private readonly int _consoleMessageQueueSecondToLive = TimeSpan.FromMinutes(10).Seconds;
         private bool _enableDataTypesAutoUpdate = false;
         private bool _broadcastConsoleElementChanges = true;
+        private bool _prettifyPublicMarkup = true;
+        private bool _prettifyRenderFunctionExceptions = true;
 
         public string ApplicationName
         {
             get { return _applicationName; }
         }
 
+        public string BrandedVersionAssemblySource
+        {
+            get { return _brandedVersionAssemblySource; }
+        }
 
 
         public string DefaultCultureName
@@ -251,6 +258,16 @@ namespace Composite.Core.Configuration.BuildinPlugins.GlobalSettingsProvider
             {
                 return 80;
             }
+        }
+
+        public bool PrettifyPublicMarkup
+        {
+            get { return _prettifyPublicMarkup; }
+        }
+
+        public bool PrettifyRenderFunctionExceptions
+        {
+            get { return _prettifyRenderFunctionExceptions; }
         }
     }
 }

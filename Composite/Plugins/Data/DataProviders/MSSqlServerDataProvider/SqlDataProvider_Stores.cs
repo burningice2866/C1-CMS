@@ -41,7 +41,10 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             {
                 if (InterfaceConfigurationManipulator.ConfigurationExists(_dataProviderContext.ProviderName, dataTypeDescriptor))
                 {
-                    throw new InvalidOperationException(string.Format("SqlDataProvider configuration already contains a interface named '{0}'. Remove it from the configuration and restart the application.", dataTypeDescriptor.TypeManagerTypeName));
+                    var filePath = InterfaceConfigurationManipulator.GetConfigurationFilePath(_dataProviderContext.ProviderName);
+
+                    throw new InvalidOperationException(
+                        $"SqlDataProvider configuration already contains a interface named '{dataTypeDescriptor.TypeManagerTypeName}', Id: '{dataTypeDescriptor.DataTypeId}'. Remove it from the configuration file '{filePath}' and restart the application.");
                 }
             }
 
@@ -141,7 +144,12 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
             // Registering the new type/tables
             foreach (var dataTypeDescriptor in dataTypeDescriptors)
             {
-                var classesInfo = generatedClassesInfo[dataTypeDescriptor];
+                InterfaceGeneratedClassesInfo classesInfo;
+
+                if (!generatedClassesInfo.TryGetValue(dataTypeDescriptor, out classesInfo))
+                {
+                    throw new InvalidOperationException("No generated classes for data type '{0}' found".FormatWith(dataTypeDescriptor.Name));
+                }
                 InitializeStoreResult initInfo = EmbedDataContextInfo(classesInfo, dataContextClass);
 
                 AddDataTypeStore(initInfo, false);
@@ -308,12 +316,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
             foreach (InterfaceConfigurationElement element in configurationElements)
             {
-                if (!element.DataTypeId.HasValue)
-                {
-                    throw NewConfigurationException(element, "Missing 'dataTypeId' attribute");
-                }
-
-                Guid dataTypeId = element.DataTypeId.Value;
+                Guid dataTypeId = element.DataTypeId;
 
                 var dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(dataTypeId, true);
                 if (dataTypeDescriptor == null)
@@ -491,12 +494,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
             result.DataScopes = dataScopes;
 
-            if (!element.DataTypeId.HasValue)
-            {
-                throw NewConfigurationException(element, "Missing 'dataTypeId' attribute");
-            }
-
-            Guid dataTypeId = element.DataTypeId.Value;
+            Guid dataTypeId = element.DataTypeId;
 
             var dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(dataTypeId, true);
             if (dataTypeDescriptor == null)
@@ -1018,17 +1016,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider
 
             foreach (InterfaceConfigurationElement element in _interfaceConfigurationElements)
             {
-                if (!element.DataTypeId.HasValue)
-                {
-#pragma warning disable 612,618
-                    string interfaceName = element.InterfaceType ?? "<unknown type name>";
-#pragma warning restore 612,618
-
-                    Log.LogWarning(LogTitle, "Failed to create store for type '{0}' as it doesn't have an assigned 'dataTypeId' attribute, or it wasn't correctly loaded from meta data files".FormatWith(interfaceName));
-                    continue;
-                }
-
-                Guid dataTypeId = element.DataTypeId.Value;
+                Guid dataTypeId = element.DataTypeId;
                 var dataTypeDescriptor = DataMetaDataFacade.GetDataTypeDescriptor(dataTypeId, true);
                 if (dataTypeDescriptor == null)
                 {

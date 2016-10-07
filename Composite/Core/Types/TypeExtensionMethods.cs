@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -71,28 +72,21 @@ namespace Composite.Core.Types
         /// <exclude />
         public static List<PropertyInfo> GetPropertiesRecursively(this Type type, Func<PropertyInfo, bool> predicate)
         {
-            List<PropertyInfo> properties = new List<PropertyInfo>();
+            predicate = predicate ?? (p => true);
 
-            if (predicate == null)
-            {
-                properties.AddRange(type.GetProperties());
-            }
-            else
-            {
-                properties.AddRange(type.GetProperties().Where(predicate));
-            }
+            var properties = new List<PropertyInfo>();
+            properties.AddRange(type.GetProperties().Where(predicate));
 
             Type[] interfaceTypes = type.GetInterfaces();
             foreach (Type interfaceType in interfaceTypes)
             {
-                if (predicate == null)
-                {
-                    properties.AddRange(interfaceType.GetProperties());
-                }
-                else
-                {
-                    properties.AddRange(interfaceType.GetProperties().Where(predicate));
-                }
+                properties.AddRange(interfaceType.GetProperties().Where(predicate));
+            }
+
+            // A compatibility fix, returning the same "PageId" property twice usually leads to an error
+            if (typeof (IPageData).IsAssignableFrom(type))
+            {
+                properties.RemoveAll(p => p.Name == "PageId" && p.DeclaringType == typeof (IPageData));
             }
 
             return properties;
@@ -103,7 +97,7 @@ namespace Composite.Core.Types
         /// <exclude />
         public static List<Type> GetInterfacesRecursively(this Type type)
         {
-            List<Type> interfaces = new List<Type>();
+            var interfaces = new List<Type>();
 
             GetInterfacesRecursively(type, null, interfaces);
 
@@ -115,7 +109,7 @@ namespace Composite.Core.Types
         /// <exclude />
         public static List<Type> GetInterfacesRecursively(this Type type, Func<Type, bool> predicate)
         {
-            List<Type> interfaces = new List<Type>();
+            var interfaces = new List<Type>();
 
             GetInterfacesRecursively(type, predicate, interfaces);
 
@@ -161,7 +155,7 @@ namespace Composite.Core.Types
         {
             if (serializedValue == null) return null;
 
-            if (targetType == typeof(string)) return (string)serializedValue;
+            if (targetType == typeof(string)) return serializedValue;
             if (targetType == typeof(Guid)) return new Guid(serializedValue);
             if (targetType == typeof(int)) return int.Parse(serializedValue); ;
 
@@ -198,54 +192,34 @@ namespace Composite.Core.Types
 
 
 
-        private static readonly Hashtable<Type, List<Attribute>> _typeAttributeCache = new Hashtable<Type, List<Attribute>>();
+        private static readonly ConcurrentDictionary<Type, List<Attribute>> _typeAttributeCache = new ConcurrentDictionary<Type, List<Attribute>>();
 
 
         /// <exclude />
         public static IEnumerable<T> GetCustomAttributesRecursively<T>(this Type type)
             where T : Attribute
         {
-            List<Attribute> attributeList;
-
-            if (!_typeAttributeCache.TryGetValue(type, out attributeList))
-            {
-                lock (_lock)
-                {
-                    if (!_typeAttributeCache.TryGetValue(type, out attributeList))
-                    {
-                        attributeList = new List<Attribute>();
-                        GetCustomAttributesRecursively(type, attributeList, null, new List<Type>(), false);
-
-                        _typeAttributeCache.Add(type, attributeList);
-                    }
-                }
-            }
-
-            return attributeList.OfType<T>();
+            return GetCustomAttributesRecursively(type).OfType<T>();
         }
 
         /// <exclude />
         public static IEnumerable<Attribute> GetCustomAttributesRecursively(this Type type, Type attributeType)
         {
-            List<Attribute> attributeList;
-
-            if (!_typeAttributeCache.TryGetValue(type, out attributeList))
-            {
-                lock (_lock)
-                {
-                    if (!_typeAttributeCache.TryGetValue(type, out attributeList))
-                    {
-                        attributeList = new List<Attribute>();
-                        GetCustomAttributesRecursively(type, attributeList, null, new List<Type>(), false);
-
-                        _typeAttributeCache.Add(type, attributeList);
-                    }
-                }
-            }
-
-            return attributeList.Where(t => t.GetType() == attributeType);
+            return GetCustomAttributesRecursively(type).Where(attr => attr.GetType() == attributeType);
         }
 
+
+        private static IEnumerable<Attribute> GetCustomAttributesRecursively(this Type type)
+        {
+            return _typeAttributeCache.GetOrAdd(type, t =>
+            {
+                var attributeList = new List<Attribute>();
+
+                GetCustomAttributesRecursively(t, attributeList, null, new List<Type>(), false);
+
+                return attributeList;
+            });
+        }
 
 
         /// <exclude />

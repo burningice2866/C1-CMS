@@ -1,4 +1,5 @@
-﻿using Composite.Core.Routing.Foundation.PluginFacades;
+﻿using System.Web;
+using Composite.Core.Routing.Foundation.PluginFacades;
 using Composite.Core.Routing.Plugins.PageUrlsProviders;
 using Composite.Data.Types;
 
@@ -45,7 +46,11 @@ namespace Composite.Core.Routing
                 return UrlProvider.ParseUrl(absoluteUrl, out urlKind);
             }
 
-            return UrlProvider.ParseUrl(absoluteUrl, new UrlSpace(), out urlKind);
+            var context = HttpContext.Current;
+            string hostname = context != null ? context.Request.Url.Host : null;
+            var urlSpace = new UrlSpace(hostname, absoluteUrl);
+
+            return UrlProvider.ParseUrl(absoluteUrl, urlSpace, out urlKind);
         }
 
         /// <summary>
@@ -57,6 +62,8 @@ namespace Composite.Core.Routing
         /// <returns></returns>
         public static PageUrlData ParseUrl(string relativeUrl, UrlSpace urlSpace, out UrlKind urlKind) 
         {
+            Verify.ArgumentNotNull(relativeUrl, "relativeUrl");
+
             return UrlProvider.ParseUrl(relativeUrl, urlSpace, out urlKind);
         }
 
@@ -67,9 +74,11 @@ namespace Composite.Core.Routing
         /// <param name="urlKind">Kind of the URL.</param>
         /// <param name="urlSpace">The URL space.</param>
         /// <returns></returns>
-        public static string BuildUrl(PageUrlData pageUrlData, UrlKind urlKind, UrlSpace urlSpace) 
+        public static string BuildUrl(PageUrlData pageUrlData, UrlKind urlKind = UrlKind.Public, UrlSpace urlSpace = null) 
         {
-            return UrlProvider.BuildUrl(pageUrlData, urlKind, urlSpace);
+            Verify.ArgumentNotNull(pageUrlData, "pageUrlData");
+
+            return UrlProvider.BuildUrl(pageUrlData, urlKind, urlSpace ?? new UrlSpace());
         }
 
         /// <summary>

@@ -72,6 +72,7 @@ del ..\..\Bin\dotless.Core.dll
 del ..\..\Bin\Antlr3.Runtime.dll
 del ..\..\Bin\WebGrease.dll
 del ..\..\Bin\System.Web.Optimization.dll
+del ..\..\Bin\Composite.Search.SimplePageSearch.dll
 
 rd /s /q ..\..\Frontend\Scripts
 rd /s /q ..\..\Frontend\Styles
@@ -198,5 +199,6 @@ del ..\..\bin\Composite.Tools.*.*
 del ..\..\bin\Composite.Media.*.*
 del ..\..\bin\Composite.Forms.*.*
 del ..\..\bin\Composite.XmlSerializers.dll
+del ..\..\bin\WebGrease.dll
 
 

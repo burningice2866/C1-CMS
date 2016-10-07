@@ -137,11 +137,15 @@ DockBinding.prototype.onBindingRegister = function () {
 	this.addActionListener ( ViewBinding.ACTION_LOADED );
 	this.addActionListener ( ViewBinding.ACTION_CLOSED )
 	
-	this.subscribe ( BroadcastMessages.SYSTEMTREENODEBINDING_FOCUS );
+
 	
 	this._viewBindingList = new List ();
 	
-	this.reference = this.getProperty ( "reference" );
+	this.reference = this.getProperty("reference");
+
+	if (this.reference == DockBinding.MAIN) {
+		this.subscribe(BroadcastMessages.SYSTEMTREENODEBINDING_FOCUS);
+	}
 }
 
 /**
@@ -163,19 +167,6 @@ DockBinding.prototype.onBindingAttach = function () {
 
 /**
  * Hide editorsdock dockcontrols.
- * @overloads {TabBoxBinding#onBindingAttach}
- */
-DockBinding.prototype.onBindingInitialize = function () {
-	
-	if ( this.type == DockBinding.TYPE_EDITORS ) {
-		this.showControls ( false );
-	}
-	
-	DockBinding.superclass.onBindingInitialize.call ( this );
-}
-
-/**
- * Hide editorsdock dockcontrols.
  * @overloads {TabBoxBinding#onMembersAttached}
  *
 DockBinding.prototype.onMembersAttached = function () {
@@ -193,14 +184,6 @@ DockBinding.prototype.onMembersAttached = function () {
  * @overwrites {TabBoxBinding#buildDOMContent}
  */
 DockBinding.prototype.buildDOMContent = function () {
-	
-	var parentBinding = UserInterface.getBinding ( this.bindingElement.parentNode );
-	var matrixBinding = MatrixBinding.newInstance ( this.bindingDocument );
-	matrixBinding.attachClassName ( "dockliner" );
-	this.shadowTree.dockLiner = matrixBinding;
-	parentBinding.add ( matrixBinding );
-	matrixBinding.attach ();
-	matrixBinding.manifest ();
 	
 	var type = this.getProperty ( "type" );
 	this.type = type ? type : DockBinding.TYPE_TOOLS;;
@@ -234,6 +217,7 @@ DockBinding.prototype.interceptDisplayChange = function ( wasDisplayed ) {
 /**
  * Prepare new view.
  * @param {ViewDefinition} definition
+ * @return DockTabBinding
  */
 DockBinding.prototype.prepareNewView = function ( definition ) {
 	
@@ -249,6 +233,9 @@ DockBinding.prototype.prepareNewView = function ( definition ) {
 	tabBinding.setToolTip ( definition.toolTip );
 	tabBinding.setEntityToken ( definition.entityToken );
 	tabBinding.setAssociatedView ( viewBinding );
+	if (definition.isPinned) {
+		tabBinding.setProperty("pinned", true);
+	}
 	this.appendTabByBindings ( tabBinding, null );
 	
 	// listen for dirty events and loaded pages
@@ -256,7 +243,7 @@ DockBinding.prototype.prepareNewView = function ( definition ) {
 	
 	// snap view to tabpanel position
 	var tabPanelBinding = this.getTabPanelBinding ( tabBinding );
-	viewBinding.snapToBinding ( tabPanelBinding );
+	viewBinding.snapToBinding ( tabPanelBinding, definition.isFloating );
 	
 	// TODO: construct a viewset binding for hosting this fellow?
 	/*
@@ -274,7 +261,9 @@ DockBinding.prototype.prepareNewView = function ( definition ) {
 	 * Odd fact: if this is done on a timeout, mozilla will 
 	 * summon a bug that hides the dock after a few seconds.
 	 */
-	viewBinding.attach ();
+	viewBinding.attach();
+
+	return tabBinding;
 }
 
 /**
@@ -301,7 +290,7 @@ DockBinding.prototype.prepareOpenView = function ( definition, tabBinding ) {
 	
 	//tabPanelBinding.add ( viewBinding ); // this would create a non-floating view
 
-	viewBinding.snapToBinding ( tabPanelBinding );
+	viewBinding.snapToBinding(tabPanelBinding, definition.isFloating);
 	UserInterface.getBinding ( this.bindingDocument.body ).add ( viewBinding );
 	viewBinding.attach ();
 	
@@ -545,33 +534,53 @@ DockBinding.prototype.handleBroadcast = function ( broadcast, arg ) {
 	switch ( broadcast ) {
 		case BroadcastMessages.SYSTEMTREENODEBINDING_FOCUS :
 			var treenode = arg;
-			if ( treenode.perspectiveNode == this.perspectiveNode ) {
-				this._selectTabByEntityToken ( treenode.node.getEntityToken ());
+			if (arg == this.perspectiveNode) {
+				this._highlightTabByEntityToken()
+			} else if (treenode.perspectiveNode && treenode.perspectiveNode == this.perspectiveNode ) {
+				this._highlightTabByEntityToken(treenode.node.getEntityToken());
 			}
 			break;
 	}
 }
 
 /**
- * Find a (more or less random) tab with a given entityToken and select it.
+ * Find a tab with a given entityToken and highlight it.
  * @param {string} entityToken
  */
-DockBinding.prototype._selectTabByEntityToken = function ( entityToken ) {
-	
-	var tabs = this.getTabBindings (); 
-	var hasSelected = false;
-	
-	while ( tabs.hasNext () && !hasSelected ) {
-		var tab = tabs.getNext ();
-		var token = tab.getEntityToken ();
-		if ( token != null && token == entityToken ) {
-			if ( !tab.isSelected ) {
-				this.select ( tab, true );
-				hasSelected = true;
-			}
+DockBinding.prototype._highlightTabByEntityToken = function (entityToken) {
+
+	var tabs = this.getTabBindings();
+	while (tabs.hasNext()){
+		var tab = tabs.getNext();
+		var token = tab.getEntityToken();
+		if (entityToken && token != null && token == entityToken) {
+			tab.highlight(true);
+		} else {
+			tab.highlight(false);
 		}
 	}
 }
+
+///**
+// * Find a (more or less random) tab with a given entityToken and select it.
+// * @param {string} entityToken
+// */
+//DockBinding.prototype._selectTabByEntityToken = function ( entityToken ) {
+	
+//	var tabs = this.getTabBindings (); 
+//	var hasSelected = false;
+	
+//	while ( tabs.hasNext () && !hasSelected ) {
+//		var tab = tabs.getNext ();
+//		var token = tab.getEntityToken ();
+//		if ( token != null && token == entityToken ) {
+//			if ( !tab.isSelected ) {
+//				this.select ( tab, true );
+//				hasSelected = true;
+//			}
+//		}
+//	}
+//}
 
 /**
  * Collapse tabpanels. Invoked by the {@link StageSplitPanelBinding}
@@ -684,7 +693,9 @@ DockBinding.prototype.deActivate = function () {
  * @param {DockTabBinding} tabBinding
  * @param {boolean} isForce
  */
-DockBinding.prototype.closeTab = function ( tabBinding, isForce ) {
+DockBinding.prototype.closeTab = function (tabBinding, isForce) {
+	if (tabBinding.isPinned)
+		return;
 	
 	if ( tabBinding.isDirty && !isForce ) { 
 		var resourcename = Resolver.resolve ( tabBinding.getLabel ());
@@ -809,7 +820,7 @@ DockBinding.prototype.show = function () {
 	if ( this.isVisible ) {
 		DockBinding.superclass.show.call ( this );
 		this.isFlexible = true;
-		this.shadowTree.dockLiner.style.display = "block";
+		//this.shadowTree.dockLiner.style.display = "block";
 	}
 }
 
@@ -821,7 +832,7 @@ DockBinding.prototype.hide = function () {
 	
 	if ( !this.isVisible ) {
 		DockBinding.superclass.hide.call ( this );
-		this.shadowTree.dockLiner.style.display = "none";
+		//this.shadowTree.dockLiner.style.display = "none";
 		this.isFlexible = false;
 		if ( this.isActive ) {
 			this.deActivate ();
@@ -830,16 +841,18 @@ DockBinding.prototype.hide = function () {
 }
 
 /**
- * Showhide the dockcontrols. They are hidden when the stagedeck 
- * presents the main editorsdock as the single open dock.
- * @param {boolean} isShow
+ * @overloads {TabBoxBinding#getBestTab}
  */
-DockBinding.prototype.showControls = function ( isShow ) {
+DockBinding.prototype.getBestTab = function () {
+
+	var bestTabBinding = null;
+	var tabBindings = this.getTabBindings();
+	var tabsLength = tabBindings.getLength();
 	
-	var tabs = this.getChildBindingByLocalName ( this._nodename_tabs );
-	if ( isShow ) {
-		tabs.controlGroupBinding.show ();
-	} else {
-		tabs.controlGroupBinding.hide ();
+	if (tabsLength == 1) { // first tab
+		bestTabBinding = null;
+	} else { 
+		bestTabBinding = tabBindings.get(0);
 	}
+	return bestTabBinding;
 }

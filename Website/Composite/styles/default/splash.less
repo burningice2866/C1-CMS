@@ -1,0 +1,128 @@
+.splash-cover {
+	overflow: auto;
+	font-size: 16px;
+
+	.splash {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		-webkit-transform: translate(-50%, -50%);
+		-ms-transform: translate(-50%, -50%);
+		transform: translate(-50%, -50%);
+		z-index: 3;
+		display: block;
+		width: 312px;
+		-ms-border-radius: 10px;
+		border-radius: 10px;
+		background: #fff;
+	}
+
+	.splash-inner {
+		padding: 10px 30px 40px 30px;
+	}
+
+	h1 {
+		border-bottom: solid 1px #E1E1E1;
+		padding-bottom: 10px;
+		margin: 10px 0;
+	}
+
+	a, a:focus, a:active {
+		color: @primary-color;
+		cursor: pointer;
+	}
+
+	a:hover {
+		color: darken( @primary-color, 10%);
+		text-decoration: underline;
+	}
+
+	.clickbutton {
+		display: block;
+		text-decoration: none;
+		background: @primary-color;
+		color: #fff;
+		-ms-border-radius: 20px;
+		border-radius: 20px;
+		width: 100%;
+		text-transform: uppercase;
+		padding: 10px 20px;
+		text-align: center;
+
+		&:hover, &:active, &:focus {
+			background: darken( @primary-color, 10%);
+			color: #fff;
+			text-decoration: none;
+		}
+	}
+
+	ui|clickbutton {
+		float: none;
+		width: 100%;
+		margin: 0;
+
+		ui|labelbody {
+			height: auto;
+			float: none;
+		}
+
+		ui|labeltext {
+			float: none;
+		}
+
+		ui|labelbox {
+			display: block;
+			text-decoration: none;
+			background: @primary-color;
+			color: #fff;
+			-ms-border-radius: 20px;
+			border-radius: 20px;
+			width: 100%;
+			text-transform: uppercase;
+			padding: 10px 20px;
+			text-align: center;
+		}
+
+		&.right-btn {
+			float: right;
+			width: auto;
+		}
+
+		&.left-btn {
+			float: left;
+			width: auto;
+		}
+
+		&.hover {
+			ui|labelbox {
+				background: darken( @primary-color, 10%);
+				color: #fff;
+			}
+		}
+	}
+}
+
+.splash-bg {
+	position: fixed;
+	z-index: 1;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgb(240,240,240);
+	background-size: cover;
+	background-position: center center;
+	background-repeat: no-repeat;
+	background-image: url("@{images-root-path}/top-page-cover-bg.jpg?cacheversion=@{cache-version}");
+
+	&:after {
+		content: "";
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: 2;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.2);
+	}
+}

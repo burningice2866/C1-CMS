@@ -1,31 +1,36 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-    
-<%@ Page Language="C#" %>
+<?xml version="1.0" encoding="UTF-8" ?>
+<html xmlns="http://www.w3.org/1999/xhtml"  xmlns:control="http://www.composite.net/ns/uicontrol">
 
-	<head>
-		<title>Composite C1 was updated</title>
-		<link rel="stylesheet" type="text/css" href="updated.css.aspx"/>
-		<link rel="shortcut icon" type="image/x-icon" href="images/icons/branding/favicon16.ico"/>
-		<script type="text/javascript" src="updated.js"></script>
-	</head>
-	<body>
-		<div id="splash">
-			<div id="backdrop"></div>
-			<div id="updated">
-				<div id="head">
-					<div id="heading">
-						<div id="vignette"></div>
-						<h1>Composite C1<br/><span>was updated</span></h1>
-					</div>
-				</div>
-				<p>Your Composite C1 installation has successfully been updated. Enjoy!</p>
-				<div id="start">
-					<a id="continuelink" href="top.aspx">
-						<span><img alt="" src="images/blank.png"/> Continue</span>
-					</a>
-				</div>
-			</div>
-		</div>
-	</body>
+<%@ Page Language="C#" %>
+<head>
+    <title><%= Composite.Core.Configuration.GlobalSettingsFacade.ApplicationName %> was updated</title>
+     <% Response.WriteFile("favicon.inc"); %>
+    <control:styleloader runat="server" />
+    <script type="text/javascript" src="updated.js"></script>
+</head>
+<body class="updatedpage">
+    <div class="splash-cover">
+        <div class="splash-bg"></div>
+        <div id="splash" class="splash">
+            <div class="splash-inner">
+                <control:brandingSnippet runat="server" SnippetName="logo" />
+                <div id="updated">
+                    <div id="head">
+                        <div id="heading">
+                            <div id="vignette"></div>
+                            <h3><%= Composite.Core.Configuration.GlobalSettingsFacade.ApplicationName %> 
+                                <span>was updated</span></h3>
+                        </div>
+                    </div>
+                    <p>
+                        Your <%= Composite.Core.Configuration.GlobalSettingsFacade.ApplicationName %> installation has successfully been updated. Enjoy!
+                    </p>
+                    <div id="start">
+                        <a id="continuelink" href="top.aspx" class="clickbutton mt-40">Continue</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
 </html>

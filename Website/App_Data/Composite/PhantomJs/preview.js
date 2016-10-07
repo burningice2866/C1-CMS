@@ -14,7 +14,7 @@ window.addEventListener('load', function () {
         window.setTimeout(function () {
             finalize();
         }, (gotIframes ? 1000 : 0));
-    }, 200);
+    }, 1);
 });
 
 function finalize() {
@@ -184,3 +184,6 @@ function setDebugMarkers() {
         previewMarkerElement.style.opacity = 0.5;
     }
 }
+
+
+window.previewJsInitialized = true;

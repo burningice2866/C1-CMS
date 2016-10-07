@@ -27,6 +27,12 @@ function StageDeckBinding () {
 	 * @type {string}
 	 */
 	this.handle = null;
+
+	/**
+	 * If true, contained tree needs to be refreshed.
+	 * @type {boolean}
+	 */
+	this._isRefreshRequired = false;
 	
 	/**
 	 * Associates the deck to the selected perspective.
@@ -71,6 +77,9 @@ function StageDeckBinding () {
 	 * @type {boolean}
 	 */
 	this.isSubPanelMaximized = false;
+
+
+	this.definition = null;
 }
 
 /**
@@ -96,6 +105,8 @@ StageDeckBinding.prototype.onBindingRegister = function () {
 	
 	this.addActionListener ( WindowBinding.ACTION_LOADED );
 	this.addActionListener ( TabBoxBinding.ACTION_ATTACHED );
+
+	this.subscribe(BroadcastMessages.SYSTEMTREEBINDING_REFRESHALL);
 }
 
 /**
@@ -125,7 +136,8 @@ StageDeckBinding.prototype.handleAction = function ( action ) {
 				this.removeActionListener ( WindowBinding.ACTION_LOADED );
 				this.addActionListener ( StageSplitBoxBinding.ACTION_DOCK_EMPTIED );
 				this.addActionListener ( StageSplitBoxBinding.ACTION_DOCK_OPENED );
-				this.dispatchAction ( StageDeckBinding.ACTION_LOADED );
+				this.dispatchAction(StageDeckBinding.ACTION_LOADED);
+
 				action.consume ();
 			}
 			break;
@@ -145,9 +157,9 @@ StageDeckBinding.prototype.handleAction = function ( action ) {
 		 */
 		case StageSplitBoxBinding.ACTION_DOCK_OPENED : 
 			this._dockBindingCount ++;
-			if ( this._dockBindingCount == 2 ) {
-				this._dockBindings.get ( "main" ).showControls ( true );
-			}
+			//if ( this._dockBindingCount == 2 ) {
+			//	this._dockBindings.get ( "main" ).showControls ( true );
+			//}
 			action.consume (); // StageBinding is no longer listening!
 			break;
 		
@@ -156,9 +168,9 @@ StageDeckBinding.prototype.handleAction = function ( action ) {
 		 */	
 		case StageSplitBoxBinding.ACTION_DOCK_EMPTIED : 
 			this._dockBindingCount --;
-			if ( this._dockBindingCount == 1 ) {
-				this._dockBindings.get ( "main" ).showControls ( false );
-			}
+			//if ( this._dockBindingCount == 1 ) {
+			//	this._dockBindings.get ( "main" ).showControls ( false );
+			//}
 			action.consume ();
 			break;
 	}
@@ -190,10 +202,18 @@ StageDeckBinding.prototype.iterateContainedStageBoxBindings = function ( mode ) 
  */
 StageDeckBinding.prototype.select = function () {
 
-	if ( !this._isStageDeckBindingInitialized ) {
-		this.initialize ();
+	if (!this._isStageDeckBindingInitialized) {
+		this.initialize();
+	} else {
+		EventBroadcaster.broadcast(BroadcastMessages.STAGEDECK_CHANGED, this.handle);
 	}
-	StageDeckBinding.superclass.select.call ( this );
+	StageDeckBinding.superclass.select.call(this);
+
+	if (this._isRefreshRequired == true) {
+		this._refreshTree();
+		this._isRefreshRequired = false;
+	}
+	
 }
 
 /**
@@ -223,6 +243,70 @@ StageDeckBinding.prototype.initialize = function () {
 		this._isStageDeckBindingInitialized = true;
 	}
 }
+
+StageDeckBinding.prototype.getBrowserTab = function () {
+
+	return this._browserTab;
+}
+
+StageDeckBinding.prototype.getBrowserPage = function () {
+
+	return this.getBrowserTab().getAssociatedView().getContentWindow().bindingMap.browserpage;
+}
+
+StageDeckBinding.prototype.getSystemTree = function () {
+
+	var result = null;
+	var page = this.getBrowserPage();
+	if (page) {
+		result = page.getSystemTree();
+	}
+	return result;
+}
+
+/**
+ * @implements {IBroadcastListener}
+ * @param {string} broadcast
+ * @param {object} arg
+ */
+StageDeckBinding.prototype.handleBroadcast = function (broadcast, arg) {
+
+	StageDeckBinding.superclass.handleBroadcast.call(this, broadcast, arg);
+
+	switch (broadcast) {
+
+		case BroadcastMessages.SYSTEMTREEBINDING_REFRESHALL:
+			if (this.isSelected == true) {
+				this._refreshTree();
+			} else if (this.perspectiveNode != null) {
+				this._isRefreshRequired = true;
+			}
+			break;
+
+		case BroadcastMessages.SYSTEMTREEBINDING_REFRESHED:
+			this.unsubscribe(BroadcastMessages.SYSTEMTREEBINDING_REFRESHED);
+			this.select();
+			break;
+	}
+}
+
+/**
+ * Refresh the contained tree.
+ */
+StageDeckBinding.prototype._refreshTree = function () {
+
+	/*
+	 * The broadcast will be intercepted by SystemPageBinding. 
+	 */
+	if (this.perspectiveNode && this.perspectiveNode.getEntityToken) {
+		this.subscribe(BroadcastMessages.SYSTEMTREEBINDING_REFRESHED);
+		EventBroadcaster.broadcast(
+			BroadcastMessages.SYSTEMTREEBINDING_REFRESH,
+			this.perspectiveNode.getEntityToken()
+		);
+	}
+}
+
 
 /**
  * StageDeckBinding factory.

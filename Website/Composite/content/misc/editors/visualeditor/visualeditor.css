@@ -1,43 +1,21 @@
 @namespace ui url("http://www.w3.org/1999/xhtml");
 
-/*
- * @see {EditorToolBarButtonBinding}
- *
-ui|toolbarbutton,
-ui|clickbutton,
-ui|selector {
-	overflow: hidden !important;
-}
-*/
+
 ui|box {
 	position: relative;
-	
 }
+
 ui|cover#toolbarscover {
-	border-top: 1px solid $(color:threedhighlight);
-	border-bottom: 1px solid $(color:threedshadow);
+	border-top: 1px solid #fff;
+	border-bottom: 1px solid #ddd;
 }
 ui|flexbox#tinyflexbox {
 	position: relative; /* contain the cover */	
 }
 ui|splitpanel#editorsplitpanel {
-	border-right: 1px solid $(color:threedshadow);	
-}
-ui|splitter.horizontal {
-	border-left-color: $(color:threedface);
-	border-right-color: $(color:threedshadow);
-}
-ui|toolbarbutton.isdisabled {
-	filter: url("${root}/templates/grayscalefilter.xml#grayscale");
-	opacity: 0.35;
+	border-right: 1px solid #ddd;	
 }
 
-ui|toolbar {
-	white-space: normal;
-}
-ui|toolbar#statusbar {
-	border-top: none;
-}
 input#focusableinput { /* synchronize with sourcecodeeditor.css */
 	background-color: transparent;
 	border: none;
@@ -45,10 +23,6 @@ input#focusableinput { /* synchronize with sourcecodeeditor.css */
 	bottom: 0;
 	right: 0;
 	display: none;
-	background-color: red !important;
 	cursor: help;
 }
 
-#switchbutton {
-	margin-left: -10px;
-}

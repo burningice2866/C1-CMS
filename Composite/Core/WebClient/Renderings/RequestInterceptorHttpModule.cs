@@ -39,6 +39,8 @@ namespace Composite.Core.WebClient.Renderings
 
             SetCultureByHostname();
 
+            PrettifyPublicMarkup(httpContext);
+
             HandleRootRequestInClassicMode(httpContext);
         }
 
@@ -47,11 +49,17 @@ namespace Composite.Core.WebClient.Renderings
             IHostnameBinding hostnameBinding = HostnameBindingsFacade.GetBindingForCurrentRequest();
             if(hostnameBinding != null && !hostnameBinding.Culture.IsNullOrEmpty())
             {
-                CultureInfo cultureInfo = new CultureInfo(hostnameBinding.Culture);
+                var cultureInfo = new CultureInfo(hostnameBinding.Culture);
                 var thread = System.Threading.Thread.CurrentThread;
                 thread.CurrentCulture = cultureInfo;
                 thread.CurrentUICulture = cultureInfo;
             }
+        }
+
+
+        static void PrettifyPublicMarkup(HttpContext httpContext)
+        {
+            httpContext.Response.AppendHeader("X-Powered-By", GlobalSettingsFacade.ApplicationName);
         }
 
         static bool HandleMediaRequest(HttpContext httpContext)
@@ -60,6 +68,20 @@ namespace Composite.Core.WebClient.Renderings
 
             UrlKind urlKind;
             var mediaUrlData = MediaUrls.ParseUrl(rawUrl, out urlKind);
+
+            // Redirecting to public media url if it isn't pointing to our handler
+            if (urlKind == UrlKind.Internal && mediaUrlData.MediaStore != MediaUrls.DefaultMediaStore)
+            {
+                string publicUrl = MediaUrls.BuildUrl(mediaUrlData, UrlKind.Public);
+
+                if (!string.IsNullOrEmpty(publicUrl) && !publicUrl.StartsWith(MediaUrls.MediaUrl_PublicPrefix))
+                {
+                    httpContext.Response.Redirect(publicUrl, false);
+                    httpContext.Response.ExpiresAbsolute = DateTime.Now.AddDays(1);
+                    httpContext.ApplicationInstance.CompleteRequest();
+                    return true;
+                }
+            }
 
             if(mediaUrlData != null
                 && (urlKind == UrlKind.Public || urlKind == UrlKind.Internal))
@@ -141,7 +163,7 @@ namespace Composite.Core.WebClient.Renderings
             }
 
             // Redirecting to PageNotFoundUrl or setting 404 response code if PathInfo url part hasn't been used
-            if (!HostnameBindingsFacade.RedirectCustomPageNotFoundUrl(httpContext))
+            if (!HostnameBindingsFacade.ServeCustomPageNotFoundPage(httpContext))
             {
                 page.Response.StatusCode = 404;
             }

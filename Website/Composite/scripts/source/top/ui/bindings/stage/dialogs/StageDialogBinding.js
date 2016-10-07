@@ -514,18 +514,33 @@ StageDialogBinding.prototype._fixAutoHeight = function ( pageBinding ) {
 	}
 	height = pageBinding.bindingElement.offsetHeight;
 	height += this._titlebar.bindingElement.offsetHeight;
-	height += 4; // HARDCODE WARNING! Compensates for border thickness
-	height += 4; // HARDCODE WARNING! Compensates for border thickness
+
+	var padding = CSSComputer.getPadding(this.bindingElement);
+	var border = CSSComputer.getBorder(this.bindingElement);
+	height += padding.top + padding.bottom;
+	height += border.top + border.bottom;
+
+
 	
-	if ( height < dim.h ) { // never shrink the dialog - only expand it.
-		height = dim.h;
-	}
+	//if ( height < dim.h ) { // never shrink the dialog - only expand it.
+	//	height = dim.h;
+	//}
 	if ( pageBinding.minheight != null ) { // consider minheight!
 		if ( height < pageBinding.minheight ) {
 			height = pageBinding.minheight;
 		}
 	}
-	this.setDimension ( new Dimension ( width, height ));
+
+	//don't set height more than client height;
+	height = (top.window.innerHeight < height) ? top.window.innerHeight : height;
+
+	this.setDimension(new Dimension(width, height));
+
+	//fit position with new height
+	this.startPoint = this.getPosition();
+	this._setComputedPosition(
+			new Point(0, 0)
+	);
 }
 
 /**

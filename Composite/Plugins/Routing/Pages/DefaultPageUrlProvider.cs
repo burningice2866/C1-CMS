@@ -33,7 +33,7 @@ namespace Composite.Plugins.Routing.Pages
          private static readonly Hashtable<Tuple<DataScopeIdentifier, string>, Hashtable<string, Guid>> _friendlyUrls
             = new Hashtable<Tuple<DataScopeIdentifier, string>, Hashtable<string, Guid>>();
 
-        public string UrlSuffix { get; private set;}
+        public static string UrlSuffix { get; private set;}
 
         static DefaultPageUrlProvider()
         {
@@ -43,11 +43,19 @@ namespace Composite.Plugins.Routing.Pages
             DataEvents<IHostnameBinding>.OnAfterAdd += (a, b) => _hostnameBindings = null;
             DataEvents<IHostnameBinding>.OnAfterUpdate += (a, b) => _hostnameBindings = null;
             DataEvents<IHostnameBinding>.OnDeleted += (a, b) => _hostnameBindings = null;
+
+            DataEvents<IUrlConfiguration>.OnStoreChanged += (a, b) => LoadUrlSuffix();
         }
 
         public DefaultPageUrlProvider()
         {
-            UrlSuffix = DataFacade.GetData<IUrlConfiguration>().Select(c => c.PageUrlSuffix).FirstOrDefault() ?? string.Empty;
+            LoadUrlSuffix();
+        }
+
+        private static void LoadUrlSuffix()
+        {
+            UrlSuffix = DataFacade.GetData<IUrlConfiguration>()
+                                  .Select(c => c.PageUrlSuffix).FirstOrDefault() ?? string.Empty;
         }
 
         [Obsolete]
@@ -137,6 +145,10 @@ namespace Composite.Plugins.Routing.Pages
             }
 
             string pathInfo = decodedPath.Substring(closingBracketOffset + 1);
+            if (pathInfo.Length > 0 && pathInfo[0] != '/')
+            {
+                return null;
+            }
 
             bool isUnpublished = pathInfo.Contains(UrlMarker_Unpublished);
             if (isUnpublished)
@@ -290,7 +302,7 @@ namespace Composite.Plugins.Routing.Pages
             var urlBuilder = new UrlBuilder(relativeUrl);
 
             // Structure of a public url:
-            // http://<hostname>[/ApplicationVitrualPath]{/languageCode}[/Path to a page][/c1mode(unpublished)][/c1mode(relative)][UrlSuffix]{/PathInfo}
+            // http://<hostname>[/ApplicationVirtualPath]{/languageCode}[/Path to a page][/c1mode(unpublished)][/c1mode(relative)][UrlSuffix]{/PathInfo}
            
 
             string filePathAndPathInfo = HttpUtility.UrlDecode(urlBuilder.FullPath);
@@ -687,7 +699,7 @@ namespace Composite.Plugins.Routing.Pages
 
             if (!string.IsNullOrEmpty(pageUrlData.PathInfo))
             {
-                AppendUrlPart(pageUrlPath, pageUrlData.PathInfo);
+                AppendPathInfo(pageUrlPath, pageUrlData.PathInfo);
             }
 
 
@@ -817,6 +829,39 @@ namespace Composite.Plugins.Routing.Pages
             }
 
             return sb.Append('/').Append(urlPart);
+        }
+
+        private static StringBuilder AppendPathInfo(StringBuilder sb, string pathInfo)
+        {
+            if (string.IsNullOrEmpty(pathInfo))
+            {
+                return sb;
+            }
+
+            Verify.That(pathInfo[0] == '/', "pathInfo has to start with '/' character");
+
+            bool endsWithSlash = sb.Length != 0 && sb[sb.Length - 1] == '/';
+            if (!endsWithSlash)
+            {
+                sb.Append('/');
+            }
+
+            var parts = pathInfo.Split('/');
+
+            bool isFirst = true;
+            foreach (var pathInfoPart in parts.Skip(1))
+            {
+                if (!isFirst)
+                {
+                    sb.Append('/');
+                }
+
+                sb.Append(UrlBuilder.DefaultHttpEncoder.UrlEncode(pathInfoPart));
+
+                isFirst = false;
+            }
+
+            return sb;
         }
 
         private static string BuildRenderUrl(PageUrlData pageUrlData)

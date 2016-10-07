@@ -24,7 +24,7 @@ namespace Composite.Core.ResourceSystem
     /// </summary>
     /// <exclude />
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
-	internal static class LocalizationFiles
+	public static class LocalizationFiles
 	{
 		
     /// <exclude />
@@ -64,11 +64,11 @@ namespace Composite.Core.ResourceSystem
  /// <summary>&quot;The type &apos;{0}&apos; does not contain a property named &apos;{1}&apos;&quot;</summary> 
  public static string TreeValidationError_Common_MissingProperty(object parameter0,object parameter1) { return string.Format(T("TreeValidationError.Common.MissingProperty"), parameter0,parameter1); } 
  /// <summary>&quot;The type &apos;{0}&apos; could not be found&quot;</summary> 
- public static string TreeValidationError_Common_UnkownInterfaceType(object parameter0) { return string.Format(T("TreeValidationError.Common.UnkownInterfaceType"), parameter0); } 
+ public static string TreeValidationError_Common_UnknownInterfaceType(object parameter0) { return string.Format(T("TreeValidationError.Common.UnknownInterfaceType"), parameter0); } 
  /// <summary>&quot;The type &apos;{0}&apos; does not implement the interface &apos;{1}&apos;&quot;</summary> 
  public static string TreeValidationError_Common_NotImplementingIData(object parameter0,object parameter1) { return string.Format(T("TreeValidationError.Common.NotImplementingIData"), parameter0,parameter1); } 
  /// <summary>&quot;The value &apos;{0}&apos; is not allowed as a permission type value&quot;</summary> 
- public static string TreeValidationError_Common_WrongPermissinValue(object parameter0) { return string.Format(T("TreeValidationError.Common.WrongPermissinValue"), parameter0); } 
+ public static string TreeValidationError_Common_WrongPermissionValue(object parameter0) { return string.Format(T("TreeValidationError.Common.WrongPermissionValue"), parameter0); } 
  /// <summary>&quot;The value &apos;{0}&apos; is not allowed as a location value&quot;</summary> 
  public static string TreeValidationError_Common_WrongLocationValue(object parameter0) { return string.Format(T("TreeValidationError.Common.WrongLocationValue"), parameter0); } 
  /// <summary>&quot;No function markup provided as a child element&quot;</summary> 
@@ -308,8 +308,6 @@ namespace Composite.Core.ResourceSystem
  public static string ChangeOwnPasswordWorkflow_ElementActionToolTip { get { return T("ChangeOwnPasswordWorkflow.ElementActionToolTip"); } } 
  /// <summary>&quot;Change Password&quot;</summary> 
  public static string ChangeOwnPasswordWorkflow_Dialog_Label { get { return T("ChangeOwnPasswordWorkflow.Dialog.Label"); } } 
- /// <summary>&quot;Change your password&quot;</summary> 
- public static string ChangeOwnPasswordWorkflow_Dialog_FieldGroup_Label { get { return T("ChangeOwnPasswordWorkflow.Dialog.FieldGroup.Label"); } } 
  /// <summary>&quot;Existing password&quot;</summary> 
  public static string ChangeOwnPasswordWorkflow_Dialog_ExistingPassword_Label { get { return T("ChangeOwnPasswordWorkflow.Dialog.ExistingPassword.Label"); } } 
  /// <summary>&quot;For security reasons you must present your existing password before you can continue.&quot;</summary> 
@@ -354,8 +352,6 @@ namespace Composite.Core.ResourceSystem
  public static string ChangeOwnCultureWorkflow_Dialog_Confirm_Title { get { return T("ChangeOwnCultureWorkflow.Dialog.Confirm.Title"); } } 
  /// <summary>&quot;Are your sure you wish to change the settings? The application will restart and all your unsaved changes will be lost.&quot;</summary> 
  public static string ChangeOwnCultureWorkflow_Dialog_Confirm_Text { get { return T("ChangeOwnCultureWorkflow.Dialog.Confirm.Text"); } } 
- /// <summary>&quot;Regional settings&quot;</summary> 
- public static string ChangeOwnCultureWorkflow_FieldGroup_Label { get { return T("ChangeOwnCultureWorkflow.FieldGroup.Label"); } } 
  /// <summary>&quot;Administrators&quot;</summary> 
  public static string AdministratorAutoCreator_DefaultGroupName { get { return T("AdministratorAutoCreator.DefaultGroupName"); } } 
  /// <summary>&quot;Translation...&quot;</summary> 
@@ -549,6 +545,10 @@ namespace Composite.Core.ResourceSystem
  public static string FilePackageFragmentInstaller_OnlyUpdateNotAllowed { get { return T("FilePackageFragmentInstaller.OnlyUpdateNotAllowed"); } } 
  /// <summary>&quot;The &apos;onlyUpdate&apos; attribute is not allowed in combination with the &apos;loadAssembly&apos; attribute&quot;</summary> 
  public static string FilePackageFragmentInstaller_OnlyUpdateNotAllowedWithLoadAssemlby { get { return T("FilePackageFragmentInstaller.OnlyUpdateNotAllowedWithLoadAssemlby"); } } 
+ /// <summary>&quot;The &apos;onlyUpdate&apos; and &apos;onlyAdd&apos; attributes are now allowed on the same element&quot;</summary> 
+ public static string FilePackageFragmentInstaller_OnlyUpdateAndOnlyAddNotAllowed { get { return T("FilePackageFragmentInstaller.OnlyUpdateAndOnlyAddNotAllowed"); } } 
+ /// <summary>&quot;The &apos;onlyAdd&apos; and &apos;allowOverwrite&apos; attributes are now allowed on the same element&quot;</summary> 
+ public static string FilePackageFragmentInstaller_OnlyAddAndAllowOverwriteNotAllowed { get { return T("FilePackageFragmentInstaller.OnlyAddAndAllowOverwriteNotAllowed"); } } 
  /// <summary>&quot;The install zip-file does not contain the directory &apos;{0}&apos;&quot;</summary> 
  public static string FilePackageFragmentInstaller_MissingDirectory(object parameter0) { return string.Format(T("FilePackageFragmentInstaller.MissingDirectory"), parameter0); } 
  /// <summary>&quot;Uninstall.xml contains file pathes, binded to the original website location, and therefore the package cannot be uninstalled safely.&quot;</summary> 
@@ -572,25 +572,25 @@ namespace Composite.Core.ResourceSystem
  /// <summary>&quot;File &apos;{0}&apos; was marked as &apos;Read Only&apos;. This file attribute was explicitly removed and the file was updated normally.&quot;</summary> 
  public static string FileXslTransformationPackageFragmentInstaller_FileReadOnlyOverride(object parameter0) { return string.Format(T("FileXslTransformationPackageFragmentInstaller.FileReadOnlyOverride"), parameter0); } 
  /// <summary>&quot;Only one &apos;PackageVersions&apos; element allowed&quot;</summary> 
- public static string PackageVersionBumberFragmentInstaller_OnlyOneElement { get { return T("PackageVersionBumberFragmentInstaller.OnlyOneElement"); } } 
+ public static string PackageVersionBumperFragmentInstaller_OnlyOneElement { get { return T("PackageVersionBumperFragmentInstaller.OnlyOneElement"); } } 
  /// <summary>&quot;Missing {0} attribute in the configuration&quot;</summary> 
- public static string PackageVersionBumberFragmentInstaller_MissingAttribute(object parameter0) { return string.Format(T("PackageVersionBumberFragmentInstaller.MissingAttribute"), parameter0); } 
+ public static string PackageVersionBumperFragmentInstaller_MissingAttribute(object parameter0) { return string.Format(T("PackageVersionBumperFragmentInstaller.MissingAttribute"), parameter0); } 
  /// <summary>&quot;Wrong attribute value format, Guid value expected&quot;</summary> 
- public static string PackageVersionBumberFragmentInstaller_WrongAttributeGuidFormat { get { return T("PackageVersionBumberFragmentInstaller.WrongAttributeGuidFormat"); } } 
+ public static string PackageVersionBumperFragmentInstaller_WrongAttributeGuidFormat { get { return T("PackageVersionBumperFragmentInstaller.WrongAttributeGuidFormat"); } } 
  /// <summary>&quot;The package id duplicate: &apos;{0}&apos;&quot;</summary> 
- public static string PackageVersionBumberFragmentInstaller_PackageIdDuplicate(object parameter0) { return string.Format(T("PackageVersionBumberFragmentInstaller.PackageIdDuplicate"), parameter0); } 
+ public static string PackageVersionBumperFragmentInstaller_PackageIdDuplicate(object parameter0) { return string.Format(T("PackageVersionBumperFragmentInstaller.PackageIdDuplicate"), parameter0); } 
  /// <summary>&quot;Wrong attribute value format, Version value expected (x.y.z)&quot;</summary> 
- public static string PackageVersionBumberFragmentInstaller_WrongAttributeVersionFormat { get { return T("PackageVersionBumberFragmentInstaller.WrongAttributeVersionFormat"); } } 
+ public static string PackageVersionBumperFragmentInstaller_WrongAttributeVersionFormat { get { return T("PackageVersionBumperFragmentInstaller.WrongAttributeVersionFormat"); } } 
  /// <summary>&quot;Only one &apos;PackageVersions&apos; element allowed&quot;</summary> 
- public static string PackageVersionBumberFragmentUninstaller_OnlyOneElement { get { return T("PackageVersionBumberFragmentUninstaller.OnlyOneElement"); } } 
+ public static string PackageVersionBumperFragmentUninstaller_OnlyOneElement { get { return T("PackageVersionBumperFragmentUninstaller.OnlyOneElement"); } } 
  /// <summary>&quot;Missing {0} attribute in the configuration&quot;</summary> 
- public static string PackageVersionBumberFragmentUninstaller_MissingAttribute(object parameter0) { return string.Format(T("PackageVersionBumberFragmentUninstaller.MissingAttribute"), parameter0); } 
+ public static string PackageVersionBumperFragmentUninstaller_MissingAttribute(object parameter0) { return string.Format(T("PackageVersionBumperFragmentUninstaller.MissingAttribute"), parameter0); } 
  /// <summary>&quot;Wrong attribute value format, Guid value expected&quot;</summary> 
- public static string PackageVersionBumberFragmentUninstaller_WrongAttributeGuidFormat { get { return T("PackageVersionBumberFragmentUninstaller.WrongAttributeGuidFormat"); } } 
+ public static string PackageVersionBumperFragmentUninstaller_WrongAttributeGuidFormat { get { return T("PackageVersionBumperFragmentUninstaller.WrongAttributeGuidFormat"); } } 
  /// <summary>&quot;The package id duplicate: &apos;{0}&apos;&quot;</summary> 
- public static string PackageVersionBumberFragmentUninstaller_PackageIdDuplicate(object parameter0) { return string.Format(T("PackageVersionBumberFragmentUninstaller.PackageIdDuplicate"), parameter0); } 
+ public static string PackageVersionBumperFragmentUninstaller_PackageIdDuplicate(object parameter0) { return string.Format(T("PackageVersionBumperFragmentUninstaller.PackageIdDuplicate"), parameter0); } 
  /// <summary>&quot;Wrong attribute value format, Version value expected (x.y.z)&quot;</summary> 
- public static string PackageVersionBumberFragmentUninstaller_WrongAttributeVersionFormat { get { return T("PackageVersionBumberFragmentUninstaller.WrongAttributeVersionFormat"); } } 
+ public static string PackageVersionBumperFragmentUninstaller_WrongAttributeVersionFormat { get { return T("PackageVersionBumperFragmentUninstaller.WrongAttributeVersionFormat"); } } 
  /// <summary>&quot;A public RSA key is missing in the package configuration&quot;</summary> 
  public static string PackageLicenseFragmentInstaller_MissingPublicKeyElement { get { return T("PackageLicenseFragmentInstaller.MissingPublicKeyElement"); } } 
  /// <summary>&quot;File &apos;{0}&apos; does not exist.&quot;</summary> 
@@ -1655,10 +1655,8 @@ namespace Composite.Core.ResourceSystem
  public static string VirtualElementProviderElementProvider_RootActions_RestartApplicationLabel { get { return T("VirtualElementProviderElementProvider.RootActions.RestartApplicationLabel"); } } 
  /// <summary>&quot;Restart the server&quot;</summary> 
  public static string VirtualElementProviderElementProvider_RootActions_RestartApplicationTooltip { get { return T("VirtualElementProviderElementProvider.RootActions.RestartApplicationTooltip"); } } 
- /// <summary>&quot;Broadcast Message to All C1 Consoles&quot;</summary> 
+ /// <summary>&quot;Broadcast Message to All {applicationname} Consoles&quot;</summary> 
  public static string SendMessageToConsolesWorkflow_Layout_Label { get { return T("SendMessageToConsolesWorkflow.Layout.Label"); } } 
- /// <summary>&quot;Message to broadcast&quot;</summary> 
- public static string SendMessageToConsolesWorkflow_FieldGroup_Label { get { return T("SendMessageToConsolesWorkflow.FieldGroup.Label"); } } 
  /// <summary>&quot;Title&quot;</summary> 
  public static string SendMessageToConsolesWorkflow_TitleTextBox_Label { get { return T("SendMessageToConsolesWorkflow.TitleTextBox.Label"); } } 
  /// <summary>&quot;Dialog title of broadcast message&quot;</summary> 
@@ -1781,7 +1779,7 @@ namespace Composite.Core.ResourceSystem
  public static string Website_General_LabelVersionNumber { get { return T("Website.General.LabelVersionNumber"); } } 
  /// <summary>&quot;Restart?&quot;</summary> 
  public static string Website_Application_DialogReload_Title { get { return T("Website.Application.DialogReload.Title"); } } 
- /// <summary>&quot;Restart Composite C1? All unsaved changes will be lost.&quot;</summary> 
+ /// <summary>&quot;Restart {applicationname}? All unsaved changes will be lost.&quot;</summary> 
  public static string Website_Application_DialogReload_Text { get { return T("Website.Application.DialogReload.Text"); } } 
  /// <summary>&quot;Save Resource?&quot;</summary> 
  public static string WebSite_Application_DialogSaveResource_Title { get { return T("WebSite.Application.DialogSaveResource.Title"); } } 
@@ -1801,7 +1799,7 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Dialogs_LabelCancel { get { return T("Website.Dialogs.LabelCancel"); } } 
  /// <summary>&quot;More Info&quot;</summary> 
  public static string Website_Dialogs_LabelDisclosure { get { return T("Website.Dialogs.LabelDisclosure"); } } 
- /// <summary>&quot;About Composite C1&quot;</summary> 
+ /// <summary>&quot;About {applicationname}&quot;</summary> 
  public static string Website_Dialogs_About_Title { get { return T("Website.Dialogs.About.Title"); } } 
  /// <summary>&quot;Credits&quot;</summary> 
  public static string Website_Dialogs_About_LabelCredits { get { return T("Website.Dialogs.About.LabelCredits"); } } 
@@ -2141,7 +2139,7 @@ namespace Composite.Core.ResourceSystem
  public static string Website_App_LabelFileCloseAll { get { return T("Website.App.LabelFileCloseAll"); } } 
  /// <summary>&quot;Save All...&quot;</summary> 
  public static string Website_App_LabelFileSaveAll { get { return T("Website.App.LabelFileSaveAll"); } } 
- /// <summary>&quot;Exit&quot;</summary> 
+ /// <summary>&quot;Sign out&quot;</summary> 
  public static string Website_App_LabelFileExit { get { return T("Website.App.LabelFileExit"); } } 
  /// <summary>&quot;View&quot;</summary> 
  public static string Website_App_LabelView { get { return T("Website.App.LabelView"); } } 
@@ -2155,12 +2153,14 @@ namespace Composite.Core.ResourceSystem
  public static string Website_App_LabelTools { get { return T("Website.App.LabelTools"); } } 
  /// <summary>&quot;Help&quot;</summary> 
  public static string Website_App_LabelHelp { get { return T("Website.App.LabelHelp"); } } 
+ /// <summary>&quot;Settings&quot;</summary> 
+ public static string Website_App_LabelSettings { get { return T("Website.App.LabelSettings"); } } 
  /// <summary>&quot;Help Contents&quot;</summary> 
  public static string Website_App_LabelHelpContents { get { return T("Website.App.LabelHelpContents"); } } 
  /// <summary>&quot;Provide Feedback...&quot;</summary> 
  public static string Website_App_LabelFeedback { get { return T("Website.App.LabelFeedback"); } } 
- /// <summary>&quot;About Composite C1&quot;</summary> 
- public static string Website_App_LabelAboutComposite { get { return T("Website.App.LabelAboutComposite"); } } 
+ /// <summary>&quot;About {applicationname}&quot;</summary> 
+ public static string Website_App_LabelAbout { get { return T("Website.App.LabelAbout"); } } 
  /// <summary>&quot;Cut&quot;</summary> 
  public static string Website_App_LabelCut { get { return T("Website.App.LabelCut"); } } 
  /// <summary>&quot;Copy&quot;</summary> 
@@ -2205,8 +2205,6 @@ namespace Composite.Core.ResourceSystem
  public static string Website_App_StatusBar_ErrorInField { get { return T("Website.App.StatusBar.ErrorInField"); } } 
  /// <summary>&quot;Add New Media File&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewMediaFile_Layout_Label { get { return T("Website.Forms.Administrative.AddNewMediaFile.Layout.Label"); } } 
- /// <summary>&quot;Media Properties&quot;</summary> 
- public static string Website_Forms_Administrative_AddNewMediaFile_FieldGroup_Label { get { return T("Website.Forms.Administrative.AddNewMediaFile.FieldGroup.Label"); } } 
  /// <summary>&quot;Filename&quot;</summary> 
  public static string Website_Forms_Administrative_AddNewMediaFile_FileUpload_Label { get { return T("Website.Forms.Administrative.AddNewMediaFile.FileUpload.Label"); } } 
  /// <summary>&quot;Select the file to upload&quot;</summary> 
@@ -2255,8 +2253,6 @@ namespace Composite.Core.ResourceSystem
  public static string Website_Forms_Administrative_AddNewMediaFolder_FolderNotOnlySlash { get { return T("Website.Forms.Administrative.AddNewMediaFolder.FolderNotOnlySlash"); } } 
  /// <summary>&quot;Upload Multiple Files via a Zip File&quot;</summary> 
  public static string Website_Forms_Administrative_AddZipMediaFile_LabelDialog { get { return T("Website.Forms.Administrative.AddZipMediaFile.LabelDialog"); } } 
- /// <summary>&quot;Select Zip file containing files to extract&quot;</summary> 
- public static string Website_Forms_Administrative_AddZipMediaFile_LabelFieldGroup { get { return T("Website.Forms.Administrative.AddZipMediaFile.LabelFieldGroup"); } } 
  /// <summary>&quot;Zip file&quot;</summary> 
  public static string Website_Forms_Administrative_AddZipMediaFile_LabelFile { get { return T("Website.Forms.Administrative.AddZipMediaFile.LabelFile"); } } 
  /// <summary>&quot;Create a Zip file (right click local folder and select Send to -&gt; Compressed folder) and select it using the Browse button&quot;</summary> 
@@ -2649,7 +2645,7 @@ namespace Composite.Core.ResourceSystem
  public static string DraftTransition { get { return T("DraftTransition"); } } 
  /// <summary>&quot;Awaiting Approval&quot;</summary> 
  public static string AwaitingApprovalTransition { get { return T("AwaitingApprovalTransition"); } } 
- /// <summary>&quot;PublicationSettings&quot;</summary> 
+ /// <summary>&quot;Publication settings&quot;</summary> 
  public static string PublicationSettings_FieldGroupLabel { get { return T("PublicationSettings.FieldGroupLabel"); } } 
  /// <summary>&quot;Status&quot;</summary> 
  public static string PublicationStatus_Label { get { return T("PublicationStatus.Label"); } } 
@@ -2691,8 +2687,22 @@ namespace Composite.Core.ResourceSystem
  public static string EditorCommon_HelpTitle { get { return T("EditorCommon.HelpTitle"); } } 
  /// <summary>&quot;Fields&quot;</summary> 
  public static string EditorCommon_LabelFields { get { return T("EditorCommon.LabelFields"); } } 
+ /// <summary>&quot;Key field type&quot;</summary> 
+ public static string EditorCommon_KeyFieldTypeLabel { get { return T("EditorCommon.KeyFieldTypeLabel"); } } 
+ /// <summary>&quot;The type of the primary key. Use the default &apos;Guid&apos; type for optimal performance and &apos;RandomString&apos; for shorter data urls.&quot;</summary> 
+ public static string EditorCommon_KeyFieldTypeHelp { get { return T("EditorCommon.KeyFieldTypeHelp"); } } 
+ /// <summary>&quot;Guid&quot;</summary> 
+ public static string EditorCommon_KeyFieldType_Guid { get { return T("EditorCommon.KeyFieldType.Guid"); } } 
+ /// <summary>&quot;Random String, 4 characters long&quot;</summary> 
+ public static string EditorCommon_KeyFieldType_RandomString4 { get { return T("EditorCommon.KeyFieldType.RandomString4"); } } 
+ /// <summary>&quot;Random String, 8 characters long&quot;</summary> 
+ public static string EditorCommon_KeyFieldType_RandomString8 { get { return T("EditorCommon.KeyFieldType.RandomString8"); } } 
  /// <summary>&quot;Services&quot;</summary> 
  public static string EditorCommon_ServicesLabel { get { return T("EditorCommon.ServicesLabel"); } } 
+ /// <summary>&quot;Short URL name&quot;</summary> 
+ public static string EditorCommon_InternalUrlPrefixLabel { get { return T("EditorCommon.InternalUrlPrefixLabel"); } } 
+ /// <summary>&quot;When specified, allows data items of the current type to be referenced in content. The internal links will have format &apos;~/{ShortURLName}({id})&apos;, f.e. &apos;~/product(aIkH34F)&quot;</summary> 
+ public static string EditorCommon_InternalUrlPrefixHelp { get { return T("EditorCommon.InternalUrlPrefixHelp"); } } 
  /// <summary>&quot;Has caching&quot;</summary> 
  public static string EditorCommon_HasCaching { get { return T("EditorCommon.HasCaching"); } } 
  /// <summary>&quot;Has publishing&quot;</summary> 
@@ -2784,11 +2794,7 @@ namespace Composite.Core.ResourceSystem
  /// <summary>&quot;Error&quot;</summary> 
  public static string AddNewCompositionTypeWorkflow_ErrorTitle { get { return T("AddNewCompositionTypeWorkflow.ErrorTitle"); } } 
  /// <summary>&quot;Error&quot;</summary> 
- public static string AddNewAggregationTypeWorkflow_ErrorTitle { get { return T("AddNewAggregationTypeWorkflow.ErrorTitle"); } } 
- /// <summary>&quot;Error&quot;</summary> 
  public static string EditCompositionTypeWorkflow_ErrorTitle { get { return T("EditCompositionTypeWorkflow.ErrorTitle"); } } 
- /// <summary>&quot;Error&quot;</summary> 
- public static string EditAggregationTypeWorkflow_ErrorTitle { get { return T("EditAggregationTypeWorkflow.ErrorTitle"); } } 
  /// <summary>&quot;XML Result&quot;</summary> 
  public static string DataTypeDescriptorToXmlLabel { get { return T("DataTypeDescriptorToXmlLabel"); } } 
  /// <summary>&quot;This type has custom form markup&quot;</summary> 
@@ -2857,8 +2863,6 @@ namespace Composite.Core.ResourceSystem
  public static string AddSystemLocaleWorkflow_AddElementActionToolTip { get { return T("AddSystemLocaleWorkflow.AddElementActionToolTip"); } } 
  /// <summary>&quot;Add Language&quot;</summary> 
  public static string AddSystemLocaleWorkflow_Dialog_Label { get { return T("AddSystemLocaleWorkflow.Dialog.Label"); } } 
- /// <summary>&quot;Choose language&quot;</summary> 
- public static string AddSystemLocaleWorkflow_FieldGroup_Label { get { return T("AddSystemLocaleWorkflow.FieldGroup.Label"); } } 
  /// <summary>&quot;Languages&quot;</summary> 
  public static string AddSystemLocaleWorkflow_CultureSelector_Label { get { return T("AddSystemLocaleWorkflow.CultureSelector.Label"); } } 
  /// <summary>&quot;The list of available, uninstalled languages. Language packages may be installed for additional options.&quot;</summary> 
@@ -2936,8 +2940,6 @@ namespace Composite.Core.ResourceSystem
  public static string EditTemplate_Validation_TemplateIdChanged(object parameter0) { return string.Format(T("EditTemplate.Validation.TemplateIdChanged"), parameter0); } 
  /// <summary>&quot;Add New Master Page Template&quot;</summary> 
  public static string AddNewMasterPagePageTemplate_LabelDialog { get { return T("AddNewMasterPagePageTemplate.LabelDialog"); } } 
- /// <summary>&quot;Master Page Template&quot;</summary> 
- public static string AddNewMasterPagePageTemplate_LabelFieldGroup { get { return T("AddNewMasterPagePageTemplate.LabelFieldGroup"); } } 
  /// <summary>&quot;Template Title&quot;</summary> 
  public static string AddNewMasterPagePageTemplate_LabelTemplateTitle { get { return T("AddNewMasterPagePageTemplate.LabelTemplateTitle"); } } 
  /// <summary>&quot;The title identifies this template in lists. Consider selecting a short but meaningful name.&quot;</summary> 
@@ -2985,8 +2987,6 @@ namespace Composite.Core.ResourceSystem
  public static string Delete { get { return T("Delete"); } } 
  /// <summary>&quot;Delete Function.&quot;</summary> 
  public static string DeleteToolTip { get { return T("DeleteToolTip"); } } 
- /// <summary>&quot;Add new method based function&quot;</summary> 
- public static string AddNewMethodBasedFunction_LabelFieldGroup { get { return T("AddNewMethodBasedFunction.LabelFieldGroup"); } } 
  /// <summary>&quot;Type&quot;</summary> 
  public static string AddNewMethodBasedFunctionStep1_LabelType { get { return T("AddNewMethodBasedFunctionStep1.LabelType"); } } 
  /// <summary>&quot;The type that contains the method in question&quot;</summary> 
@@ -3300,8 +3300,6 @@ namespace Composite.Core.ResourceSystem
  public static string InstallRemotePackage_ShowWarning_InfoTableCaption { get { return T("InstallRemotePackage.ShowWarning.InfoTableCaption"); } } 
  /// <summary>&quot;Install Local Package&quot;</summary> 
  public static string InstallLocalPackage_Step1_LayoutLabel { get { return T("InstallLocalPackage.Step1.LayoutLabel"); } } 
- /// <summary>&quot;Path to the local package&quot;</summary> 
- public static string InstallLocalPackage_Step1_FieldGroupLabel { get { return T("InstallLocalPackage.Step1.FieldGroupLabel"); } } 
  /// <summary>&quot;Package file&quot;</summary> 
  public static string InstallLocalPackage_Step1_FileUploadLabel { get { return T("InstallLocalPackage.Step1.FileUploadLabel"); } } 
  /// <summary>&quot;Browse to and select the local package file&quot;</summary> 
@@ -3451,8 +3449,6 @@ namespace Composite.Core.ResourceSystem
  public static string AddNewPageStep1_LabelAddAlphabetic { get { return T("AddNewPageStep1.LabelAddAlphabetic"); } } 
  /// <summary>&quot;Select position...&quot;</summary> 
  public static string AddNewPageStep1_LabelAddBelowOtherPage { get { return T("AddNewPageStep1.LabelAddBelowOtherPage"); } } 
- /// <summary>&quot;Advanced settings&quot;</summary> 
- public static string AddNewPageStep2_LabelFieldGroup { get { return T("AddNewPageStep2.LabelFieldGroup"); } } 
  /// <summary>&quot;URL title&quot;</summary> 
  public static string AddNewPageStep2_LabelUrlTitle { get { return T("AddNewPageStep2.LabelUrlTitle"); } } 
  /// <summary>&quot;The entry specified in this field is shown in the browser address bar. The field is used by search engines&quot;</summary> 
@@ -3573,14 +3569,6 @@ namespace Composite.Core.ResourceSystem
  public static string PageElementProvider_AddSubPage { get { return T("PageElementProvider.AddSubPage"); } } 
  /// <summary>&quot;Add new page below the selected&quot;</summary> 
  public static string PageElementProvider_AddSubPageToolTip { get { return T("PageElementProvider.AddSubPageToolTip"); } } 
- /// <summary>&quot;Browse Published Page&quot;</summary> 
- public static string PageElementProvider_ViewPublicPage { get { return T("PageElementProvider.ViewPublicPage"); } } 
- /// <summary>&quot;View last published version&quot;</summary> 
- public static string PageElementProvider_ViewPublicToolTip { get { return T("PageElementProvider.ViewPublicToolTip"); } } 
- /// <summary>&quot;Browse Saved Page&quot;</summary> 
- public static string PageElementProvider_ViewDraftPage { get { return T("PageElementProvider.ViewDraftPage"); } } 
- /// <summary>&quot;View recent changes&quot;</summary> 
- public static string PageElementProvider_ViewDraftToolTip { get { return T("PageElementProvider.ViewDraftToolTip"); } } 
  /// <summary>&quot;Show page local orderings&quot;</summary> 
  public static string PageElementProvider_DisplayLocalOrderingLabel { get { return T("PageElementProvider.DisplayLocalOrderingLabel"); } } 
  /// <summary>&quot;Show page local orderings&quot;</summary> 
@@ -3633,10 +3621,6 @@ namespace Composite.Core.ResourceSystem
  public static string ManageHostNames_Remove_MultiSelectorLabel { get { return T("ManageHostNames.Remove.MultiSelectorLabel"); } } 
  /// <summary>&quot;The host names you select will no longer be associated with the page&quot;</summary> 
  public static string ManageHostNames_Remove_MultiSelectorHelp { get { return T("ManageHostNames.Remove.MultiSelectorHelp"); } } 
- /// <summary>&quot;The selected page is not published&quot;</summary> 
- public static string Preview_PublishedPage_NotPublishedTitle { get { return T("Preview.PublishedPage.NotPublishedTitle"); } } 
- /// <summary>&quot;The selected page is not published&quot;</summary> 
- public static string Preview_PublishedPage_NotPublishedMessage { get { return T("Preview.PublishedPage.NotPublishedMessage"); } } 
  /// <summary>&quot;Please confirm deletion of all sub pages&quot;</summary> 
  public static string DeletePageWorkflow_MissingConfirmErrorMessage { get { return T("DeletePageWorkflow.MissingConfirmErrorMessage"); } } 
  /// <summary>&quot;Cascade delete error&quot;</summary> 
@@ -3682,8 +3666,6 @@ namespace Composite.Core.ResourceSystem
  public static string PageTemplateElementProvider_EditXmlTemplateToolTip { get { return T("PageTemplateElementProvider.EditXmlTemplateToolTip"); } } 
  /// <summary>&quot;Add New XML Page Template&quot;</summary> 
  public static string AddNewXmlPageTemplate_LabelDialog { get { return T("AddNewXmlPageTemplate.LabelDialog"); } } 
- /// <summary>&quot;XML Template&quot;</summary> 
- public static string AddNewXmlPageTemplate_LabelFieldGroup { get { return T("AddNewXmlPageTemplate.LabelFieldGroup"); } } 
  /// <summary>&quot;Template Title&quot;</summary> 
  public static string AddNewXmlPageTemplate_LabelTemplateTitle { get { return T("AddNewXmlPageTemplate.LabelTemplateTitle"); } } 
  /// <summary>&quot;The title identifies this template in lists. Consider selecting a short but meaningful name.&quot;</summary> 
@@ -3728,8 +3710,6 @@ namespace Composite.Core.ResourceSystem
  public static string DeletePageTemplateWorkflow_PageTypeReference(object parameter0,object parameter1) { return string.Format(T("DeletePageTemplateWorkflow.PageTypeReference"), parameter0,parameter1); } 
  /// <summary>&quot;Add New Page Template&quot;</summary> 
  public static string AddNewPageTemplate_LabelDialog { get { return T("AddNewPageTemplate.LabelDialog"); } } 
- /// <summary>&quot;New page template&quot;</summary> 
- public static string AddNewPageTemplate_LabelFieldGroup { get { return T("AddNewPageTemplate.LabelFieldGroup"); } } 
  /// <summary>&quot;Choose one of the possible types of page templates&quot;</summary> 
  public static string AddNewPageTemplate_TemplateTypeHelp { get { return T("AddNewPageTemplate.TemplateTypeHelp"); } } 
  /// <summary>&quot;Template type&quot;</summary> 
@@ -3771,8 +3751,6 @@ namespace Composite.Core.ResourceSystem
  public static string ElementProvider_EditVisuallyToolTip { get { return T("ElementProvider.EditVisuallyToolTip"); } } 
  /// <summary>&quot;Add New Page Template Feature&quot;</summary> 
  public static string AddWorkflow_LabelDialog { get { return T("AddWorkflow.LabelDialog"); } } 
- /// <summary>&quot;Page Template Feature&quot;</summary> 
- public static string AddWorkflow_LabelFieldGroup { get { return T("AddWorkflow.LabelFieldGroup"); } } 
  /// <summary>&quot;Feature name&quot;</summary> 
  public static string AddWorkflow_LabelTemplateFeatureName { get { return T("AddWorkflow.LabelTemplateFeatureName"); } } 
  /// <summary>&quot;The name is used to identify this feature when included in templates&quot;</summary> 
@@ -3944,8 +3922,6 @@ namespace Composite.Core.ResourceSystem
  public static string PageType_DeletePageTypeWorkflow_PagesRefering_Layout_Message(object parameter0) { return string.Format(T("PageType.DeletePageTypeWorkflow.PagesRefering.Layout.Message"), parameter0); } 
  /// <summary>&quot;Add Default Content&quot;</summary> 
  public static string PageType_AddPageTypeDefaultPageContentWorkflow_Layout_Label { get { return T("PageType.AddPageTypeDefaultPageContentWorkflow.Layout.Label"); } } 
- /// <summary>&quot;Choose placeholder&quot;</summary> 
- public static string PageType_AddPageTypeDefaultPageContentWorkflow_FieldGroup_Label { get { return T("PageType.AddPageTypeDefaultPageContentWorkflow.FieldGroup.Label"); } } 
  /// <summary>&quot;Placeholder ID&quot;</summary> 
  public static string PageType_AddPageTypeDefaultPageContentWorkflow_PlaceHolderIdTextBox_Label { get { return T("PageType.AddPageTypeDefaultPageContentWorkflow.PlaceHolderIdTextBox.Label"); } } 
  /// <summary>&quot;The ID of the placeholder. You can write a non-existing ID and create the placeholder afterwards (by editing Page Template markup).&quot;</summary> 
@@ -4045,8 +4021,6 @@ namespace Composite.Core.ResourceSystem
  public static string DeleteRazorFunction_ToolTip { get { return T("DeleteRazorFunction.ToolTip"); } } 
  /// <summary>&quot;Add Razor Function&quot;</summary> 
  public static string AddNewRazorFunction_LabelDialog { get { return T("AddNewRazorFunction.LabelDialog"); } } 
- /// <summary>&quot;New Razor function&quot;</summary> 
- public static string AddNewRazorFunction_LabelFieldGroup { get { return T("AddNewRazorFunction.LabelFieldGroup"); } } 
  /// <summary>&quot;Name&quot;</summary> 
  public static string AddNewRazorFunction_LabelName { get { return T("AddNewRazorFunction.LabelName"); } } 
  /// <summary>&quot;&quot;</summary> 
@@ -4104,8 +4078,6 @@ namespace Composite.Core.ResourceSystem
  public static string DeleteRazorPageTemplateAction_ToolTip { get { return T("DeleteRazorPageTemplateAction.ToolTip"); } } 
  /// <summary>&quot;Add New Razor Template&quot;</summary> 
  public static string AddNewRazorPageTemplate_LabelDialog { get { return T("AddNewRazorPageTemplate.LabelDialog"); } } 
- /// <summary>&quot;Razor Template&quot;</summary> 
- public static string AddNewRazorPageTemplate_LabelFieldGroup { get { return T("AddNewRazorPageTemplate.LabelFieldGroup"); } } 
  /// <summary>&quot;Template Title&quot;</summary> 
  public static string AddNewRazorPageTemplate_LabelTemplateTitle { get { return T("AddNewRazorPageTemplate.LabelTemplateTitle"); } } 
  /// <summary>&quot;The title identifies this template in lists. Consider selecting a short but meaningful name.&quot;</summary> 
@@ -4197,8 +4169,6 @@ namespace Composite.Core.ResourceSystem
  public static string AddEditSqlFunction_LabelIsQueryCheckBox { get { return T("AddEditSqlFunction.LabelIsQueryCheckBox"); } } 
  /// <summary>&quot;SQL Command behaviour&quot;</summary> 
  public static string AddEditSqlFunction_LabelCommandBehaviour { get { return T("AddEditSqlFunction.LabelCommandBehaviour"); } } 
- /// <summary>&quot;SQL Connection settings&quot;</summary> 
- public static string AddEditSqlFunctionConnection_LabelFieldGroup { get { return T("AddEditSqlFunctionConnection.LabelFieldGroup"); } } 
  /// <summary>&quot;SQL Command&quot;</summary> 
  public static string AddEditSqlFunction_LabelSqlEditor { get { return T("AddEditSqlFunction.LabelSqlEditor"); } } 
  /// <summary>&quot;Add New SQL Connection&quot;</summary> 
@@ -4776,7 +4746,7 @@ namespace Composite.Core.ResourceSystem
  public static string Composite_Web_Client_IsCrawler_description { get { return T("Composite.Web.Client.IsCrawler.description"); } } 
  /// <summary>&quot;True if the current request is identified as coming from a mobile device.&quot;</summary> 
  public static string Composite_Web_Client_IsMobileDevice_description { get { return T("Composite.Web.Client.IsMobileDevice.description"); } } 
- /// <summary>&quot;Common HTML meta tags you probably want in yout html head&quot;</summary> 
+ /// <summary>&quot;Common HTML meta tags you probably want in your html head&quot;</summary> 
  public static string Composite_Web_Html_Template_CommonMetaTags_description { get { return T("Composite.Web.Html.Template.CommonMetaTags.description"); } } 
  /// <summary>&quot;Content-Type&quot;</summary> 
  public static string Composite_Web_Html_Template_CommonMetaTags_param_ContentType_label { get { return T("Composite.Web.Html.Template.CommonMetaTags.param.ContentType.label"); } } 
@@ -4950,7 +4920,7 @@ namespace Composite.Core.ResourceSystem
  public static string Composite_Web_Request_PathInfo_param_Segment_help { get { return T("Composite.Web.Request.PathInfo.param.Segment.help"); } } 
  /// <summary>&quot;Segment&quot;</summary> 
  public static string Composite_Web_Request_PathInfo_param_Segment_label { get { return T("Composite.Web.Request.PathInfo.param.Segment.label"); } } 
- /// <summary>&quot;When true, Composite C1 will be instructed to accept any path info string. Default is true.&quot;</summary> 
+ /// <summary>&quot;When true, any path info string will be accepted. Default is true.&quot;</summary> 
  public static string Composite_Web_Request_PathInfo_param_AutoApprove_help { get { return T("Composite.Web.Request.PathInfo.param.AutoApprove.help"); } } 
  /// <summary>&quot;AutoApprove&quot;</summary> 
  public static string Composite_Web_Request_PathInfo_param_AutoApprove_label { get { return T("Composite.Web.Request.PathInfo.param.AutoApprove.label"); } } 
@@ -4964,7 +4934,7 @@ namespace Composite.Core.ResourceSystem
  public static string Composite_Web_Request_PathInfoInt_param_Segment_help { get { return T("Composite.Web.Request.PathInfoInt.param.Segment.help"); } } 
  /// <summary>&quot;Segment&quot;</summary> 
  public static string Composite_Web_Request_PathInfoInt_param_Segment_label { get { return T("Composite.Web.Request.PathInfoInt.param.Segment.label"); } } 
- /// <summary>&quot;When true, Composite C1 will be instructed to accept any path info string. Default is true.&quot;</summary> 
+ /// <summary>&quot;When true, any path info string will be accepted. Default is true.&quot;</summary> 
  public static string Composite_Web_Request_PathInfoInt_param_AutoApprove_help { get { return T("Composite.Web.Request.PathInfoInt.param.AutoApprove.help"); } } 
  /// <summary>&quot;AutoApprove&quot;</summary> 
  public static string Composite_Web_Request_PathInfoInt_param_AutoApprove_label { get { return T("Composite.Web.Request.PathInfoInt.param.AutoApprove.label"); } } 
@@ -4978,7 +4948,7 @@ namespace Composite.Core.ResourceSystem
  public static string Composite_Web_Request_PathInfoGuid_param_Segment_help { get { return T("Composite.Web.Request.PathInfoGuid.param.Segment.help"); } } 
  /// <summary>&quot;Segment&quot;</summary> 
  public static string Composite_Web_Request_PathInfoGuid_param_Segment_label { get { return T("Composite.Web.Request.PathInfoGuid.param.Segment.label"); } } 
- /// <summary>&quot;When true, Composite C1 will be instructed to accept any path info string. Default is true.&quot;</summary> 
+ /// <summary>&quot;When true, accept any path info string will be accepted. Default is true.&quot;</summary> 
  public static string Composite_Web_Request_PathInfoGuid_param_AutoApprove_help { get { return T("Composite.Web.Request.PathInfoGuid.param.AutoApprove.help"); } } 
  /// <summary>&quot;AutoApprove&quot;</summary> 
  public static string Composite_Web_Request_PathInfoGuid_param_AutoApprove_label { get { return T("Composite.Web.Request.PathInfoGuid.param.AutoApprove.label"); } } 
@@ -5034,7 +5004,7 @@ namespace Composite.Core.ResourceSystem
  public static string Composite_Web_Response_SetSessionVariable_param_VariableName_help { get { return T("Composite.Web.Response.SetSessionVariable.param.VariableName.help"); } } 
  /// <summary>&quot;Variable name&quot;</summary> 
  public static string Composite_Web_Response_SetSessionVariable_param_VariableName_label { get { return T("Composite.Web.Response.SetSessionVariable.param.VariableName.label"); } } 
- /// <summary>&quot;Gets the web application virtual path. Typically this is &apos;&apos; - the empty string, when running in the website root, but if Composite C1 is running in a sub folder this can be &apos;/MySubfolder&apos;. You can use this value to prefix URL&apos;s so they will work no matter is Composite C1 is running is a subfolder or not. Sample XSLT usage: &lt;img src=&quot;{/in:inputs/in:result[@name=&apos;ApplicationPath&apos;]}/images/myImage.png&quot; /&gt;&quot;</summary> 
+ /// <summary>&quot;Gets the web application virtual path. Typically this is &apos;&apos; - the empty string, when running in the website root, but if {applicationname} is running in a sub folder this can be &apos;/MySubfolder&apos;. You can use this value to prefix URL&apos;s so they will work no matter is {applicationname} is running is a subfolder or not. Sample XSLT usage: &lt;img src=&quot;{/in:inputs/in:result[@name=&apos;ApplicationPath&apos;]}/images/myImage.png&quot; /&gt;&quot;</summary> 
  public static string Composite_Web_Server_ApplicationPath_description { get { return T("Composite.Web.Server.ApplicationPath.description"); } } 
  /// <summary>&quot;Gets an IIS application variable&quot;</summary> 
  public static string Composite_Web_Server_ApplicationVariable_description { get { return T("Composite.Web.Server.ApplicationVariable.description"); } } 
@@ -5197,8 +5167,6 @@ namespace Composite.Core.ResourceSystem
  public static string DeleteUserControlFunction_ToolTip { get { return T("DeleteUserControlFunction.ToolTip"); } } 
  /// <summary>&quot;Add User Control Function&quot;</summary> 
  public static string AddNewUserControlFunction_LabelDialog { get { return T("AddNewUserControlFunction.LabelDialog"); } } 
- /// <summary>&quot;New User Control function&quot;</summary> 
- public static string AddNewUserControlFunction_LabelFieldGroup { get { return T("AddNewUserControlFunction.LabelFieldGroup"); } } 
  /// <summary>&quot;Name&quot;</summary> 
  public static string AddNewUserControlFunction_LabelName { get { return T("AddNewUserControlFunction.LabelName"); } } 
  /// <summary>&quot;&quot;</summary> 
@@ -5325,14 +5293,10 @@ namespace Composite.Core.ResourceSystem
  public static string AddNew_MissingActiveLanguageTitle { get { return T("AddNew.MissingActiveLanguageTitle"); } } 
  /// <summary>&quot;To create a visual function a language is required, but no languages have been added yet. You can add one under the System perspective.&quot;</summary> 
  public static string AddNew_MissingActiveLanguageMessage { get { return T("AddNew.MissingActiveLanguageMessage"); } } 
- /// <summary>&quot;Select datatype to visualize&quot;</summary> 
- public static string AddNewStep1_FieldGroupLabel { get { return T("AddNewStep1.FieldGroupLabel"); } } 
  /// <summary>&quot;Datatype&quot;</summary> 
  public static string AddNewStep1_TypeSelectorLabel { get { return T("AddNewStep1.TypeSelectorLabel"); } } 
  /// <summary>&quot;&quot;</summary> 
  public static string AddNewStep1_TypeSelectorHelp { get { return T("AddNewStep1.TypeSelectorHelp"); } } 
- /// <summary>&quot;Visual function naming&quot;</summary> 
- public static string AddNewStep2_FieldGroupLabel { get { return T("AddNewStep2.FieldGroupLabel"); } } 
  /// <summary>&quot;Function name&quot;</summary> 
  public static string AddNewStep2_FuncitonNameLabel { get { return T("AddNewStep2.FuncitonNameLabel"); } } 
  /// <summary>&quot;&quot;</summary> 
@@ -5601,8 +5565,6 @@ namespace Composite.Core.ResourceSystem
  public static string XsltBasedFunctionProviderElementProvider_DeleteToolTip { get { return T("XsltBasedFunctionProviderElementProvider.DeleteToolTip"); } } 
  /// <summary>&quot;Add New XSLT Function&quot;</summary> 
  public static string AddNewXsltFunctionStep1_LabelDialog { get { return T("AddNewXsltFunctionStep1.LabelDialog"); } } 
- /// <summary>&quot;New Xslt function&quot;</summary> 
- public static string AddNewXsltFunctionStep1_LabelFieldGroup { get { return T("AddNewXsltFunctionStep1.LabelFieldGroup"); } } 
  /// <summary>&quot;Name&quot;</summary> 
  public static string AddNewXsltFunctionStep1_LabelName { get { return T("AddNewXsltFunctionStep1.LabelName"); } } 
  /// <summary>&quot;&quot;</summary> 
@@ -5826,6 +5788,12 @@ namespace Composite.Core.ResourceSystem
  public static string DeleteButtonLabel { get { return T("DeleteButtonLabel"); } } 
  /// <summary>&quot;Datatype Fields&quot;</summary> 
  public static string LabelDataTypeFields { get { return T("LabelDataTypeFields"); } } 
+ /// <summary>&quot;Key field properties&quot;</summary> 
+ public static string KeyFieldDetailsGroupLabel { get { return T("KeyFieldDetailsGroupLabel"); } } 
+ /// <summary>&quot;Key field type&quot;</summary> 
+ public static string KeyFieldType { get { return T("KeyFieldType"); } } 
+ /// <summary>&quot;The data type of the key field. Guid fields feature optimal performance, string key fields are usefull when the id values have to be exposed in urls.&quot;</summary> 
+ public static string KeyFieldTypeHelp { get { return T("KeyFieldTypeHelp"); } } 
  /// <summary>&quot;Field properties&quot;</summary> 
  public static string FieldDetailsGroupLabel { get { return T("FieldDetailsGroupLabel"); } } 
  /// <summary>&quot;Name&quot;</summary> 
@@ -5936,6 +5904,28 @@ namespace Composite.Core.ResourceSystem
  public static string DefaultValueHelp { get { return T("DefaultValueHelp"); } } 
  /// <summary>&quot;Field default value configuration&quot;</summary> 
  public static string DefaultValueDialogLabel { get { return T("DefaultValueDialogLabel"); } } 
+ /// <summary>&quot;Data url&quot;</summary> 
+ public static string DataUrlGroupLabel { get { return T("DataUrlGroupLabel"); } } 
+ /// <summary>&quot;Field appears in data url&quot;</summary> 
+ public static string AppearsInUrlLabel { get { return T("AppearsInUrlLabel"); } } 
+ /// <summary>&quot;Use in data urls&quot;</summary> 
+ public static string AppearsInUrlItemLabel { get { return T("AppearsInUrlItemLabel"); } } 
+ /// <summary>&quot;When checked the field will appear in data urls&quot;</summary> 
+ public static string AppearsInUrlHelp { get { return T("AppearsInUrlHelp"); } } 
+ /// <summary>&quot;Order&quot;</summary> 
+ public static string DataUrlOrderLabel { get { return T("DataUrlOrderLabel"); } } 
+ /// <summary>&quot;Order in which the field appear in data url route&quot;</summary> 
+ public static string DataUrlOrderHelp { get { return T("DataUrlOrderHelp"); } } 
+ /// <summary>&quot;Format&quot;</summary> 
+ public static string DataUrlDateFormatLabel { get { return T("DataUrlDateFormatLabel"); } } 
+ /// <summary>&quot;Chose in what format the date field will appear in url&quot;</summary> 
+ public static string DataUrlDateFormatHelp { get { return T("DataUrlDateFormatHelp"); } } 
+ /// <summary>&quot;Year&quot;</summary> 
+ public static string DataUrlDateFormat_Year { get { return T("DataUrlDateFormat_Year"); } } 
+ /// <summary>&quot;Month&quot;</summary> 
+ public static string DataUrlDateFormat_Month { get { return T("DataUrlDateFormat_Month"); } } 
+ /// <summary>&quot;Day&quot;</summary> 
+ public static string DataUrlDateFormat_Day { get { return T("DataUrlDateFormat_Day"); } } 
  /// <summary>&quot;String maximum length&quot;</summary> 
  public static string StringMaximumLength { get { return T("StringMaximumLength"); } } 
  /// <summary>&quot;16 character maximum&quot;</summary> 
@@ -5987,8 +5977,10 @@ namespace Composite.Core.ResourceSystem
     /// <exclude />
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
 	   public static class Composite_Web_PageBrowser {
- /// <summary>&quot;Page Source&quot;</summary> 
+ /// <summary>&quot;Page source&quot;</summary> 
  public static string Menu_ViewSource { get { return T("Menu.ViewSource"); } } 
+ /// <summary>&quot;View mode&quot;</summary> 
+ public static string Menu_ViewMode { get { return T("Menu.ViewMode"); } } 
  /// <summary>&quot;Back&quot;</summary> 
  public static string ContextMenu_Back { get { return T("ContextMenu.Back"); } } 
  /// <summary>&quot;Forward&quot;</summary> 
@@ -6003,6 +5995,8 @@ namespace Composite.Core.ResourceSystem
  public static string ToolBarButton_Forward_ToolTip { get { return T("ToolBarButton.Forward.ToolTip"); } } 
  /// <summary>&quot;Refresh page&quot;</summary> 
  public static string ToolBarButton_Refresh_ToolTip { get { return T("ToolBarButton.Refresh.ToolTip"); } } 
+ /// <summary>&quot;Show Tree&quot;</summary> 
+ public static string ToolBarButton_TreeView_ToolTip { get { return T("ToolBarButton.TreeView.ToolTip"); } } 
  /// <summary>&quot;Go to the address in the location bar&quot;</summary> 
  public static string ToolBarButton_Go_ToolTip { get { return T("ToolBarButton.Go.ToolTip"); } } 
  /// <summary>&quot;Go to the Start page&quot;</summary> 
@@ -6054,22 +6048,24 @@ namespace Composite.Core.ResourceSystem
  public static string ResultHeading { get { return T("ResultHeading"); } } 
  /// <summary>&quot;No keywords configured.&quot;</summary> 
  public static string NoKeywordsWarning { get { return T("NoKeywordsWarning"); } } 
- /// <summary>&quot;Keyword in title&quot;</summary> 
+ /// <summary>&quot;In title&quot;</summary> 
  public static string isInTitle { get { return T("isInTitle"); } } 
- /// <summary>&quot;Keyword in URL&quot;</summary> 
+ /// <summary>&quot;In URL&quot;</summary> 
  public static string isInURL { get { return T("isInURL"); } } 
- /// <summary>&quot;Keyword in menu title&quot;</summary> 
+ /// <summary>&quot;In menu title&quot;</summary> 
  public static string isInMenuTitle { get { return T("isInMenuTitle"); } } 
- /// <summary>&quot;Keyword in description&quot;</summary> 
+ /// <summary>&quot;In description&quot;</summary> 
  public static string isInDescription { get { return T("isInDescription"); } } 
- /// <summary>&quot;Keyword in heading&quot;</summary> 
+ /// <summary>&quot;In heading&quot;</summary> 
  public static string isInHeading { get { return T("isInHeading"); } } 
- /// <summary>&quot;Keyword in content&quot;</summary> 
+ /// <summary>&quot;In content&quot;</summary> 
  public static string isInContent { get { return T("isInContent"); } } 
  /// <summary>&quot;No keywords found in page preview&quot;</summary> 
  public static string NoKeywords { get { return T("NoKeywords"); } } 
  /// <summary>&quot;Failed to analyze the keywords because the markup is not valid&quot;</summary> 
  public static string IncorrectHtml { get { return T("IncorrectHtml"); } } 
+ /// <summary>&quot;Add SEO word ...&quot;</summary> 
+ public static string AddKeywordInputPlaceholder { get { return T("AddKeywordInputPlaceholder"); } } 
      private static string T(string key) 
        { 
             return StringResourceSystemFacade.GetString("Composite.Web.SEOAssistant", key);
@@ -6345,8 +6341,6 @@ namespace Composite.Core.ResourceSystem
  public static string LabelTabBasic { get { return T("LabelTabBasic"); } } 
  /// <summary>&quot;Advanced&quot;</summary> 
  public static string LabelTabAdvanced { get { return T("LabelTabAdvanced"); } } 
- /// <summary>&quot;Presentation&quot;</summary> 
- public static string LabelPresentation { get { return T("LabelPresentation"); } } 
  /// <summary>&quot;Class&quot;</summary> 
  public static string LabelClass { get { return T("LabelClass"); } } 
  /// <summary>&quot;The class attribute specifies a CSS classname for an element.&quot;</summary> 
@@ -6357,7 +6351,7 @@ namespace Composite.Core.ResourceSystem
  public static string HelpId { get { return T("HelpId"); } } 
  /// <summary>&quot;Clipboard disabled&quot;</summary> 
  public static string MozSecurityNote_LabelSecurityStuff { get { return T("MozSecurityNote.LabelSecurityStuff"); } } 
- /// <summary>&quot;For security reasons, access to the clipboard was blocked by your browser. Please use standard keyboard shortcuts. For a technical description of, how to configure your browser for use with Composite C1, press the &quot;More Info&quot; button.&quot;</summary> 
+ /// <summary>&quot;For security reasons, access to the clipboard was blocked by your browser. Please use standard keyboard shortcuts. For a technical description of, how to configure your browser for use with {applicationname}, press the &quot;More Info&quot; button.&quot;</summary> 
  public static string MozSecurityNote_TextSecurityStuff { get { return T("MozSecurityNote.TextSecurityStuff"); } } 
  /// <summary>&quot;Insert Link&quot;</summary> 
  public static string Link_LabelInsertLink { get { return T("Link.LabelInsertLink"); } } 

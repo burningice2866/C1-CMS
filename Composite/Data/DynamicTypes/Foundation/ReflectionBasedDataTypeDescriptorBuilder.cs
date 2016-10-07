@@ -28,6 +28,7 @@ namespace Composite.Data.DynamicTypes.Foundation
             {
                 Title = DynamicTypeReflectionFacade.GetTitle(type),
                 LabelFieldName = DynamicTypeReflectionFacade.GetLabelPropertyName(type),
+                InternalUrlPrefix = DynamicTypeReflectionFacade.GetInternalUrlPrefix(type),
                 DataAssociations = DynamicTypeReflectionFacade.GetDataTypeAssociationDescriptors(type)
             };
             
@@ -49,6 +50,11 @@ namespace Composite.Data.DynamicTypes.Foundation
             {
                 foreach (PropertyInfo propertyInfo in superInterfaceType.GetProperties())
                 {
+                    if (propertyInfo.Name == "PageId" && propertyInfo.DeclaringType == typeof(IPageData))
+                    {
+                        continue;
+                    }
+
                     DataFieldDescriptor fieldDescriptor = BuildFieldDescriptor(propertyInfo, true);
 
                     typeDescriptor.Fields.Add(fieldDescriptor);

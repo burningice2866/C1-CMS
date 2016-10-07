@@ -1,0 +1,177 @@
+
+/*
+ * Docks are absolutely positioned in explorer in order to fix a display 
+ * bug on browser resize. The bug is only noticeable on second area and 
+ * higher (remove absolute positioning, navigate to area two, open some 
+ * stuff and resize the browser). They are NOT absolute in Mozilla because 
+ * moz may update display multiple times in a single thread, temporarily 
+ * showing the dock overlaying other stuff. 
+ */
+ui|dock {
+	display: block;
+	overflow: hidden;
+
+	&.editors {
+		border-radius: 5px 0 0 0;
+		box-shadow: inset 0px 0px 0px 1px rgba(204,204,204,1);
+		background: #fff;
+	}
+}
+
+ui|docktabs {
+	display: block;
+	position: relative !important;
+	overflow: hidden;
+	box-shadow: inset 0px -1px 0px 0px rgba(204,204,204,1);
+	padding: 10px 10px 0 10px;
+	background: #EFEFEF;
+
+	ui|toolbarbutton {
+		position: relative;
+	}
+}
+
+ui|docktab {
+	display: block;
+	float: left;
+	position: relative;
+	white-space: nowrap;
+	bottom: -100px; /* adjusted by script */
+	border: solid 1px #ddd;
+	border-radius: 5px 5px 0 0;
+	background: #fff;
+	z-index: 2;
+	margin-right: -4px;
+	text-transform: uppercase;
+	padding: 10px 30px 10px 19px;
+
+
+	.closecontrol {
+		top: 5px;
+		right: 5px;
+		width: 21px;
+		height: 21px;
+		border-radius: 50%;
+
+		ui|labelbody:after {
+			font-weight: normal;
+			font-size: 17px;
+			line-height: 13px;
+			text-align: center;
+			color: #fff;
+			background: #D5D5D5;
+			width: 15px;
+			height: 15px;
+			border-radius: 50%;
+			position: absolute;
+			top: 3px;
+			left: 3px;
+		}
+
+		&.hover {
+			ui|labelbody:after {
+				background: #ABABAB;
+				color: #fff;
+			}
+		}
+	}
+
+
+	ui|labelbox {
+		color: #ADADAD;
+
+		&.highlighted {
+			ui|labelbody {
+				color: @primary-color;
+			}
+		}
+
+		&.overflowed {
+			ui|labeltext:after {
+				position: absolute;
+				top: 0;
+				right: 0;
+				width: 30px;
+				height: 100%;
+				display: block;
+				content: ' ';
+				box-shadow: inset -20px 0 39px -7px rgba(255,255,255,1);
+			}
+		}
+
+		&.image-and-text {
+			ui|labeltext { 
+				float: left;
+				margin-left: 8px;
+			}
+		}
+	}
+
+	ui|labeltext {
+		position: relative;
+		overflow: hidden;
+		font-family: @heading-font-family;
+		font-size: 13px;
+		width: 110px;
+	}
+
+	&.selected {
+		z-index: 3;
+		border-color: @base-border-color @base-border-color transparent @base-border-color;
+
+		ui|labelbody {
+			color: @primary-color;
+		}
+	}
+
+
+	.default ui|controlgroup {
+		display: none;
+	}
+}
+
+
+ui|dockpanels {
+	display: block;
+	height: 100%;
+	clear: both;
+	overflow: hidden;
+	width: auto;
+}
+
+ui|dockpanel { /* styles comparable to deck - please coordinate all changes! */
+	display: block;
+	height: 100%;
+	clear: both;
+	overflow: hidden;
+	position: absolute;
+	top: -10000px;
+}
+
+
+/* EDITORS DOCK .......................... */
+ui|splitpanel.editors {
+	box-shadow: inset 0px 5px 0px 0px rgba(51,51,51,1);
+}
+
+/* START DOCK ............................ */
+
+ui|dock.start {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+
+	ui|docktab {
+		display: none;
+	}
+
+	ui|docktabs ui|controlgroup {
+		display: none;
+	}
+
+	ui|docktabs {
+		height: 2px;
+	}
+}

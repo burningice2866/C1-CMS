@@ -9,6 +9,7 @@ using Composite.C1Console.Workflow;
 using Composite.Core.Extensions;
 using Composite.Core.ResourceSystem;
 using Composite.Core.ResourceSystem.Icons;
+using Composite.Core.Routing;
 using Composite.Core.Types;
 using Composite.Data;
 using Composite.Data.DynamicTypes;
@@ -25,7 +26,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
     {
         internal delegate void HooksChangedCallbackDelegate();
 
-        private ElementProviderContext _elementProviderContext;
+        private readonly ElementProviderContext _elementProviderContext;
         private EntityToken _rootEntityToken;
         private bool _addVisualFunctionActions;
 
@@ -36,8 +37,8 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
         public static ResourceHandle DelocalizeDataTypeIcon { get { return GetIconHandle("generated-type-delocalize"); } }
         private ResourceHandle DataAssociationOpenIcon { get { return GetIconHandle("dataassociation-rootfolder-open"); } }
         private ResourceHandle DataAssociationClosedIcon { get { return GetIconHandle("dataassociation-rootfolder-closed"); } }
-        private ResourceHandle InterfaceOpenIcon { get { return GetIconHandle("generated-interface-open"); } }
-        private ResourceHandle InterfaceClosedIcon { get { return GetIconHandle("generated-interface-closed"); } }
+        private ResourceHandle InterfaceOpenIcon { get { return GetIconHandle("data-interface-open"); } }
+        private ResourceHandle InterfaceClosedIcon { get { return GetIconHandle("data-interface-closed"); } }
 
         private ResourceHandle AddAssociatedDataIcon { get { return GetIconHandle("associated-data-add"); } }
         private ResourceHandle EditAssociatedDataIcon { get { return GetIconHandle("associated-data-edit"); } }
@@ -47,13 +48,13 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
         public static readonly Dictionary<string, ResourceHandle> DataIconLookup;
 
-        internal static readonly PermissionType[] AddAssociatedTypePermissionTypes = new PermissionType[] { PermissionType.Configure, PermissionType.Administrate };
-        internal static readonly PermissionType[] EditAssociatedTypePermissionTypes = new PermissionType[] { PermissionType.Configure, PermissionType.Administrate };
-        internal static readonly PermissionType[] RemoveAssociatedTypePermissionTypes = new PermissionType[] { PermissionType.Configure, PermissionType.Administrate };
-        private static readonly PermissionType[] _addAssociatedDataPermissionTypes = new PermissionType[] { PermissionType.Add };
-        private static readonly PermissionType[] _editAssociatedDataPermissionTypes = new PermissionType[] { PermissionType.Edit };
-        private static readonly PermissionType[] _deleteAssociatedDataPermissionTypes = new PermissionType[] { PermissionType.Delete };
-        private static readonly PermissionType[] _localizeDataPermissionTypes = new PermissionType[] { PermissionType.Add };
+        internal static readonly PermissionType[] AddAssociatedTypePermissionTypes = { PermissionType.Configure, PermissionType.Administrate };
+        internal static readonly PermissionType[] EditAssociatedTypePermissionTypes = { PermissionType.Configure, PermissionType.Administrate };
+        internal static readonly PermissionType[] RemoveAssociatedTypePermissionTypes = { PermissionType.Configure, PermissionType.Administrate };
+        private static readonly PermissionType[] _addAssociatedDataPermissionTypes = { PermissionType.Add };
+        private static readonly PermissionType[] _editAssociatedDataPermissionTypes = { PermissionType.Edit };
+        private static readonly PermissionType[] _deleteAssociatedDataPermissionTypes = { PermissionType.Delete };
+        private static readonly PermissionType[] _localizeDataPermissionTypes = { PermissionType.Add };
 
         private static readonly ActionGroup AppendedActionGroup = new ActionGroup("Associated data", ActionGroupPriority.TargetedAppendMedium);
         private static readonly ActionGroup PrimaryActionGroup = new ActionGroup(ActionGroupPriority.PrimaryHigh);
@@ -64,11 +65,13 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
         static AssociatedDataElementProviderHelper()
         {
-            DataIconLookup = new Dictionary<string, ResourceHandle>();
-            DataIconLookup.Add(GenericPublishProcessController.Draft, DataIconFacade.DataDraftIcon);
-            DataIconLookup.Add(GenericPublishProcessController.AwaitingApproval, DataIconFacade.DataAwaitingApprovalIcon);
-            DataIconLookup.Add(GenericPublishProcessController.AwaitingPublication, DataIconFacade.DataAwaitingPublicationIcon);
-            DataIconLookup.Add(GenericPublishProcessController.Published, DataIconFacade.DataPublishedIcon);
+            DataIconLookup = new Dictionary<string, ResourceHandle>
+            {
+                {GenericPublishProcessController.Draft, DataIconFacade.DataDraftIcon},
+                {GenericPublishProcessController.AwaitingApproval, DataIconFacade.DataAwaitingApprovalIcon},
+                {GenericPublishProcessController.AwaitingPublication, DataIconFacade.DataAwaitingPublicationIcon},
+                {GenericPublishProcessController.Published, DataIconFacade.DataPublishedIcon}
+            };
         }
 
 
@@ -82,14 +85,17 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
             _rootEntityToken = rootEntityToken;
             _addVisualFunctionActions = addVisualFunctionActions;
 
-            _dataGroupingProviderHelper = new DataGroupingProviderHelper.DataGroupingProviderHelper(elementProviderContext);
-            _dataGroupingProviderHelper.OnOwnsType = type => typeof (IPageFolderData).IsAssignableFrom(type);
-            _dataGroupingProviderHelper.OnCreateLeafElement = this.CreateElement;
-            _dataGroupingProviderHelper.OnCreateDisabledLeafElement = data => ShowForeignElement(data, false);
-            _dataGroupingProviderHelper.OnCreateGhostedLeafElement = data => ShowForeignElement(data, true);
-            _dataGroupingProviderHelper.OnGetRootParentEntityToken = this.GetParentEntityToken;
-            _dataGroupingProviderHelper.OnGetLeafsFilter = this.GetLeafsFilter;
-            _dataGroupingProviderHelper.OnGetPayload = this.GetPayload;
+            _dataGroupingProviderHelper = new DataGroupingProviderHelper.DataGroupingProviderHelper(elementProviderContext)
+            {
+                OnOwnsType = type => typeof (IPageFolderData).IsAssignableFrom(type)
+                                    || typeof(IPageDataFolder).IsAssignableFrom(type),
+                OnCreateLeafElement = this.CreateElement,
+                OnCreateDisabledLeafElement = data => ShowForeignElement(data, false),
+                OnCreateGhostedLeafElement = data => ShowForeignElement(data, true),
+                OnGetRootParentEntityToken = this.GetParentEntityToken,
+                OnGetLeafsFilter = this.GetLeafsFilter,
+                OnGetPayload = this.GetPayload
+            };
 
             AuxiliarySecurityAncestorFacade.AddAuxiliaryAncestorProvider<DataEntityToken>(this);
         }
@@ -102,7 +108,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
         private Func<IData, bool> GetLeafsFilter(EntityToken parentEntityToken)
         {
             Guid pageId = GetPageId(parentEntityToken);
-            return data => (data as IPageFolderData).PageId == pageId;
+            return data => (data as IPageRelatedData).PageId == pageId;
         }
 
         private Guid GetPageId(EntityToken entityToken)
@@ -127,7 +133,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
             var dataEntityToken = entityToken as DataEntityToken;
             if(dataEntityToken != null)
             {
-                return (dataEntityToken.Data as IPageFolderData).PageId;
+                return (dataEntityToken.Data as IPageRelatedData).PageId;
             }
 
             throw new InvalidOperationException("Unexpected entity token type '{0}'".FormatWith(entityToken.GetType().FullName));
@@ -247,13 +253,13 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
         public List<Element> GetChildren(T data, EntityToken parentEntityToken)
         {
-            List<Element> children = new List<Element>();
+            var children = new List<Element>();
 
             PropertyInfo idPropertyInfo = typeof(T).GetKeyProperties()[0];
 
             foreach (Type type in PageFolderFacade.GetDefinedFolderTypes((IPage)data).OrderBy(t => t.Name))
             {
-                AssociatedDataElementProviderHelperEntityToken entityToken = new AssociatedDataElementProviderHelperEntityToken(
+                var entityToken = new AssociatedDataElementProviderHelperEntityToken(
                             TypeManager.SerializeType(typeof(T)),
                             _elementProviderContext.ProviderName,
                             ValueTypeConverter.Convert<string>(idPropertyInfo.GetValue(data, null)),
@@ -262,7 +268,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
                 DataTypeDescriptor dataTypeDescriptor = DynamicTypeManager.GetDataTypeDescriptor(type);
 
-                Element element = new Element(_elementProviderContext.CreateElementHandle(entityToken))
+                var element = new Element(_elementProviderContext.CreateElementHandle(entityToken))
                 {
                     VisualData = new ElementVisualizedData
                     {
@@ -324,23 +330,23 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
         public Dictionary<EntityToken, IEnumerable<EntityToken>> GetParents(IEnumerable<EntityToken> entityTokens)
         {
-            Dictionary<EntityToken, IEnumerable<EntityToken>> result = new Dictionary<EntityToken, IEnumerable<EntityToken>>();
+            var result = new Dictionary<EntityToken, IEnumerable<EntityToken>>();
 
             foreach (EntityToken entityToken in entityTokens)
             {
-                DataEntityToken dataEntityToken = entityToken as DataEntityToken;
+                var dataEntityToken = entityToken as DataEntityToken;
                 if (dataEntityToken.Data == null) continue;
 
                 Type interfaceType = dataEntityToken.InterfaceType;
 
-                if (PageFolderFacade.GetAllFolderTypes().Contains(interfaceType) == false) continue;
+                if (!PageFolderFacade.GetAllFolderTypes().Contains(interfaceType)) continue;
 
                 IData data = dataEntityToken.Data;
                 IPage referencedPage = PageFolderFacade.GetReferencedPage(data);
                 if (referencedPage == null) continue; // TODO: check this branch
 
                 result.Add(entityToken,
-                    new AssociatedDataElementProviderHelperEntityToken[] 
+                    new [] 
                     {
                         new AssociatedDataElementProviderHelperEntityToken(
                         TypeManager.SerializeType(typeof(T)),
@@ -358,7 +364,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
         {
             string label = data.GetLabel();
 
-            Element element = new Element(_elementProviderContext.CreateElementHandle(data.GetDataEntityToken()))
+            var element = new Element(_elementProviderContext.CreateElementHandle(data.GetDataEntityToken()))
             {
                 VisualData = new ElementVisualizedData
                 {
@@ -374,6 +380,20 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
             AddEditAssociatedDataAction(element);
             AddDeleteAssociatedDataAction(element);
 
+            if (InternalUrls.DataTypeSupported(data.DataSourceId.InterfaceType))
+            {
+                var dataReference = data.ToDataReference();
+
+                if (DataUrls.CanBuildUrlForData(dataReference))
+                {
+                    string internalUrl = InternalUrls.TryBuildInternalUrl(dataReference);
+                    if (internalUrl != null)
+                    {
+                        element.PropertyBag.Add("Uri", internalUrl);
+                    }
+                }
+            }
+
             return element;
         }
 
@@ -385,7 +405,7 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
 
             if (enabled)
             {
-                Element element = new Element(_elementProviderContext.CreateElementHandle(entityToken))
+                var element = new Element(_elementProviderContext.CreateElementHandle(entityToken))
                 {
                     VisualData = new ElementVisualizedData
                     {
@@ -435,9 +455,9 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
         #region Action methods
         private void AddAddAssociatedDataAction(Element element, bool isInToolbar)
         {
-            element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.AddAssociatedDataWorkflow"), _addAssociatedDataPermissionTypes)))
-            {
-                VisualData = new ActionVisualizedData
+            element.AddWorkflowAction("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.AddAssociatedDataWorkflow", 
+                _addAssociatedDataPermissionTypes, 
+                new ActionVisualizedData
                 {
                     Label = StringResourceSystemFacade.GetString("Composite.Management", "AssociatedDataElementProviderHelper.AddAssociatedDataLabel"),
                     ToolTip = StringResourceSystemFacade.GetString("Composite.Management", "AssociatedDataElementProviderHelper.AddAssociatedDataToolTip"),
@@ -450,17 +470,16 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
                         IsInToolbar = isInToolbar,
                         ActionGroup = AppendedActionGroup
                     }
-                }
-            });
+                });
         }
 
 
 
         private void AddEditAssociatedDataAction(Element element)
         {
-            element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.EditAssociatedDataWorkflow"), _editAssociatedDataPermissionTypes)))
-            {
-                VisualData = new ActionVisualizedData
+            element.AddWorkflowAction("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.EditAssociatedDataWorkflow", 
+                _editAssociatedDataPermissionTypes,
+                new ActionVisualizedData
                 {
                     Label = StringResourceSystemFacade.GetString("Composite.Management", "AssociatedDataElementProviderHelper.EditAssociatedDataLabel"),
                     ToolTip = StringResourceSystemFacade.GetString("Composite.Management", "AssociatedDataElementProviderHelper.EditAssociatedDataToolTip"),
@@ -473,17 +492,16 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
                         IsInToolbar = true,
                         ActionGroup = PrimaryActionGroup
                     }
-                }
-            });
+                });
         }
 
 
 
         private void AddDeleteAssociatedDataAction(Element element)
         {
-            element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.DeleteAssociatedDataWorkflow"), _deleteAssociatedDataPermissionTypes)))
-            {
-                VisualData = new ActionVisualizedData
+            element.AddWorkflowAction("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.DeleteAssociatedDataWorkflow", 
+                _deleteAssociatedDataPermissionTypes,
+                new ActionVisualizedData
                 {
                     Label = StringResourceSystemFacade.GetString("Composite.Management", "AssociatedDataElementProviderHelper.DeleteAssociatedDataLabel"),
                     ToolTip = StringResourceSystemFacade.GetString("Composite.Management", "AssociatedDataElementProviderHelper.DeleteAssociatedDataToolTip"),
@@ -496,7 +514,6 @@ namespace Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElem
                         IsInToolbar = true,
                         ActionGroup = PrimaryActionGroup
                     }
-                }
             });
         }
         #endregion

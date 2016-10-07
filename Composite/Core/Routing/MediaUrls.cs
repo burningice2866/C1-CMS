@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Web;
 using Composite.Core.Extensions;
 using Composite.Core.WebClient;
-using Composite.Data;
+using Composite.Core.WebClient.Media;
 using Composite.Data.Types;
-using Composite.Core.IO;
-using System.IO;
+using Composite.Plugins.Routing.MediaUrlProviders;
 
 namespace Composite.Core.Routing
 {
@@ -21,13 +17,14 @@ namespace Composite.Core.Routing
         internal static readonly string DefaultMediaStore = "MediaArchive";
         private static readonly string MediaUrl_UnprocessedInternalPrefix = "~/media(";
         private static readonly string MediaUrl_InternalPrefix = UrlUtils.PublicRootPath + "/media(";
-        private static readonly string MediaUrl_PublicPrefix = UrlUtils.PublicRootPath + "/media/";
+        internal static readonly string MediaUrl_PublicPrefix = UrlUtils.PublicRootPath + "/media/";
 
         private static readonly string MediaUrl_UnprocessedRenderPrefix = "~/Renderers/ShowMedia.ashx";
         private static readonly string MediaUrl_RenderPrefix = UrlUtils.PublicRootPath + "/Renderers/ShowMedia.ashx";
 
-        private static readonly string ForbiddenUrlCharacters = @"<>*%&\?#""";
+        private static Lazy<IResizableImageUrlProvider> _defaultMediaUrlProvider = new Lazy<IResizableImageUrlProvider>(() => new DefaultMediaUrlProvider(null));
 
+        private static ConcurrentDictionary<string, IMediaUrlProvider> _mediaUrlProviders = new ConcurrentDictionary<string, IMediaUrlProvider>();
 
         /// <summary>
         /// Parses the URL.
@@ -244,9 +241,10 @@ namespace Composite.Core.Routing
 
         private static string BuildRendererUrl(MediaUrlData mediaUrlData)
         {
-            var queryParams = new NameValueCollection(mediaUrlData.QueryParameters);
-
-            queryParams.Add("id", mediaUrlData.MediaId.ToString());
+            var queryParams = new NameValueCollection(mediaUrlData.QueryParameters)
+            {
+                {"id", mediaUrlData.MediaId.ToString()}
+            };
 
             if (mediaUrlData.MediaStore != null 
                 && mediaUrlData.MediaStore != DefaultMediaStore)
@@ -262,131 +260,37 @@ namespace Composite.Core.Routing
 
         private static string BuildPublicUrl(MediaUrlData mediaUrlData)
         {
-            var queryParams = new NameValueCollection();
-
-            if (mediaUrlData.QueryParameters != null)
+            IMediaUrlProvider urlProvider;
+            if (!_mediaUrlProviders.TryGetValue(mediaUrlData.MediaStore, out urlProvider))
             {
-                queryParams.Add(mediaUrlData.QueryParameters);
+                urlProvider = _defaultMediaUrlProvider.Value;
             }
 
-            IMediaFile file = GetFileById(mediaUrlData.MediaStore, mediaUrlData.MediaId);
-            if (file == null)
+            if (mediaUrlData.QueryParameters.Count > 0)
             {
-                return null;
-            }
+                var resizingOptions = ResizingOptions.Parse(mediaUrlData.QueryParameters);
 
-            string pathToFile = UrlUtils.Combine(file.FolderPath, file.FileName);
-
-            pathToFile = RemoveForbiddenCharactersAndNormalize(pathToFile);
-
-            // IIS6 doesn't have wildcard mapping by default, so removing image extension if running in "classic" app pool
-            if (!HttpRuntime.UsingIntegratedPipeline)
-            {
-                int dotOffset = pathToFile.IndexOf(".", StringComparison.Ordinal);
-                if (dotOffset >= 0)
+                if (!resizingOptions.IsEmpty)
                 {
-                    pathToFile = pathToFile.Substring(0, dotOffset);
+                    var imageResizableUrlProvider = urlProvider is IResizableImageUrlProvider
+                        ? urlProvider as IResizableImageUrlProvider
+                        : _defaultMediaUrlProvider.Value;
+
+                    return imageResizableUrlProvider.GetResizedImageUrl(mediaUrlData.MediaStore, mediaUrlData.MediaId, resizingOptions);
                 }
             }
 
-            string mediaStore = string.Empty;
-
-            if(!mediaUrlData.MediaStore.Equals(DefaultMediaStore, StringComparison.InvariantCultureIgnoreCase))
-            {
-                mediaStore = mediaUrlData.MediaStore + "/";
-            }
-
-
-            var url = new UrlBuilder(UrlUtils.PublicRootPath + "/media/" + mediaStore + /* UrlUtils.CompressGuid(*/ mediaUrlData.MediaId /*)*/);
-
-            url.PathInfo = file.LastWriteTime != null
-                               ? "/" + GetDateTimeHash(file.LastWriteTime.Value.ToUniversalTime()) : string.Empty;
-
-            if (pathToFile.Length > 0)
-            {
-                url.PathInfo += pathToFile;
-            }
-            url.AddQueryParameters(queryParams);
-
-            return url.ToString();
+            return urlProvider.GetPublicMediaUrl(mediaUrlData.MediaStore, mediaUrlData.MediaId);
         }
 
-        private static string GetDateTimeHash(DateTime dateTime)
+        /// <summary>
+        /// Registers a media url provider
+        /// </summary>
+        /// <param name="storeId">The store id.</param>
+        /// <param name="mediaUrlProvider">The media url provider.</param>
+        public static void RegisterMediaUrlProvider(string storeId, IMediaUrlProvider mediaUrlProvider)
         {
-            int hash = dateTime.GetHashCode();
-            return Convert.ToBase64String(BitConverter.GetBytes(hash)).Substring(0, 6).Replace('+', '-').Replace('/', '_');
-        }
-
-        private static string RemoveFilePathIllegalCharacters(string path)
-        {
-            path = path.Replace("\"", " ").Replace("<", " ").Replace(">", " ").Replace("|", " ");
-            for (int i = 0; i < 31; i++)
-            {
-                path = path.Replace((char) i, ' ');
-            }
-            return path;
-        }
-
-        private static string RemoveForbiddenCharactersAndNormalize(string path)
-        {
-            // Replacing dots with underscores, so IIS will not intercept requests in some scenarios
-
-            string legalFilePath = RemoveFilePathIllegalCharacters(path);
-            string extension = Path.GetExtension(legalFilePath);
-
-            if (!MimeTypeInfo.IsIisServable(extension))
-            {
-                path = path.Replace(".", "_");
-            }
-
-            path = path.Replace("+", " ");
-
-            foreach (var ch in ForbiddenUrlCharacters)
-            {
-                path = path.Replace(ch, '#');
-            }
-
-            path = path.Replace("#", string.Empty);
-
-            // Removing consequtive white spaces
-            while(path.Contains("  "))
-            {
-                path = path.Replace("  ", " ");
-            }
-
-            string[] parts = path.Split('/');
-
-            var result = new StringBuilder();
-            for(int i=0; i<parts.Length; i++)
-            {
-                string trimmedPart = parts[i].Trim();
-                if(trimmedPart.Length > 0)
-                {
-                    result.Append("/").Append(trimmedPart);
-                }
-            }
-
-            // Encoding white spaces
-            result.Replace(" ", "%20");
-
-            return result.ToString();
-        }
-
-        private static IMediaFile GetFileById(string storeId, Guid fileId)
-        {
-            using (new DataScope(DataScopeIdentifier.Public))
-            {
-                var query = DataFacade.GetData<IMediaFile>();
-
-                if (query.IsEnumerableQuery())
-                {
-                    return (query as IEnumerable<IMediaFile>)
-                        .FirstOrDefault(f => f.Id == fileId && f.StoreId == storeId);
-                }
-
-                return query
-                    .FirstOrDefault(f => f.StoreId == storeId && f.Id == fileId);
-            }
+            _mediaUrlProviders[storeId] = mediaUrlProvider;
         }
     }
 }

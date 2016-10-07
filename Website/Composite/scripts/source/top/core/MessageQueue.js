@@ -324,10 +324,35 @@ window.MessageQueue = new function () {
 					break;
 
 				case "SelectElement":
-					EventBroadcaster.broadcast(
-						BroadcastMessages.SYSTEMTREEBINDING_FOCUS,
-						action.BindEntityTokenToViewParams.EntityToken
-					);
+
+					var perspectiveElementKey = action.SelectElementParams.PerspectiveElementKey;
+					if (perspectiveElementKey && perspectiveElementKey != StageBinding.getSelectionHandle()) {
+						var handler = {
+							handleBroadcast: function(broadcast, arg) {
+								switch (broadcast) {
+								case BroadcastMessages.STAGEDECK_CHANGED:
+									if (arg == perspectiveElementKey) {
+										StageBinding.selectBrowserTab();
+										EventBroadcaster.broadcast(
+											BroadcastMessages.SYSTEMTREEBINDING_FOCUS,
+											action.SelectElementParams.EntityToken
+										);
+										EventBroadcaster.unsubscribe(BroadcastMessages.STAGEDECK_CHANGED, this);
+									}
+									break;
+								}
+							}
+						}
+						EventBroadcaster.subscribe(BroadcastMessages.STAGEDECK_CHANGED, handler);
+						StageBinding.setSelectionByHandle(perspectiveElementKey);
+					} else {
+						EventBroadcaster.broadcast(
+											BroadcastMessages.SYSTEMTREEBINDING_FOCUS,
+											action.SelectElementParams.EntityToken
+										);
+					}
+
+
 					this._nextAction();
 					break;
 
@@ -691,6 +716,11 @@ window.MessageQueue = new function () {
 		isOffline = isLock;
 	}
 
+
+	this.placeConsoleCommand = function (serializedMessageOrder) {
+
+	    service.PlaceConsoleCommand(Application.CONSOLE_ID, serializedMessageOrder);
+	}
 
 	// EVENTBROADCASTERSTUFF ...................................................
 

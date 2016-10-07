@@ -2,6 +2,8 @@ StageBinding.prototype = new FocusBinding;
 StageBinding.prototype.constructor = StageBinding;
 StageBinding.superclass = FocusBinding.prototype;
 
+StageBinding.ACTION_DECK_LOADED = "stage deck loaded";
+
 /**
  * Static reference to the single StageBinding instance. Assigned on startup.
  * @type {StageBinding}
@@ -59,6 +61,27 @@ StageBinding.isViewOpen = function ( handle ) {
 	
 	return StageBinding.bindingInstance._activeViewDefinitions [ handle ] != null;
 }
+
+/**
+ * @param {string} handle
+ */
+StageBinding.setSelectionByHandle = function (handle) {
+	//TODO refactor this
+	StageBinding.bindingInstance._explorerBinding.setSelectionByHandle(handle);
+}
+
+/**
+ */
+StageBinding.getSelectionHandle = function () {
+	//TODO refactor this
+	return StageBinding.bindingInstance._explorerBinding.getSelectionHandle();
+}
+
+StageBinding.selectBrowserTab = function () {
+
+	StageBinding.bindingInstance.selectBrowserTab();
+}
+
 
 /**
  * Present ViewDefinition on stage.
@@ -135,12 +158,6 @@ function StageBinding () {
 	this._isShowingStart = false;
 	
 	/**
-	 * True when default start stuff is visible.
-	 * @type {boolean}
-	 */
-	this._isShowingDefaultStart = false;
-	
-	/**
 	 * Makes no sense to handle activation in the app root.
 	 * @implements {IActivationAware}
 	 * @overwrites {FocusBinding#isActivationAware}
@@ -189,16 +206,17 @@ StageBinding.prototype.onBindingRegister = function () {
 	/*
 	 * Attach action listeners.
 	 */
-	this.addActionListener ( ExplorerBinding.ACTION_INITIALIZED );
+
 	this.addActionListener ( StageDecksBinding.ACTION_INITIALIZED );
-	this.addActionListener ( ExplorerMenuBinding.ACTION_SELECTIONCHANGED );
 	this.addActionListener ( TabBoxBinding.ACTION_ATTACHED );
 	this.addActionListener ( TabBoxBinding.ACTION_SELECTED );
 	this.addActionListener ( WindowBinding.ACTION_LOADED );
-	this.addActionListener ( ExplorerBinding.ACTION_DECK_LOADED );
+	this.addActionListener ( StageBinding.ACTION_DECK_LOADED );
 	this.addActionListener ( StageDeckBinding.ACTION_LOADED );
 	this.addActionListener ( ErrorBinding.ACTION_INITIALIZE );
-	
+
+	DOMEvents.addEventListener(top, DOMEvents.HASHCHANGE, this);
+
 	/*
 	 * File EventBroadcaster subscriptions.
 	 */
@@ -209,14 +227,18 @@ StageBinding.prototype.onBindingRegister = function () {
 	this.subscribe ( BroadcastMessages.DOCK_MAXIMIZED );
 	this.subscribe ( BroadcastMessages.DOCK_NORMALIZED );
 	
+	app.bindingMap.explorer.addActionListener(ExplorerBinding.ACTION_INITIALIZED, this);
+	app.bindingMap.explorer.addActionListener(ExplorerMenuBinding.ACTION_SELECTIONCHANGED, this);
+
 	/*
 	 * Initialize root actions.
 	 */
+	this._initializeUsergroup();
 	var root = System.getRootNode ();
 	this._initializeRootActions ( root );
 	
 	/*
-	 * Hookup root refresh. The broadcast is intercepted by ExplorerDeckBinding. 
+	 * Hookup root refresh. The broadcast is intercepted by StageDeckBinding. 
 	 * The associated tree is refreshed when deck gets selected.
 	 */
 	EventBroadcaster.subscribe ( BroadcastMessages.SYSTEMTREEBINDING_REFRESH, {
@@ -313,17 +335,29 @@ StageBinding.prototype._onStageReady = function () {
 	
 	if ( !this._isStageReady ) {
 	
-		/*
-		 * Broadcasting readystate. If no start 
-		 * page, show default start splash. 
-		 */	
-		if ( !Application.hasStartPage || !Application.hasExternalConnection) {
-			top.app.bindingMap.defaultstartdeck.select ();
-			this._isShowingDefaultStart = true;
+		top.app.bindingMap.maindecks.select("stagedeck");
+		if (Application.hasStartPage && KickStart.justLogged && !Client.isPad) {
+			EventBroadcaster.broadcast(BroadcastMessages.START_COMPOSITE);
+		} else {
+			if(ViewBinding.hasInstance("Composite.Management.Start")){
+				ViewBinding.getInstance("Composite.Management.Start").hide();
+			}
 		}
+		
+
 		EventBroadcaster.broadcast ( BroadcastMessages.STAGE_INITIALIZED );
 		this._isStageReady = true;
 	}
+}
+
+/**
+ * Set label for usemenu group..
+ */
+StageBinding.prototype._initializeUsergroup = function (root) {
+
+	LoginService.GetUserDisplayName(true, function (name) {
+		top.app.bindingMap.usermenu.setLabel(name);
+	});
 }
 
 /**
@@ -371,6 +405,8 @@ StageBinding.prototype._initializeRootActions = function ( root ) {
 						switch ( tag ) {
 							case SystemAction.TAG_CHANGEFROMLANGUAGE :
 								group = top.app.bindingMap.translationsmenugroup;
+							case SystemAction.TAG_USER:
+								group = top.app.bindingMap.usermenugroup;
 								break;
 						}
 					}
@@ -438,7 +474,10 @@ StageBinding.prototype.handleAction = function ( action ) {
 			if ( !Application.isOperational ) {
 				ProgressBarBinding.notch ( 5 );
 			}
-			this.handlePerspectiveChange ( binding );
+			this.handlePerspectiveChange(app.bindingMap.explorermenu);
+			var tag = app.bindingMap.explorermenu.getSelectionTag();
+			EventBroadcaster.broadcast(BroadcastMessages.PERSPECTIVE_CHANGED, tag);
+
 			action.consume ();
 			break;
 			
@@ -473,7 +512,7 @@ StageBinding.prototype.handleAction = function ( action ) {
 			// this.logger.warn ( "window load intercepted by stage: " + binding.getURL ());
 			break;
 			
-		case ExplorerBinding.ACTION_DECK_LOADED :
+		case StageBinding.ACTION_DECK_LOADED :
 			this._isExplorerReady = true;
 			if ( this._isDecksReady == true ) {
 				if ( !this._isStageReady ) {
@@ -515,6 +554,24 @@ StageBinding.prototype.handleAction = function ( action ) {
 					this._onStageReady ();
 				}
 			}
+
+			//NEW UI: LOAD Browser to first tab
+			var deck = action.target;
+
+			this._activeViewDefinitions["Composite.Management.Browser"] = deck.definition;
+
+			var browserViewDefinition = ViewDefinitions["Composite.Management.Browser"];
+			browserViewDefinition.image = deck.definition.image;
+			browserViewDefinition.label = deck.definition.label;
+			browserViewDefinition.toolTip = deck.definition.toolTip;
+
+			browserViewDefinition.argument["SystemViewDefinition"] = deck.definition;
+			browserViewDefinition.argument["URL"] = null;
+			browserViewDefinition.argument.image = deck.definition.image;
+			browserViewDefinition.argument.label = deck.definition.label;
+			browserViewDefinition.argument.toolTip = deck.definition.toolTip;
+			deck._browserTab = deck._dockBindings.get("main").prepareNewView(browserViewDefinition);
+			deck._browserTab.isExplorerTab = true;
 			break;
 		
 		/*
@@ -573,6 +630,36 @@ StageBinding.prototype.handleBroadcast = function ( broadcast, arg ) {
 }
 
 /**
+ * @implements {IEventListener}
+ * @overloads {Binding#handleEvent}
+ * @param {Event} e
+ */
+StageBinding.prototype.handleEvent = function (e) {
+
+	StageBinding.superclass.handleEvent.call(this, e);
+
+	switch (e.type) {
+		case DOMEvents.HASHCHANGE:
+			this.handleHash(e.target);
+			e.preventDefault();
+			break;
+	}
+}
+
+StageBinding.prototype.handleHash = function (target) {
+
+	if (target && target.location && target.location.hash) {
+		var serializedMessage = target.location.hash.replace(/^#/, '');
+		if (serializedMessage) {
+			target.location.hash = "";
+			MessageQueue.placeConsoleCommand(decodeURIComponent(serializedMessage));
+			MessageQueue.update();
+			EventBroadcaster.broadcast(BroadcastMessages.COMPOSITE_STOP);
+		}
+	}
+}
+
+/**
  * Explorer may have difficulties computing stage layout 
  * when docks are maximized and normalized. Let's hack it. 
  */
@@ -598,20 +685,14 @@ StageBinding.prototype._showStart = function ( isShow ) {
 		
 		var view = ViewBinding.getInstance ( "Composite.Management.Start" );
 		var dock = this._dockBindings.get ( DockBinding.START );
-		var decks = this.bindingWindow.bindingMap.maindecks;
-		
-		
 		if ( isShow ) {
-			decks.select ( "startdeck" );
 			view.show ();
 		} else {
 			view.hide ();
-			decks.select ( "stagedeck" );
 			if ( dock != null && dock.isActive ) {
 				dock.deActivate ();
 			}
 		}
-		
 		this._isShowingStart = isShow;
 	}
 }
@@ -683,16 +764,12 @@ StageBinding.prototype.handleAttachedDock = function ( dockBinding ) {
 			var tabBinding = tabBindings.getNext ();
 			var handle = tabBinding.getHandle ();
 			if ( handle ) {
-				if ( handle == "Composite.Management.Start" && ( !Application.hasStartPage || !Application.hasExternalConnection )) {
-					// do nothing - although maybe this check should not be performed here...
-				} else {
 					var viewDefinition = ViewDefinitions [ handle ];
 					if ( viewDefinition ) {
 						this._view ( dockBinding, tabBinding, viewDefinition, false );
 					} else {
 						alert ( "StageBinding: no such predefined viewdefinition (" + handle + ")" );
 					}
-				}
 			}
 		};
 	}
@@ -749,10 +826,6 @@ StageBinding.prototype._presentViewDefinition = function ( viewDefinition ) {
 						// hide start stuff if present.
 						if ( this._isShowingStart ) {
 							EventBroadcaster.broadcast ( BroadcastMessages.STOP_COMPOSITE );
-						}  else if ( this._isShowingDefaultStart ) {
-							var decks = this.bindingWindow.bindingMap.maindecks;
-							decks.select ( "stagedeck" );
-							this._isShowingDefaultStart = false;
 						}
 						break;
 				}
@@ -836,6 +909,18 @@ StageBinding.prototype._dontView = function ( handle ) {
 		delete this._activeViewDefinitions [ handle ];
 	} else {
 		this.logger.debug ( "Could not unregister active view: " + handle );
+	}
+}
+
+/**
+ * Select Browser tab
+ */
+StageBinding.prototype.selectBrowserTab = function () {
+
+	var deck = this._decksBinding.getSelectedDeckBinding();
+	var browserTab = deck.getBrowserTab();
+	if (browserTab && !browserTab.isSelected) {
+		browserTab.containingTabBoxBinding.select(browserTab, true);
 	}
 }
 

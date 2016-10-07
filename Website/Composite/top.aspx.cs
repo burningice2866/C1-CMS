@@ -1,12 +1,23 @@
 using System;
+using Composite.Core.IO;
 using Composite.Core.Configuration;
-
-
+using System.IO;
 
 public partial class Composite_Management_Top : System.Web.UI.Page
 {
-    protected void Page_Init(object sender, EventArgs e)
+    const string gruntHolderFileUrl = "grunt.inc";
+    const string welcomeHolderFileUrl = "welcome.inc";
+    const string loginHolderFileUrl = "login.inc";
+
+    protected void Page_PreInit(object sender, EventArgs e)
     {
+        var isCSSCompiled = C1File.Exists(this.MapPath("styles/styles.min.css")) && C1File.Exists(this.MapPath("styles/styles.css"));
+        if (!isCSSCompiled)
+        {
+            contentHolder.Text = C1File.ReadAllText(this.MapPath(gruntHolderFileUrl));
+            return;
+        }
+        
         string myPathAndQuery = Request.Url.PathAndQuery;
 
         if (!myPathAndQuery.Contains("/Composite/"))
@@ -27,14 +38,12 @@ public partial class Composite_Management_Top : System.Web.UI.Page
                 Response.Redirect("unknownbrowser.aspx");
                 return;
             }
-
-            introholder.Visible = true;
-            splashholder.Visible = false;
+            contentHolder.Text = C1File.ReadAllText(MapPath(welcomeHolderFileUrl));
         }
         else
         {
-            introholder.Visible = false;
-            splashholder.Visible = true;
+            contentHolder.Text = C1File.ReadAllText(this.MapPath(loginHolderFileUrl));
         }
+       
     }
 }

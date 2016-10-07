@@ -1,0 +1,39 @@
+.brand-name {
+	position: relative;
+	padding-top: 10px;
+
+	.brand-icon {
+		width: 50px;
+		text-align: center;
+
+		img {
+			max-width: 50px;
+			max-height: 50px;
+		}
+	}
+
+	.brand-text {
+		position: absolute;
+		top: 20px;
+		left: 50px;
+	}
+
+	&:hover {
+		opacity: 0.85;
+	}
+}
+
+.brand-logo {
+	width: 250px;
+	height: 100px;
+	margin: 20px auto 30px auto;
+	background: url("@{images-root-path}/logo.png?cacheversion=@{cache-version}") no-repeat center center;
+}
+
+.brand-main {
+	display: block;
+	position: absolute;
+	bottom: 0;
+	background: @explorer-bg-color;
+	padding: 0 13px 10px 13px;
+}

@@ -41,10 +41,15 @@
 		<Directories>
 			<Directory path="\Composite\scripts\source" />
 			<Directory path="\Composite\applets" />
+      <Directory path="\bower_components" />
 		</Directories>
 		<Files>
 			<File path="\Composite\scripts\compressed\sub-uncompressed.js" />
 			<File path="\Composite\scripts\compressed\top-uncompressed.js" />
+      <File path="\.bowerrc" />
+      <File path="\bower.json" />
+      <File path="\gruntfile.js" />
+      <File path="\package.json" />
 			<File path="\ReleaseCleanupConfiguration.xml" />
 		</Files>
 	</Target>

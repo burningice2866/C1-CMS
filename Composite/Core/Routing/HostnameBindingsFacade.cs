@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using System.Web;
 using Composite.Core.Extensions;
+using Composite.Core.Routing.Pages;
 using Composite.Core.Threading;
 using Composite.Core.WebClient;
 using Composite.Data;
@@ -53,9 +54,7 @@ namespace Composite.Core.Routing
                     {
                         return;
                     }
-
-                    ConvertLegacyBindings();
-
+                    
                     var configurationData = DataFacade.BuildNew<IUrlConfiguration>();
                     configurationData.Id = new Guid("c7bd886b-7208-4257-b641-df2571a4872b");
 
@@ -63,38 +62,6 @@ namespace Composite.Core.Routing
 
                     DataFacade.AddNew(configurationData);
                 }
-            }
-        }
-
-        private static void ConvertLegacyBindings()
-        {
-            // TODO: remove in v 2.3
-            CultureInfo defaultCulture = DataLocalizationFacade.DefaultUrlMappingCulture;
-
-            if(defaultCulture == null)
-            {
-                return;
-            }
-#pragma warning disable 0612, 0618
-            foreach (var legacyBinding in DataFacade.GetData<IPageHostNameBinding>().ToList())
-#pragma warning restore 0612, 0618
- {
-                string hostname = legacyBinding.HostName;
-
-                if(!DataFacade.GetData<IHostnameBinding>(b => b.Hostname == hostname).Any())
-                {
-                    var newBinding = DataFacade.BuildNew<IHostnameBinding>(true);
-
-                    newBinding.Id = new Guid();
-                    newBinding.Hostname = hostname;
-                    newBinding.IncludeHomePageInUrl = false;
-                    newBinding.IncludeCultureInUrl = true;
-                    newBinding.Culture = defaultCulture.Name;
-
-                    DataFacade.AddNew(newBinding);
-                }
-
-                DataFacade.Delete(legacyBinding);
             }
         }
 
@@ -175,10 +142,32 @@ namespace Composite.Core.Routing
 
             string url = binding.PageNotFoundUrl;
 
-            return url.StartsWith("~") ? UrlUtils.PublicRootPath + url.Substring(1) : url;
+            var defaultCulture = DataLocalizationFacade.DefaultLocalizationCulture;
+
+            var pageUrlData = C1PageRoute.PageUrlData;
+            CultureInfo localeFromRequest = pageUrlData != null 
+                ? pageUrlData.LocalizationScope
+                : defaultCulture;
+
+            using (new DataConnection(localeFromRequest))
+            {
+                url = InternalUrls.TryConvertInternalUrlToPublic(url) ?? url;
+            }
+
+            if (url.StartsWith("~/") && localeFromRequest.Name != defaultCulture.Name)
+            {
+                using (new DataConnection(defaultCulture))
+                {
+                    url = InternalUrls.TryConvertInternalUrlToPublic(url) ?? url;
+                }
+            }
+
+            if (url.StartsWith("~/")) url = UrlUtils.ResolvePublicUrl(url);
+
+            return url;
         }
 
-        internal static bool RedirectCustomPageNotFoundUrl(HttpContext httpContext)
+        internal static bool ServeCustomPageNotFoundPage(HttpContext httpContext)
         {
             string rawUrl = httpContext.Request.RawUrl;
 

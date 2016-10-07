@@ -46,7 +46,7 @@
 			<ui:popup id="insertpopup">
 				<ui:menubody>
 					<ui:menugroup rel="insertions">
-						<ui:menuitem cmd="compositeInsertTable" val="insert" gui="true" label="${string:Composite.Web.VisualEditor:ContextMenu.LabelTable}" image="${skin}/wysiwygeditor/table.png" binding="EditorMenuItemBinding" />
+						<ui:menuitem cmd="compositeInsertTable" val="insert" gui="true" label="${string:Composite.Web.VisualEditor:ContextMenu.LabelTable}" image="${icon:table}" binding="EditorMenuItemBinding" />
 						<ui:menuitem cmd="compositeInsertImage" val="insert" gui="true" label="${string:Composite.Web.VisualEditor:ContextMenu.LabelImage}" image="${icon:image}" binding="EditorMenuItemBinding" />
 						<ui:menuitem cmd="compositeInsertRendering" val="insert" gui="true" label="${string:Composite.Web.VisualEditor:ContextMenu.LabelRendering}" image="${icon:functioncall}" binding="EditorMenuItemBinding" />
 						<ui:menuitem cmd="compositeInsertCharacter" val="insert" gui="true" label="${string:Composite.Web.VisualEditor:ContextMenu.LabelCharacter}" image="${icon:specialchar}" binding="EditorMenuItemBinding" />
@@ -67,10 +67,10 @@
 						<ui:deck id="designdeck">
 							<ui:box id="toolbarsbox" binding="VisualEditorBoxBinding">
 								<ui:cover id="toolbarscover" busy="false"/>
-								<ui:toolbar id="toolbar" binding="VisualEditorSimpleToolBarBinding" observes="broadcasterIsActive">
+								<ui:toolbar id="toolbar" class="visualeditor-toolbar btns-group" binding="VisualEditorSimpleToolBarBinding" observes="broadcasterIsActive">
 									<% Response.WriteFile ( "includes/toolbarsimple.inc" ); %>
 								</ui:toolbar>
-								<ui:toolbar id="advancedtoolbar" binding="VisualEditorToolBarBinding">
+								<ui:toolbar id="advancedtoolbar" class="visualeditor-adv-toolbar" binding="VisualEditorToolBarBinding">
 									<% Response.WriteFile ( "includes/toolbaradvanced.inc" ); %>
 								</ui:toolbar>
 							</ui:box>
@@ -78,7 +78,7 @@
 								<ui:window id="tinywindow" url="tinymce.aspx?config=<%= Request.QueryString [ "config" ] %>"/>
 								<ui:cover id="tinycover" busy="false"/>
 							</ui:flexbox>
-							<ui:toolbar id="statusbar" binding="VisualEditorStatusBarBinding" observes="broadcasterIsActive" class="statusbar">
+							<ui:toolbar id="statusbar" binding="VisualEditorStatusBarBinding" observes="broadcasterIsActive" class="statusbar dark">
 								<ui:toolbarbody />
 							</ui:toolbar>
 						</ui:deck>
@@ -90,7 +90,7 @@
 				</ui:splitpanel>
 				<ui:splitter id="toolsplitter" collapse="after" collapsed="true" />
 				<ui:splitpanel id="toolsplitpanel">
-					<ui:toolbar id="templatetoolbar" hidden="true">
+					<ui:toolbar id="templatetoolbar" class="pagetemplates-toolbar" hidden="true">
 						<ui:toolbarbody>
 							<ui:toolbargroup>
 								<ui:selector id="templateselector" editorcontrol="false" />

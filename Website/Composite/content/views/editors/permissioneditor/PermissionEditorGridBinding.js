@@ -2,7 +2,7 @@ PermissionEditorGridBinding.prototype = new Binding;
 PermissionEditorGridBinding.prototype.constructor = PermissionEditorGridBinding;
 PermissionEditorGridBinding.superclass = Binding.prototype;
 
-PermissionEditorGridBinding.CLASSNAME_DEFINED = "set";
+PermissionEditorGridBinding.CLASSNAME_DEFINED = "primary";
 
 /**
  * @class
@@ -103,14 +103,6 @@ PermissionEditorGridBinding.prototype.populate = function ( inheritedList, defin
 		tbody.appendChild ( row );
 	});
 	
-	/*
-	 * Build decorational table. But only on first rendering.
-	 */
-	var deco = document.getElementById ( "deco" + this._index );
-	tbody = DOMUtil.getElementsByTagName ( deco, "tbody" ).item ( 0 );
-	if ( !tbody.hasChildNodes ()) {
-		tbody.appendChild ( this._getRow ());
-	}
 }
 
 /**

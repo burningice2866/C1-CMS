@@ -15,13 +15,6 @@ function DialogControlBinding () {
 	this.logger = SystemLogger.getLogger ( "DialogControlBinding" );
 	
 	/**
-	 * No need for matrix corset here.
-	 * @overwrites {ControlBinding#hasMatrix}
-	 * @type {boolean}
-	 */
-	this.hasMatrix = false;
-	
-	/**
 	 * @type {boolean}
 	 */
 	this.isGhostable = true;
@@ -41,7 +34,6 @@ DialogControlBinding.prototype.toString = function () {
 DialogControlBinding.prototype.onBindingRegister = function () {
 
 	DialogControlBinding.superclass.onBindingRegister.call ( this );
-	this.setImageProfile ( DialogControlImageProfile );
 	this.attachClassName ( DialogControlBinding.CLASSNAME );
 }
 

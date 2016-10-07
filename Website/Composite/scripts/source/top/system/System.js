@@ -14,6 +14,16 @@ var System = new function () {
 	this.hasActivePerspectives = false;
 
 	/**
+	 * Cache tree
+	 */
+	this.nodes = new Map();
+
+	/**
+	 * Cache parents
+	 */
+	this.parents = new Map();
+
+	/**
 	* Get default EntityToken for perspective.
 	* @return {EntityToken}
 	*/
@@ -74,27 +84,58 @@ var System = new function () {
 	* @return {List<SystemNode>}
 	*/
 	this.getChildNodes = function (node, searchToken) {
-
 		var result = new List();
 		var response = null;
 
-		if (searchToken) {
-			if (SearchTokens.hasToken(searchToken)) {
-				searchToken = SearchTokens.getToken(searchToken);
-			}
-			response = TreeService.GetElementsBySearchToken(node.getData(), searchToken);
-		} else {
-			response = TreeService.GetElements(node.getData());
-		}
-		new List(response).each(function (element) {
-			var newnode = new SystemNode(element);
+		var self = this;
+		//disabel cache prototype
+		//var handle = node.getHandle();
+		//if (!this.nodes.has(handle) || searchToken) {
 			if (searchToken) {
-				newnode.searchToken = searchToken;
+				if (SearchTokens.hasToken(searchToken)) {
+					searchToken = SearchTokens.getToken(searchToken);
+				}
+				response = TreeService.GetElementsBySearchToken(node.getData(), searchToken);
+			} else {
+				response = TreeService.GetElements(node.getData());
 			}
-			result.add(newnode);
-		});
+			new List(response).each(function(element) {
+				var newnode = new SystemNode(element);
+				if (searchToken) {
+					newnode.searchToken = searchToken;
+				}
+				result.add(newnode);
+
+				//Add parents to cache
+				if (!searchToken) {
+					self.parents.set(newnode.getHandle(), node);
+				}
+
+			});
+
+
+		//	if (!searchToken) {
+		//		this.nodes.set(handle, result.copy());
+		//	}
+		//} else {
+		//	result = this.nodes.get(handle).copy();
+		//}
 		return result;
 	}
+
+	this.getParents = function (handle) {
+		var handles = new List();
+		var result = new List();
+
+		while (this.parents.has(handle) && !handles.has(handle)) {
+			var parent = this.parents.get(handle);
+			handles.add(handle);
+			result.add(parent);
+			handle = parent.getHandle();
+		}
+		return result;
+	}
+
 
 	/**
 	* Get branch. This will *not* return a tree structure, but the structure 
@@ -183,6 +224,11 @@ var System = new function () {
 			var element = elements.getNext();
 			list.add(new SystemNode(element));
 		}
+
+		var self = this;
+		map.each(function(key, list) {
+			self.nodes.set(key, list.copy());
+		});
 	}
 
 	/**

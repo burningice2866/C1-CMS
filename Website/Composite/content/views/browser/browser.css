@@ -1,67 +1,130 @@
 @namespace url("http://www.w3.org/1999/xhtml");
 @namespace ui url("http://www.w3.org/1999/xhtml");
 
-ui|tabbox ui|tabpanel {
-	background-color: white;
-}
- ui|tab table.matrix {
-	width: 189px;
-}
-ui|tab ui|labeltext {
-	width: 110px;
-	overflow: hidden;
-	#ie text-overflow: ellipsis;
-}
-ui|tab ui|labelbox  {
-	position: relative;
-	overflow: visible;
-}
-ui|tab ui|labelbox img {
-	position: absolute;
-	margin-top: 2px;
-	right: -42px;
-}
-ui|tab ui|labelbox img {
-	visibility: hidden;
-}
-ui|tab.selected ui|labelbox img,
-ui|tab.hover ui|labelbox img {
-	visibility: visible;	
-}
-ui|tab.hover ui|labelbox img {
-	margin-top: 0;
-}
-ui|datainput#addressbar {
+#addressbar {
 	float: left;
+	margin-top: 2px;
+	padding: 0;
 }
-ui|datainput#addressbar ui|box {
-	height: 27px;
-}
-ui|datainput#addressbar input {
-	width: 100%;
-	height: 100%;
-	padding-top: 5px;
-	#ie padding-top: 4px;
-	padding-left: 5px;
-}
+
+
+	#addressbar input {
+		width: 100%;
+		height: 100%;
+		padding-top: 2px;
+		padding-left: 5px;
+	}
 
 ui|cover#blocker {
-	cursor: pointer !important;		
+	cursor: pointer !important;
 }
 
-div#message {
+#message {
 	padding: 22px;
 }
-div#icon {
-	width: 32px;
-	height: 32px;
-	#alphabackdrop: url("${root}/services/Icon/GetIcon.ashx?resourceName=message&resourceNamespace=Composite.Icons&size=xlarge");
-	float: left;
-	position: relative;
-	top: 2px;
-}
-div#text {
+
+#text {
 	padding-left: 44px;
 	-moz-user-select: none;
+	user-select: none;
 	padding-top: 8px;
 }
+
+.deviceWindow {
+	overflow: hidden;
+	background: #444;
+}
+
+.deviceFrame {
+	margin: 0 auto;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	background: #fff;
+}
+
+#deviceframeoverlay {
+	position: absolute;
+	background: transparent;
+	cursor: pointer;
+	cursor: url('/Composite/images/touch-cursor.png') 13 6, pointer;
+	overflow: hidden;
+}
+
+.transformed {
+	margin: 0;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	-moz-transform-origin: 0 0;
+	transform-origin: 0 0;
+	-webkit-transform-origin: 0 0;
+}
+
+.centeredX {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	-webkit-transform: translateX(-50%);
+	-ms-transform: translateX(-50%);
+	transform: translateX(-50%);
+}
+
+.centeredXY {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	-webkit-transform: translate(-50%, -50%);
+	-ms-transform: translate(-50%, -50%);
+	transform: translate(-50%, -50%);
+}
+
+ui|toolbar#breadcrumbbar {
+	padding: 0;
+}
+
+#browsertabbox ui|tabs {
+	display: none !important;
+}
+
+ui|path {
+	width: 100%;
+	float: left;
+	height: 32px;
+	overflow: hidden;
+}
+
+	ui|path ui|toolbarbutton {
+		border: 0;
+		text-transform: none;
+		padding-right: 10px;
+		margin-right: -10px !important;
+	}
+
+		ui|path ui|toolbarbutton.isdisabled {
+			opacity: 1;
+		}
+
+		ui|path ui|toolbarbutton + ui|toolbarbutton:before {
+			content: "/";
+			display: block;
+			position: absolute;
+			color: #ddd;
+			left: 0;
+			top: 6px;
+		}
+
+		ui|path ui|toolbarbutton ui|labelbox {
+			padding: 6px 1px 6px 7px;
+		}
+
+		ui|path ui|toolbarbutton:after {
+			content: "...";
+			display: block;
+			position: absolute;
+			right: 0;
+			top: 6px;
+		}
+
+		ui|path ui|toolbarbutton:last-child:after {
+			display: none;
+		}

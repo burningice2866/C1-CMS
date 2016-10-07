@@ -89,8 +89,8 @@ UrlInputDialogBinding.prototype.buildButtonAndLabel = function () {
 
 		var button = ToolBarButtonBinding.newInstance(this.bindingDocument);
 		button.setImage("${icon:editor-sourceview}");
-		button.bindingElement.style.left = "-24px";
-		button.bindingElement.style.width = "24px";
+		button.bindingElement.style.left = "3px";
+		button.bindingElement.style.width = "29px";
 		this.addFirst(button);
 		button.attach();
 		button.hide();
@@ -130,7 +130,7 @@ UrlInputDialogBinding.prototype.setValue = function (value) {
 
 		this.compositeUrl = new Uri(value);
 
-		if (this.compositeUrl.isMedia || this.compositeUrl.isPage) {
+		if (this.compositeUrl.isMedia || this.compositeUrl.isPage || this.compositeUrl.isInternalUrl) {
 			var label = TreeService.GetCompositeUrlLabel(value);
 			if (label != value) {
 				this.setLabel(label);

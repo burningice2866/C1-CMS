@@ -1,0 +1,132 @@
+﻿//== Path
+@images-root-path: '../images';
+
+
+//== Colors
+@primary-color: #22B980; // == Brand Color
+@gray-color: #666;
+@gray-light-color: #ddd;
+
+
+
+//== Typography
+@font-family-sans-serif: "Segoe UI", Tahoma, sans-serif;
+@font-family-monospace:   Menlo, Monaco, Consolas, "Courier New", monospace;
+@font-size-base: 12px;
+@line-height-base: 1.25;
+@text-color: #333;
+@heading-h1-color: @primary-color;
+@heading-font-family: 'Roboto Condensed', sans-serif;
+
+//== Base
+@base-border-color: #ccc;
+@base-border-radius: 5px;
+@base-box-shadow: 0px 0px 12px -1px rgba(204,204,204,0.75);
+
+
+//== Buttons
+@btn-border-radius: 4px;
+@btn-border-color: @primary-color;
+@btn-bg-color: #fff;
+@btn-bg-image: none;
+@btn-color: @primary-color; //#575757;
+
+@btn-hover-border-color: darken(@primary-color, 5%);
+@btn-hover-bg-color: #fff;
+@btn-hover-color: darken(@primary-color, 5%);
+
+@btn-primary-border-color: @primary-color;
+@btn-primary-bg-color: @primary-color;
+@btn-primary-bg-image: linear-gradient(to bottom, @btn-primary-bg-color 0%, darken(@btn-primary-bg-color, 5%) 100%); /* W3C */
+@btn-primary-color: #fff;
+
+@btn-toolbar-border-color: @base-border-color;
+@btn-toolbar-bg-color: #fff;
+@btn-toolbar-color: #575757;
+
+@btn-toolbar-hover-border-color: @primary-color;
+@btn-toolbar-hover-bg-color: #fff;
+@btn-toolbar-hover-color: @primary-color;
+
+
+//== MenuBar (Settings, Languages, Help, Developer tools... )
+@menubar-bg-color: #333;
+@menubar-text-color: #919191;
+
+//== Explorer (Perspective Navbar)
+@explorer-width: 50px;
+@explorer-expanded-width: 240px;
+@explorer-bg-color: #333;
+@explorer-icon-color: #9A9A9A;
+@explorer-text-color: #9A9A9A;
+@explorer-text-active-color: @primary-color;
+
+
+//== Tabs
+@tabs-border-color: #ddd;
+@tabs-border-radius: @base-border-radius;
+@tabs-bg-color: #fff;
+@tabs-text-color: #ADADAD;
+
+@tabs-active-bg-color: #fff;
+@tabs-active-border-color: @base-border-color;
+@tabs-active-text-color: @primary-color;
+
+
+// Trees
+@tree-bg-color: #EFEFEF;
+@tree-icon-color: #999;
+@tree-root-open-icon-color: @primary-color;
+@tree-node-open-icon-color: #999;
+@tree-node-focused-icon-color: @primary-color;
+@tree-text-color: @text-color;
+@tree-text-focused-color: #fff;
+@tree-text-focused-bg-color: @primary-color;
+@tree-font-size: 13px;
+
+//== Toolbars
+@visual-editor-toolbar-bg-color: #EFEFEF;
+@pagetemplates-toolbar-bg-color: #EFEFEF;
+
+//== Dialogs
+@dialog-border-radius: @base-border-radius;
+@dialog-bg-color: #F7F7F7;
+@dialog-border-color: @base-border-color;
+@dialog-header-bg-color: #fff;
+
+
+//== Balloons
+@balloons-bg-color: lightyellow;
+@balloons-border-color: @base-border-color;
+@balloons-width: 280px;
+
+
+//== Forms, Fields
+@fields-group-bg-color: #F7F7F7;
+@fields-group-border-color: @base-border-color;
+@fields-group-border-radius: @base-border-radius;
+
+
+
+@field-label-color: #999;
+@field-border-color: @base-border-color;
+@field-border-radius: @base-border-radius;
+@field-bg-color: #fff;
+@field-readonly-bg-color: darken(@field-bg-color, 4%);
+
+@field-error-color: #A40000;
+
+//Tables
+@table-border-color: #ddd;
+@table-header-bg-color: #F7F7F7;
+@table-bg-hover: #f5f5f5;
+
+//Z-indexes
+@balloonset-zindex: 3; /* below dialogs */
+@dialogset-zindex: 4; /* below popupset */
+@dialogballoonset-zindex: 5; /* above dialogs */
+@popupset-zindex: 5; /* above dialogset */
+@dialog-zindex: 6; /* above shadow - adjusted by script */
+
+//Cache buster - see http://www.bennadel.com/blog/2643-cache-busting-css-images-with-less-css.htm
+@cache-version: `( new Date() ).getTime()` ;

@@ -30,6 +30,11 @@ function ViewSourcePageBinding () {
 	 * @type {DOMDocument}
 	 */
 	this._doc = null;
+
+	/**
+	 * @type {string}
+	 */
+	this._url = null;
 	
 	/**
 	 * @type {HostedViewDefinition}
@@ -58,6 +63,12 @@ ViewSourcePageBinding.prototype.onBindingRegister = function () {
 	
 	this._transformer = new XSLTransformer ();
 	this._transformer.importStylesheet ( ViewSourcePageBinding.XSLT );
+
+	var url = this._getParameterByName("url");
+	if(url) {
+		this._url = url;
+		this._action = DockTabPopupBinding.CMD_VIEWSOURCE;
+	}
 }
 
 /**
@@ -69,6 +80,7 @@ ViewSourcePageBinding.prototype.setPageArgument = function ( arg ) {
 
 	this._action = arg.action;
 	this._doc = arg.doc;
+	this._url = arg.url;
 	
 	switch ( this._action ) {
 		case DockTabPopupBinding.CMD_VIEWSOURCE :
@@ -104,17 +116,31 @@ ViewSourcePageBinding.prototype.handleAction = function ( action ) {
 	}
 }
 
+ViewSourcePageBinding.prototype._getParameterByName = function ( name ) {
+	var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+	return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
 /** 
  * Inject!
  */
 ViewSourcePageBinding.prototype._inject = function () {
 
-	if ( this._doc && this._windowBinding ) {
+	if ((this._doc || this._url) && this._windowBinding) {
 		
 		var area = document.getElementById ( "raw" );
 		var doc = this._windowBinding.getContentDocument ();
 		
-		if ( Client.isExplorer && this._action == DockTabPopupBinding.CMD_VIEWGENERATED ) {
+		if(Client.isEdge) {
+			var markup = this._getMarkup();
+			// raw output only!
+			area.value = markup;
+			doc.body.innerHTML = "Only raw source available in Microsoft Edge.";
+			var tabbox = window.bindingMap.tabbox;
+			var rawtab = window.bindingMap.rawtab;
+			tabbox.select(rawtab);
+
+		} else if (Client.isExplorer && this._action == DockTabPopupBinding.CMD_VIEWGENERATED) {
 			
 			var markup = this._doc.body.innerHTML;
 			
@@ -122,7 +148,8 @@ ViewSourcePageBinding.prototype._inject = function () {
 			area.value = markup;
 			doc.body.innerHTML = "Only raw source available in Internet Explorer.";
 		
-		} else {
+		} 
+		else {
 		
 			var markup = this._getMarkup ();
 			
@@ -166,8 +193,7 @@ ViewSourcePageBinding.prototype._getMarkup = function () {
 	switch ( this._action ) {
 		
 		case DockTabPopupBinding.CMD_VIEWSOURCE :
-			
-			var url = this._doc.location.toString ();
+			var url = this._url ? this._url : this._doc.location.toString();
 			var request = DOMUtil.getXMLHTTPRequest ();
 			request.open ( "get", url, false );
 			request.send ( null );

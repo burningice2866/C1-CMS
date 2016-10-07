@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Web;
 using Composite.AspNet;
+using Composite.C1Console.Elements;
 using Composite.C1Console.Events;
 using Composite.Core.Application;
 using Composite.Core.Configuration;
@@ -14,6 +15,9 @@ using Composite.Core.Logging;
 using Composite.Core.Routing;
 using Composite.Core.Threading;
 using Composite.Core.Types;
+using Composite.Functions;
+using Composite.Plugins.Elements.UrlToEntityToken;
+using Composite.Plugins.Routing.InternalUrlConverters;
 
 
 namespace Composite.Core.WebClient
@@ -27,7 +31,7 @@ namespace Composite.Core.WebClient
         private const string _verboseLogEntryTitle = "RGB(205, 92, 92)ApplicationEventHandler";
         readonly static object _syncRoot = new object();
         private static DateTime _startTime;
-        private static bool _systemIsInitialized = false;
+        private static bool _systemIsInitialized;
         private static readonly ConcurrentDictionary<string, Func<HttpContext, string>> _c1PageCustomStringProviders = new ConcurrentDictionary<string, Func<HttpContext, string>>();
 
         /// <exclude />
@@ -68,6 +72,7 @@ namespace Composite.Core.WebClient
             
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
 
+            InitializeServices();
 
             lock (_syncRoot)
             {
@@ -78,7 +83,18 @@ namespace Composite.Core.WebClient
                 _systemIsInitialized = true;
             }
         }
-        
+
+
+        private static void InitializeServices()
+        {
+            UrlToEntityTokenFacade.Register(new DataUrlToEntityTokenMapper());
+            UrlToEntityTokenFacade.Register(new ServerLogUrlToEntityTokenMapper());
+
+            RoutedData.ConfigureServices(ServiceLocator.ServiceCollection);
+
+            InternalUrls.Register(new MediaInternalUrlConverter());
+            InternalUrls.Register(new PageInternalUrlConverter());
+        }
 
 
         /// <exclude />
@@ -136,12 +152,16 @@ namespace Composite.Core.WebClient
         /// <exclude />
         public static void Application_BeginRequest(object sender, EventArgs e)
         {
+            var context = (sender as HttpApplication).Context;
+
             ThreadDataManager.InitializeThroughHttpContext(true);
+
+            ServiceLocator.CreateRequestServicesScope(context);
 
             if (LogRequestDetails)
             {
                 // LoggingService.LogVerbose("Begin request", string.Format("{0}", Request.Path));
-                HttpContext.Current.Items.Add("Global.asax timer", Environment.TickCount);
+                context.Items.Add("Global.asax timer", Environment.TickCount);
             }
         }
 
@@ -149,13 +169,17 @@ namespace Composite.Core.WebClient
         /// <exclude />
         public static void Application_EndRequest(object sender, EventArgs e)
         {
+            var context = (sender as HttpApplication).Context;
+
             try
             {
-                if (LogRequestDetails && HttpContext.Current.Items.Contains("Global.asax timer"))
+                ServiceLocator.DisposeRequestServicesScope(context);
+
+                if (LogRequestDetails && context.Items.Contains("Global.asax timer"))
                 {
-                    int startTimer = (int)HttpContext.Current.Items["Global.asax timer"];
-                    string requesrPath = HttpContext.Current.Request.Path;
-                    Log.LogVerbose("End request", string.Format("{0} - took {1} ms", requesrPath, (Environment.TickCount - startTimer)));
+                    int startTimer = (int)context.Items["Global.asax timer"];
+                    string requestPath = context.Request.Path;
+                    Log.LogVerbose("End request", string.Format("{0} - took {1} ms", requestPath, (Environment.TickCount - startTimer)));
                 }
             }
             finally
@@ -172,7 +196,7 @@ namespace Composite.Core.WebClient
             var httpApplication = (sender as HttpApplication);
             Exception exception = httpApplication.Server.GetLastError();
 
-            TraceEventType eventType = TraceEventType.Error;
+            var eventType = TraceEventType.Error;
 
             var httpContext = httpApplication.Context;
 
@@ -182,26 +206,29 @@ namespace Composite.Core.WebClient
 
                 if (is404)
                 {
-                    string customPageNotFoundUrl = HostnameBindingsFacade.GetCustomPageNotFoundUrl();
+                    string rawUrl = httpContext.Request.RawUrl;
 
-                    if (!customPageNotFoundUrl.IsNullOrEmpty())
+                    if (!UrlUtils.IsAdminConsoleRequest(rawUrl))
                     {
-                        string rawUrl = httpContext.Request.RawUrl;
+                        string customPageNotFoundUrl = HostnameBindingsFacade.GetCustomPageNotFoundUrl();
 
-                        if (rawUrl == customPageNotFoundUrl)
+                        if (!customPageNotFoundUrl.IsNullOrEmpty())
                         {
-                            throw new HttpException(500, "'Page not found' url isn't handled. Url: '{0}'".FormatWith(rawUrl));
+                            if (rawUrl == customPageNotFoundUrl)
+                            {
+                                throw new HttpException(500, "'Page not found' url isn't handled. Url: '{0}'".FormatWith(rawUrl));
+                            }
+
+                            httpContext.Server.ClearError();
+                            httpContext.Response.Clear();
+
+                            httpContext.Response.Redirect(customPageNotFoundUrl, true);
+
+                            return;
                         }
 
-                        httpContext.Server.ClearError();
-                        httpContext.Response.Clear();
-
-                        httpContext.Response.Redirect(customPageNotFoundUrl, true);
-
-                        return;
+                        eventType = TraceEventType.Verbose;
                     }
-
-                    eventType = TraceEventType.Verbose;
                 }
 
                 // Logging request url
@@ -249,33 +276,24 @@ namespace Composite.Core.WebClient
                 UrlKind urlKind;
                 var pageUrl = PageUrls.UrlProvider.ParseUrl(rawUrl, new UrlSpace(context), out urlKind);
 
-                if (pageUrl != null)
+                var page = pageUrl?.GetPage();
+                if (page != null)
                 {
-                    var page = pageUrl.GetPage();
-                    if (page != null)
+                    var pageCacheKey = new StringBuilder(page.ChangeDate.ToString(CultureInfo.InvariantCulture));
+
+                    if (context.Request.IsSecureConnection)
                     {
-                        StringBuilder pageCacheKey = new StringBuilder(page.ChangeDate.ToString(CultureInfo.InvariantCulture));
-
-                        // Adding the relative path from RawUrl as a part of cache key to make ASP.NET cache respect casing of urls
-                        pageCacheKey.Append(new UrlBuilder(rawUrl).RelativeFilePath);
-
-                        if(context.Request.IsSecureConnection)
-                        {
-                            pageCacheKey.Append("https");
-                        }
-
-                        if(!string.IsNullOrEmpty(pageUrl.PathInfo))
-                        {
-                            pageCacheKey.Append(pageUrl.PathInfo);
-                        }
-
-                        foreach (string key in _c1PageCustomStringProviders.Keys)
-                        {
-                            pageCacheKey.Append(_c1PageCustomStringProviders[key](context));
-                        }
-
-                        return pageCacheKey.ToString();
+                        pageCacheKey.Append("https");
                     }
+
+                    // Adding the relative path from RawUrl as a part of cache key to make ASP.NET cache respect casing of urls
+                    pageCacheKey.Append(new UrlBuilder(rawUrl).FullPath);
+                    foreach (string key in _c1PageCustomStringProviders.Keys)
+                    {
+                        pageCacheKey.Append(_c1PageCustomStringProviders[key](context));
+                    }
+
+                    return pageCacheKey.ToString();
                 }
                 return string.Empty;
             }
@@ -294,7 +312,7 @@ namespace Composite.Core.WebClient
         /// <param name="customStringBuilder">Your function the can return a custom string</param>
         public static void RegisterC1PageVaryByCustomStringProvider( string providerId, Func<HttpContext,string> customStringBuilder)
         {
-            _c1PageCustomStringProviders.GetOrAdd(providerId, () => customStringBuilder);
+            _c1PageCustomStringProviders.GetOrAdd(providerId, customStringBuilder);
         }
 
 
@@ -309,7 +327,11 @@ namespace Composite.Core.WebClient
             }
 
             PerformanceCounterFacade.SystemStartupIncrement();
-            ApplicationStartupFacade.FireBeforeSystemInitialize();
+
+            using (GlobalInitializerFacade.GetPreInitHandlersScope())
+            {
+                ApplicationStartupFacade.FireBeforeSystemInitialize();
+            }
 
             TempDirectoryFacade.OnApplicationStart();
 

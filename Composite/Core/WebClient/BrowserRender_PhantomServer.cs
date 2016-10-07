@@ -107,46 +107,60 @@ namespace Composite.Core.WebClient
             }
 
 
-            public static async Task<string> RenderUrlAsync(HttpCookie authenticationCookie, string url, string tempFilePath, string mode)
+            public static async Task<RenderingResult> RenderUrlAsync(HttpCookie authenticationCookie, string url, string outputImageFilePath, string mode)
             {
                 using (await _instanceAsyncLock.LockAsync())
                 {
-                    try
+                    _lastUsageDate = DateTime.Now;
+                    var renderingResult = Instance.RenderUrlImpl(authenticationCookie, url, outputImageFilePath, mode);
+
+                    if (renderingResult.Status == RenderingResultStatus.PhantomServerTimeout
+                        || renderingResult.Status == RenderingResultStatus.PhantomServerIncorrectResponse)
                     {
-                        _lastUsageDate = DateTime.Now;
-                        string output;
-                        Instance.RenderUrlImpl(authenticationCookie, url, tempFilePath, mode, out output);
-                        return output;
+                        Log.LogWarning("PhantomServer", "Shutting down PhantomJs server. Reason: {0}, Output: {1}", renderingResult.Status, renderingResult.Output);
+
+                        try
+                        {
+                            ShutDown(true);
+                        }
+                        catch (Exception shutdownException)
+                        {
+                            Log.LogError("PhantomServer", shutdownException);
+                        }
                     }
-                    catch (BrowserRenderException)
-                    {
-                        ShutDown(true);
-                        throw;
-                    }
+                    
+                    return renderingResult;
                 }
             }
 
 
-            private void RenderUrlImpl(HttpCookie authenticationCookie, string url, string tempFilePath, string mode, out string output)
+            private RenderingResult RenderUrlImpl(HttpCookie authenticationCookie, string url, string outputImageFilePath, string mode)
             {
                 Verify.ArgumentNotNull(authenticationCookie, "authenticationCookie");
 
                 string cookieDomain = new Uri(url).Host;
                 string cookieInfo = authenticationCookie.Name + "," + authenticationCookie.Value + "," + cookieDomain;
 
-                string requestLine = cookieInfo + "|" + url + "|" + tempFilePath + "|" + mode;
+                string requestLine = cookieInfo + "|" + url + "|" + outputImageFilePath + "|" + mode;
 
+                // Async way:
+                //Task<string> readerTask = Task.Run(async () =>
+                //{
+                //    await _stdin.WriteLineAsync(requestLine);
+                //    return await _stdout.ReadLineAsync();
+                //});
 
-
-                Task<string> readerTask = Task.Run(async () =>
+                Task<string> readerTask = Task.Run(() =>
                 {
                     _stdin.WriteLine(requestLine);
-                    return await _stdout.ReadLineAsync();
+                    return _stdout.ReadLine();
                 });
 
                 double timeout = (DateTime.Now - _process.StartTime).TotalSeconds < 120 ? 65 : 30;
 
                 readerTask.Wait(TimeSpan.FromSeconds(timeout));
+
+                string output;
 
                 switch (readerTask.Status)
                 {
@@ -154,20 +168,66 @@ namespace Composite.Core.WebClient
                         output = readerTask.Result;
                         break;
                     default:
-                        // nuke the exe process here - stuff is likely fucked up.
-                        throw new BrowserRenderException(Environment.NewLine + "Request failed to complete within expected time: " + requestLine);
+                        return new RenderingResult
+                        {
+                            Status = RenderingResultStatus.PhantomServerTimeout,
+                            Output = "Request failed to complete within expected time: " +
+#if DEBUG
+                                requestLine
+#else
+                                url + " " + mode
+#endif
+                        };
                 }
 
-
-                if (!C1File.Exists(tempFilePath))
+                if (C1File.Exists(outputImageFilePath))
                 {
-                    if (output == null)
-                    {
-                        output = _stderror.ReadToEnd();
-                    }
-
-                    throw new BrowserRenderException(output + Environment.NewLine + "Request: " + requestLine);
+                    return new RenderingResult 
+                    { 
+                        Status = RenderingResultStatus.Success, 
+                        Output = output,
+                        FilePath = outputImageFilePath
+                    };
                 }
+
+                const string redirectResponsePrefix = "REDIRECT: ";
+                if (output.StartsWith(redirectResponsePrefix))
+                {
+                    return new RenderingResult
+                    {
+                        Status = RenderingResultStatus.Redirect,
+                        Output = output,
+                        RedirectUrl = output.Substring(redirectResponsePrefix.Length)
+                    };
+                }
+
+                const string timeoutResponsePrefix = "TIMEOUT: ";
+                if (output.StartsWith(timeoutResponsePrefix))
+                {
+                    return new RenderingResult
+                    {
+                        Status = RenderingResultStatus.Timeout,
+                        Output = output,
+                        RedirectUrl = output.Substring(timeoutResponsePrefix.Length)
+                    };
+                }
+
+                const string errorResponsePrefix = "ERROR: ";
+                if (output.StartsWith(errorResponsePrefix))
+                {
+                    return new RenderingResult
+                    {
+                        Status = RenderingResultStatus.Error,
+                        Output = output,
+                        RedirectUrl = output.Substring(errorResponsePrefix.Length)
+                    };
+                }
+
+                return new RenderingResult
+                {
+                    Status = RenderingResultStatus.PhantomServerIncorrectResponse,
+                    Output = output
+                };
             }
 
             public static string ScriptFilePath
@@ -199,18 +259,18 @@ namespace Composite.Core.WebClient
 
             void DisposeInternal(bool silent)
             {
-                bool proccessHasExited;
+                bool processHasExited;
 
                 try
                 {
-                    proccessHasExited = _process.HasExited;
+                    processHasExited = _process.HasExited;
                 }
                 catch (Exception)
                 {
-                    proccessHasExited = true;
+                    processHasExited = true;
                 }
 
-                if (!proccessHasExited)
+                if (!processHasExited)
                 {
                     _stdin.WriteLine("exit");
                 }
@@ -221,7 +281,17 @@ namespace Composite.Core.WebClient
                     {
                         string stdOut = _stdout.ReadToEnd();
                         string stdError = _stderror.ReadToEnd();
-                        return string.Format("output: '{0}', error: '{1}'", stdOut, stdError);
+
+                        string result = !string.IsNullOrEmpty(stdOut) ? "output: '{0}'".FormatWith(stdOut) : "";
+
+                        if (!string.IsNullOrEmpty(stdError))
+                        {
+                            if (result.Length > 0) { result += ", ";}
+
+                            result += string.Format("error: '{0}'", stdError);
+                        }
+
+                        return result;
                     }
                     catch (Exception ex)
                     {
@@ -229,43 +299,53 @@ namespace Composite.Core.WebClient
                     }
                 });
 
+                
                 errorFeedbackTask.Wait(500);
 
                 string errorFeedback = errorFeedbackTask.Status == TaskStatus.RanToCompletion ? errorFeedbackTask.Result : "Process Hang";
 
-                int exitCode = -1;
-
-                try
+                if (!processHasExited)
                 {
-                    proccessHasExited = _process.HasExited;
-                }
-                catch (Exception)
-                {
-                    proccessHasExited = true;
+                    try
+                    {
+                        processHasExited = _process.HasExited;
+                    }
+                    catch (Exception)
+                    {
+                        processHasExited = true;
+                    }
+
+                    if (!processHasExited)
+                    {
+                        _stdin.Close();
+                        _stdout.Close();
+                        _stderror.Close();
+                        _process.Kill();
+                        _process.WaitForExit(500);
+                    }
                 }
 
-                if (!proccessHasExited)
-                {
-                    _stdin.Close();
-                    _stdout.Close();
-                    _stderror.Close();
-                    _process.Kill();
-                    _process.WaitForExit(500);
-                }
-
-                exitCode = _process.ExitCode;
+                int exitCode = _process.ExitCode;
 
                 _stdin.Dispose();
                 _stdout.Dispose();
                 _stderror.Dispose();
 
-
                 _process.Dispose();
                 _job.Dispose();
 
-                if (!silent && exitCode != 0 || errorFeedbackTask.Status != TaskStatus.RanToCompletion)
+                bool meaningfullExitCode = exitCode != 0 && exitCode != -1073741819 /* Access violation, the ExitCode property returns this value by default for some reason */;
+
+                if (!silent && (meaningfullExitCode || errorFeedbackTask.Status != TaskStatus.RanToCompletion))
                 {
-                    throw new InvalidOperationException("Error executing PhantomJs.exe. Exit code: {0}, {1}".FormatWith(exitCode, errorFeedback));
+                    string errorMessage = "Error executing PhantomJs.exe";
+                    if (meaningfullExitCode) errorMessage += "; Exit code: {0}".FormatWith(exitCode);
+
+                    if (!string.IsNullOrEmpty(errorFeedback))
+                    {
+                        errorMessage += ", " + errorMessage;
+                    }
+                    throw new InvalidOperationException(errorMessage);
                 }
             }
         }

@@ -20,6 +20,10 @@ namespace Composite.Core.Configuration
             }
         }
 
+        public string BrandedVersionAssemblySource
+        {
+            get { return GlobalSettingsProviderPluginFacade.BrandedVersionAssemblySource; }
+        }
 
 
         public CultureInfo DefaultCultureInfo
@@ -319,6 +323,22 @@ namespace Composite.Core.Configuration
             get
             {
                 return GlobalSettingsProviderPluginFacade.ImageQuality;
+            }
+        }
+
+        public bool PrettifyPublicMarkup
+        {
+            get
+            {
+                return GlobalSettingsProviderPluginFacade.PrettifyPublicMarkup;
+            }
+        }
+
+        public bool PrettifyRenderFunctionExceptions
+        {
+            get
+            {
+                return GlobalSettingsProviderPluginFacade.PrettifyRenderFunctionExceptions;
             }
         }
     }

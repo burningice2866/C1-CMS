@@ -18,7 +18,6 @@
 			<ui:bindingmapping element="ui:splitpanel" binding="StageSplitPanelBinding"/>
 			<ui:bindingmapping element="ui:splitter" binding="StageSplitterBinding"/>
 		</ui:bindingmappingset>
-		
 	</head>
 	<body>
 		
@@ -31,6 +30,7 @@
 		-->
 		
 		<ui:viewset id="views"/>
+
 		
 		<ui:splitbox orient="horizontal" layout="8:3">
 			<ui:splitpanel>

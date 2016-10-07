@@ -16,28 +16,31 @@ using Composite.Core.Localization;
 using Composite.Core.WebClient.Renderings.Template;
 using Composite.Core.Xml;
 using Composite.C1Console.Security;
-
+using Composite.Core.Configuration;
 
 namespace Composite.Core.WebClient.Renderings.Page
 {
     /// <summary>    
     /// </summary>
     /// <exclude />
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public static class PageRenderer
     {
-        private static readonly string LogTitle = typeof (PageRenderer).Name;
+        private static readonly string LogTitle = typeof(PageRenderer).Name;
         private static readonly NameBasedAttributeComparer _nameBasedAttributeComparer = new NameBasedAttributeComparer();
 
 
         /// <exclude />
         public static FunctionContextContainer GetPageRenderFunctionContextContainer()
         {
-            XEmbeddedControlMapper mapper = new XEmbeddedControlMapper();
+            var mapper = new XEmbeddedControlMapper();
 
-            FunctionContextContainer contextContainer = new FunctionContextContainer();
-            contextContainer.XEmbedableMapper = mapper;
-            contextContainer.SuppressXhtmlExceptions = true;
+            var contextContainer = new FunctionContextContainer
+            {
+                XEmbedableMapper = mapper,
+                SuppressXhtmlExceptions = GlobalSettingsFacade.PrettifyRenderFunctionExceptions 
+                                            || PageRenderer.RenderingReason == RenderingReason.ScreenshotGeneration 
+            };
 
             return contextContainer;
         }
@@ -80,7 +83,7 @@ namespace Composite.Core.WebClient.Renderings.Page
         /// <exclude />
         public static XhtmlDocument ParsePlaceholderContent(IPagePlaceholderContent placeholderContent)
         {
-            if(placeholderContent == null || string.IsNullOrEmpty(placeholderContent.Content))
+            if (placeholderContent == null || string.IsNullOrEmpty(placeholderContent.Content))
             {
                 return new XhtmlDocument();
             }
@@ -107,7 +110,7 @@ namespace Composite.Core.WebClient.Renderings.Page
                 {
                     foreach (XElement placeHolder in placeHolders.Where(f => f.Attribute(RenderingElementNames.PlaceHolderIdAttribute) != null))
                     {
-                        IPagePlaceholderContent placeHolderContent = 
+                        IPagePlaceholderContent placeHolderContent =
                             placeholderContents
                             .FirstOrDefault(f => f.PlaceHolderId == placeHolder.Attribute(RenderingElementNames.PlaceHolderIdAttribute).Value);
 
@@ -172,7 +175,7 @@ namespace Composite.Core.WebClient.Renderings.Page
         {
             get
             {
-                return  RequestLifetimeCache.TryGet<RenderingReason>("PageRenderer.RenderingReason");
+                return RequestLifetimeCache.TryGet<RenderingReason>("PageRenderer.RenderingReason");
             }
             set
             {
@@ -189,7 +192,7 @@ namespace Composite.Core.WebClient.Renderings.Page
                 {
                     return null;
                 }
-                
+
                 return RequestLifetimeCache.TryGet<IPage>("PageRenderer.IPage");
             }
             set
@@ -226,7 +229,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
 
         /// <exclude />
-        [Obsolete()]
+        [Obsolete]
         public static IEnumerable<IData> GetCurrentPageAssociatedData(Type type)
         {
             return PageRenderer.CurrentPage.GetReferees(type);
@@ -235,13 +238,10 @@ namespace Composite.Core.WebClient.Renderings.Page
 
 
         /// <exclude />
-        [Obsolete()]
+        [Obsolete]
         public static IEnumerable<IData> GetCurrentPageAssociatedData<T>() where T : IData
         {
-            foreach (IData data in PageRenderer.CurrentPage.GetReferees(typeof(T)))
-            {
-                yield return (T)data;
-            }
+            return PageRenderer.CurrentPage.GetReferees(typeof(T));
         }
 
 
@@ -260,11 +260,13 @@ namespace Composite.Core.WebClient.Renderings.Page
                 {
                     return new LiteralControl(document.ToString());
                 }
-                
+
                 XhtmlDocument xhtmlDocument = new XhtmlDocument(document);
                 NormalizeXhtmlDocument(xhtmlDocument);
 
                 ResolveRelativePaths(xhtmlDocument);
+
+                PrioritizeHeadNodex(xhtmlDocument);
 
                 AppendC1MetaTags(page, xhtmlDocument);
 
@@ -274,6 +276,52 @@ namespace Composite.Core.WebClient.Renderings.Page
             }
         }
 
+        private static void PrioritizeHeadNodex(XhtmlDocument xhtmlDocument)
+        {
+            List<Tuple<int, XNode>> prioritizedHeadNodes = new List<Tuple<int, XNode>>();
+            foreach (var node in xhtmlDocument.Head.Nodes().ToList())
+            {
+                int p = GetHeadNodePriority(node);
+                prioritizedHeadNodes.Add(new Tuple<int, XNode>(p, node));
+                node.Remove();
+            }
+            xhtmlDocument.Head.Add(prioritizedHeadNodes.OrderBy(f => f.Item1).Select(f => f.Item2));
+        }
+
+        private static string AttributeValueLowered(this XElement element, string attributeName)
+        {
+            string v = (string)element.Attribute(attributeName);
+            if (v != null) v = v.ToLowerInvariant();
+            return v;
+        }
+
+        private static int GetHeadNodePriority(XNode headNode)
+        {
+            if (headNode is XElement)
+            {
+                XElement headElement = (XElement)headNode;
+
+                if (headElement.Name.LocalName == "title") return 0;
+                if (headElement.Name.LocalName == "meta")
+                {
+                    if (headElement.AttributeValueLowered("http-equiv") == "content-type") return 10;
+                    if (headElement.Attribute("charset") != null) return 11;
+                    if (headElement.Attribute("http-equiv") != null) return 11;
+
+                    if (headElement.AttributeValueLowered("name") == "description") return 12;
+
+                    if (headElement.Attribute("name") != null) return 20;
+
+                    if (headElement.Attribute("property") != null) return 30;
+
+                    return 20;
+                }
+                if (headElement.Name.LocalName == "link") return 30;
+                if (headElement.Name.LocalName == "script") return 40;
+            }
+
+            return 100;
+        }
 
 
         /// <summary>
@@ -332,7 +380,7 @@ namespace Composite.Core.WebClient.Renderings.Page
                 relativePathAttribute.Value = applicationVirtualPath + relativePathAttribute.Value.Substring(tildePrefixLength);
             }
 
-            if (applicationVirtualPath.Length>1)
+            if (applicationVirtualPath.Length > 1)
             {
                 List<XAttribute> hardRootedPathAttributes = pathAttributes.Where(f => f.Value.StartsWith("/Renderers/")).ToList();
 
@@ -408,7 +456,7 @@ namespace Composite.Core.WebClient.Renderings.Page
 
                 object[] functionExecutionResults = new object[functionCalls.Count];
 
-                for(int i=0; i<functionCalls.Count; i++)
+                for (int i = 0; i < functionCalls.Count; i++)
                 {
                     XElement functionCallDefinition = functionCalls[i];
                     string functionName = null;
@@ -468,11 +516,11 @@ namespace Composite.Core.WebClient.Renderings.Page
                 };
 
                 // Applying changes
-                for(int i=0; i < functionCalls.Count; i++)
+                for (int i = 0; i < functionCalls.Count; i++)
                 {
                     XElement functionCall = functionCalls[i];
                     object functionCallResult = functionExecutionResults[i];
-                    if(functionCallResult != null)
+                    if (functionCallResult != null)
                     {
                         if (functionCallResult is XAttribute && functionCall.Parent != null)
                         {
@@ -501,11 +549,11 @@ namespace Composite.Core.WebClient.Renderings.Page
                 yield return (XElement)source;
             }
 
-            if (source is IEnumerable<XElement>)
+            if (source is IEnumerable<XNode>)
             {
-                foreach (XElement xelement in (IEnumerable<XElement>)source)
+                foreach (XElement xElement in ((IEnumerable<XNode>)source).OfType<XElement>())
                 {
-                    yield return xelement;
+                    yield return xElement;
                 }
             }
         }
@@ -537,7 +585,9 @@ namespace Composite.Core.WebClient.Renderings.Page
                     XhtmlDocument nestedXhtml = new XhtmlDocument(nestedDocument);
 
                     rootDocument.Root.Add(nestedXhtml.Root.Attributes().Except(rootDocument.Root.Attributes(), _nameBasedAttributeComparer));
-                    rootDocument.Head.Add(nestedXhtml.Head.Nodes());
+                    // making <meta property="..." /> from nested documents appear first. We will not filter them later and this ensure desired precedence 
+                    rootDocument.Head.AddFirst(nestedXhtml.Head.Elements().Where(f=>f.Name.LocalName=="meta" && f.Attribute("property")!=null));
+                    rootDocument.Head.Add(nestedXhtml.Head.Nodes().Where(f => !(f is XElement) || !(((XElement)f).Name.LocalName == "meta" && ((XElement)f).Attribute("property") != null)));
                     rootDocument.Head.Add(nestedXhtml.Head.Attributes().Except(rootDocument.Head.Attributes(), _nameBasedAttributeComparer));
                     rootDocument.Body.Add(nestedXhtml.Body.Attributes().Except(rootDocument.Body.Attributes(), _nameBasedAttributeComparer));
 

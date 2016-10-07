@@ -76,6 +76,7 @@ var ViewDefinitions = {
 		handle 		: "Composite.Management.Start",
 		position 	: DockBinding.START,
 		label 		: "Welcome Travellers", 
+		isFloating	: false,
 		url 		: "${root}/content/views/start/start.aspx"
 	}),
 	
@@ -122,46 +123,14 @@ var ViewDefinitions = {
 	}),
 	
 	/*
-	 * Icon Pack System.
+	 * Icon Pack Sprite SVG.
 	 */
-	"Composite.Management.IconPack.System" : new HostedViewDefinition ({
-		handle 		: "Composite.Management.IconPack.System",
-		position 	: DockBinding.ABSBOTTOMLEFT,
-		label 		: "Freja",
-		image		: "${icon:icon}",
-		url 		: "${root}/content/views/dev/icons/system/Default.aspx"
-	}),
-	
-	/*
-	 * Icon Pack Republic.
-	 */
-	"Composite.Management.IconPack.Republic" : new HostedViewDefinition ({
-		handle 		: "Composite.Management.IconPack.Republic",
-		position 	: DockBinding.ABSBOTTOMLEFT,
-		label 		: "Republic",
-		image		: "${icon:icon}",
-		url 		: "${root}/content/views/dev/icons/files/republic.aspx"
-	}),
-	
-	/*
-	 * Icon Pack Harmony.
-	 */
-	"Composite.Management.IconPack.Harmony" : new HostedViewDefinition ({
-		handle 		: "Composite.Management.IconPack.Harmony",
-		position 	: DockBinding.ABSBOTTOMLEFT,
-		label 		: "Harmony",
-		image		: "${icon:icon}",
-		url 		: "${root}/content/views/dev/icons/files/harmony.aspx"
-	}),
-	
-	/*
-	 * Explorer.
-	 */
-	"Composite.Management.Explorer" : new HostedViewDefinition ({
-		handle 		: "Composite.Management.Explorer",
-		position 	: DockBinding.EXPLORER,
-		url 		: "${root}/content/views/explorer/explorer.aspx",
-		label 		: "Explorer"
+	"Composite.Management.IconPack.SpriteSVG": new HostedViewDefinition({
+		handle: "Composite.Management.IconPack.SpriteSVG",
+		position: DockBinding.MAIN,
+		label: "Sprite SVG",
+		image: "${icon:icon}",
+		url: "${root}/content/views/dev/icons/svg/sprite.cshtml"
 	}),
 	
 	/*
@@ -216,6 +185,7 @@ var ViewDefinitions = {
 	 */
 	"Composite.Management.Browser" : new HostedViewDefinition ({
 		isMutable	: false,
+		isPinned	: true,
 		handle 		: "Composite.Management.Browser",
 		position	: DockBinding.MAIN,
 		perspective	: ExplorerBinding.PERSPECTIVE_CONTENT,
@@ -231,7 +201,7 @@ var ViewDefinitions = {
 	 */
 	"Composite.Management.SEOAssistant" : new HostedViewDefinition ({
 		handle 		: "Composite.Management.SEOAssistant",
-		position	: DockBinding.RIGHTTOP,
+		position: DockBinding.ABSBOTTOMRIGHT,
 		perspective	: ExplorerBinding.PERSPECTIVE_CONTENT,
 		url			: "${root}/content/views/seoassist/seoassist.aspx",
 		label		: "${string:Composite.Web.SEOAssistant:SEOAssistant}",
@@ -371,8 +341,7 @@ var ViewDefinitions = {
 			selectionResult		: "Uri",
 			nodes : [{
 				key : "LayoutFileElementProvider"
-			}],
-			width : 480
+			}]
 		}
 	}),
 	

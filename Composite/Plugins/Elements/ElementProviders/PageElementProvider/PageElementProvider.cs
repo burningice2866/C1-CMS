@@ -1,17 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Transactions;
-using System.Web;
 using Composite.C1Console.Actions;
 using Composite.C1Console.Elements;
 using Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper;
 using Composite.C1Console.Elements.ElementProviderHelpers.DataGroupingProviderHelper;
 using Composite.C1Console.Elements.Plugins.ElementProvider;
-using Composite.C1Console.Events;
 using Composite.Core.Extensions;
 using Composite.Core.Linq;
-using Composite.Core.Routing;
 using Composite.Data;
 using Composite.Data.ProcessControlled;
 using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
@@ -35,7 +31,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
     internal class PageElementProvider : IHooklessElementProvider, IDataExchangingElementProvider, IDragAndDropElementProvider, ILocaleAwareElementProvider, IAuxiliarySecurityAncestorProvider
     {
         private ElementProviderContext _context;
-        private AssociatedDataElementProviderHelper<IPage> _pageAccociatedHelper;
+        private AssociatedDataElementProviderHelper<IPage> _pageAssociatedHelper;
 
 
         public static ResourceHandle EditPage = GetIconHandle("page-edit-page");
@@ -45,9 +41,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         public static ResourceHandle ListUnpublishedItems = GetIconHandle("page-list-unpublished-items");
         public static ResourceHandle AddSubPage = GetIconHandle("page-add-sub-page");
         public static ResourceHandle DeletePage = GetIconHandle("page-delete-page");
-        public static ResourceHandle PageViewPublicScope = GetIconHandle("page-view-public-scope");
-        public static ResourceHandle PageViewPublicScopeDisabled = GetIconHandle("page-view-public-scope-disabled");
-        public static ResourceHandle PageViewAdministratedScope = GetIconHandle("page-view-administrated-scope");
         public static ResourceHandle PageDraft = GetIconHandle("page-draft");
         public static ResourceHandle PageAwaitingApproval = GetIconHandle("page-awaiting-approval");
         public static ResourceHandle PageAwaitingPublication = GetIconHandle("page-awaiting-publication");
@@ -94,7 +87,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             {
                 _context = value;
 
-                _pageAccociatedHelper = new AssociatedDataElementProviderHelper<IPage>(
+                _pageAssociatedHelper = new AssociatedDataElementProviderHelper<IPage>(
                     _context,
                     new PageElementProviderEntityToken(_context.ProviderName),
                     true);
@@ -123,11 +116,11 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
             EntityToken entityToken = new PageElementProviderEntityToken(_context.ProviderName);
 
-            ElementDragAndDropInfo dragAndDropInfo = new ElementDragAndDropInfo();
+            var dragAndDropInfo = new ElementDragAndDropInfo();
             dragAndDropInfo.AddDropType(typeof(IPage));
             dragAndDropInfo.SupportsIndexedPosition = true;
 
-            Element element = new Element(_context.CreateElementHandle(entityToken), dragAndDropInfo)
+            var element = new Element(_context.CreateElementHandle(entityToken), dragAndDropInfo)
             {
                 VisualData = new ElementVisualizedData
                 {
@@ -267,12 +260,12 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         {
             if (entityToken is AssociatedDataElementProviderHelperEntityToken)
             {
-                return _pageAccociatedHelper.GetChildren((AssociatedDataElementProviderHelperEntityToken)entityToken, false);
+                return _pageAssociatedHelper.GetChildren((AssociatedDataElementProviderHelperEntityToken)entityToken, false);
             }
 
             if (entityToken is DataGroupingProviderHelperEntityToken)
             {
-                return _pageAccociatedHelper.GetChildren((DataGroupingProviderHelperEntityToken)entityToken, false);
+                return _pageAssociatedHelper.GetChildren((DataGroupingProviderHelperEntityToken)entityToken, false);
             }
 
             using (new DataScope(DataScopeIdentifier.Administrated))
@@ -301,12 +294,12 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
             if (entityToken is AssociatedDataElementProviderHelperEntityToken)
             {
-                return _pageAccociatedHelper.GetChildren((AssociatedDataElementProviderHelperEntityToken)entityToken, true);
+                return _pageAssociatedHelper.GetChildren((AssociatedDataElementProviderHelperEntityToken)entityToken, true);
             }
 
             if (entityToken is DataGroupingProviderHelperEntityToken)
             {
-                return _pageAccociatedHelper.GetChildren((DataGroupingProviderHelperEntityToken)entityToken, true);
+                return _pageAssociatedHelper.GetChildren((DataGroupingProviderHelperEntityToken)entityToken, true);
             }
 
             Dictionary<Guid, IPage> pages;
@@ -350,15 +343,15 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 else if (foreignAdministratedPages.TryGetValue(pageId, out page)
                          && page.IsTranslatable())
                 {
-                    resultPages.Add(new KeyValuePair<PageLocaleState, IPage>(PageLocaleState.ForiegnActive, page));
+                    resultPages.Add(new KeyValuePair<PageLocaleState, IPage>(PageLocaleState.ForeignActive, page));
                 }
                 else if (foreignPublicPages.TryGetValue(pageId, out page))
                 {
-                    resultPages.Add(new KeyValuePair<PageLocaleState, IPage>(PageLocaleState.ForiegnActive, page));
+                    resultPages.Add(new KeyValuePair<PageLocaleState, IPage>(PageLocaleState.ForeignActive, page));
                 }
                 else if (foreignAdministratedPages.TryGetValue(pageId, out page))
                 {
-                    resultPages.Add(new KeyValuePair<PageLocaleState, IPage>(PageLocaleState.ForiegnDisabled, page));
+                    resultPages.Add(new KeyValuePair<PageLocaleState, IPage>(PageLocaleState.ForeignDisabled, page));
                 }
             }
 
@@ -371,7 +364,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
         public Dictionary<EntityToken, IEnumerable<EntityToken>> GetParents(IEnumerable<EntityToken> entityTokens)
         {
-            Dictionary<EntityToken, IEnumerable<EntityToken>> result = new Dictionary<EntityToken, IEnumerable<EntityToken>>();
+            var result = new Dictionary<EntityToken, IEnumerable<EntityToken>>();
 
             foreach (EntityToken entityToken in entityTokens)
             {
@@ -406,7 +399,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
                     if (page != null) // null => Foreign page
                     {
-                        associatedChildElements = _pageAccociatedHelper.GetChildren(page, entityToken);
+                        associatedChildElements = _pageAssociatedHelper.GetChildren(page, entityToken);
                     }
                     else
                     {
@@ -523,11 +516,11 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             Verify.IsNotNull(draggedPage, "Dragged page does not exist");
 
             Guid newParentPageId;
-            if ((newParentEntityToken is PageElementProviderEntityToken))
+            if (newParentEntityToken is PageElementProviderEntityToken)
             {
                 newParentPageId = Guid.Empty;
             }
-            else if ((newParentEntityToken is DataEntityToken))
+            else if (newParentEntityToken is DataEntityToken)
             {
                 IPage newParentPage = (IPage)((DataEntityToken)newParentEntityToken).Data;
                 newParentPageId = newParentPage.Id;
@@ -546,20 +539,20 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
             if (dragAndDropType == DragAndDropType.Move)
             {
-                using (TransactionScope transationScope = TransactionsFacade.CreateNewScope())
+                using (var transactionScope = TransactionsFacade.CreateNewScope())
                 {
                     string urlTitle = draggedPage.UrlTitle;
                     int counter = 1;
 
                     while (true)
                     {
-                        bool urlTitleClashe =
+                        bool urlTitleClash =
                             (from p in PageServices.GetChildren(newParentPageId).AsEnumerable()
                              where p.UrlTitle == urlTitle && p.Id != draggedPage.Id
                              select p).Any();
 
 
-                        if (urlTitleClashe == false)
+                        if (!urlTitleClash)
                         {
                             break;
                         }
@@ -569,7 +562,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
                     draggedPage.UrlTitle = urlTitle;
 
-                    // Real drop index takes in accound pages from other locales
+                    // Real drop index takes into account pages from other locales
                     int realDropIndex = GetRealDropIndex(draggedPage, newParentPageId, dropIndex);
 
                     draggedPage.MoveTo(newParentPageId, realDropIndex, false);
@@ -578,7 +571,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
                     EntityTokenCacheFacade.ClearCache(draggedPage.GetDataEntityToken());
 
-                    transationScope.Complete();
+                    transactionScope.Complete();
                 }
             }
             else
@@ -589,16 +582,16 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
             if (oldParent != null)
             {
-                ParentTreeRefresher oldParentParentTreeRefresher = new ParentTreeRefresher(flowControllerServicesContainer);
+                var oldParentParentTreeRefresher = new ParentTreeRefresher(flowControllerServicesContainer);
                 oldParentParentTreeRefresher.PostRefreshMesseges(oldParent.GetDataEntityToken());
             }
             else
             {
-                SpecificTreeRefresher oldParentspecificTreeRefresher = new SpecificTreeRefresher(flowControllerServicesContainer);
+                var oldParentspecificTreeRefresher = new SpecificTreeRefresher(flowControllerServicesContainer);
                 oldParentspecificTreeRefresher.PostRefreshMesseges(new PageElementProviderEntityToken(_context.ProviderName));
             }
 
-            ParentTreeRefresher newParentParentTreeRefresher = new ParentTreeRefresher(flowControllerServicesContainer);
+            var newParentParentTreeRefresher = new ParentTreeRefresher(flowControllerServicesContainer);
             newParentParentTreeRefresher.PostRefreshMesseges(newParentEntityToken);
 
             return true;
@@ -625,7 +618,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 return 0;
             }
 
-            childPageIDs.OrderBy(PageManager.GetLocalOrdering);
+            childPageIDs = childPageIDs.OrderBy(PageManager.GetLocalOrdering).ToList();
 
             return PageManager.GetLocalOrdering(childPageIDs[Math.Min(childPageIDs.Count - 1, dropIndex - 1)]) + 1;
         }
@@ -634,8 +627,8 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         private enum PageLocaleState
         {
             Own,
-            ForiegnActive,
-            ForiegnDisabled
+            ForeignActive,
+            ForeignDisabled
         }
 
 
@@ -656,12 +649,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             string addNewPageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.AddSubPageToolTip");
             string deletePageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.Delete");
             string deletePageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.DeleteToolTip");
-            string viewPublicPageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.ViewPublicPage");
-            string viewPublicPageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.ViewPublicToolTip");
-            string viewDraftPageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.ViewDraftPage");
-            string viewDraftPageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.ViewDraftToolTip");
-            //string displayLocalOrderingLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.DisplayLocalOrderingLabel");
-            //string displayLocalOrderingToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.DisplayLocalOrderingToolTip");
 
             string urlMappingName = null;
             if (UserSettings.ForeignLocaleCultureInfo != null)
@@ -669,7 +656,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 urlMappingName = DataLocalizationFacade.GetCultureTitle(UserSettings.ForeignLocaleCultureInfo);
             }
 
-            Element[] elements = new Element[pages.Count];
+            var elements = new Element[pages.Count];
 
             ParallelFacade.For("PageElementProvider. Getting elements", 0, pages.Count, i =>
             {
@@ -678,11 +665,11 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
                 EntityToken entityToken = page.GetDataEntityToken();
 
-                ElementDragAndDropInfo dragAndDropInfo = new ElementDragAndDropInfo(typeof(IPage));
+                var dragAndDropInfo = new ElementDragAndDropInfo(typeof(IPage));
                 dragAndDropInfo.AddDropType(typeof(IPage));
                 dragAndDropInfo.SupportsIndexedPosition = true;
 
-                Element element = new Element(_context.CreateElementHandle(entityToken), MakeVisualData(page, kvp.Key, urlMappingName, rootPages), dragAndDropInfo);
+                var element = new Element(_context.CreateElementHandle(entityToken), MakeVisualData(page, kvp.Key, urlMappingName, rootPages), dragAndDropInfo);
 
                 element.PropertyBag.Add("Uri", "~/page({0})".FormatWith(page.Id));
                 element.PropertyBag.Add("ElementType", "application/x-composite-page");
@@ -745,78 +732,9 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                         }
                     });
 
-
-                    element.AddAction(new ElementAction(new ActionHandle(new ViewDraftActionToken()))
-                    {
-                        VisualData = new ActionVisualizedData
-                        {
-                            Label = viewDraftPageLabel,
-                            ToolTip = viewDraftPageToolTip,
-                            Icon = PageElementProvider.PageViewAdministratedScope,
-                            Disabled = false,
-                            ActionLocation = new ActionLocation
-                            {
-                                ActionType = ActionType.Other,
-                                IsInFolder = false,
-                                IsInToolbar = true,
-                                ActionGroup = ViewActionGroup
-                            }
-                        }
-                    });
-
-
-                    bool pageIsPublished;
-                    using (new DataScope(PublicationScope.Published))
-                    {
-                        pageIsPublished = PageManager.GetPageById(page.Id) != null;
-                    }
-
-                    element.AddAction(new ElementAction(new ActionHandle(new ViewPublicActionToken()))
-                    {
-                        VisualData = new ActionVisualizedData
-                        {
-                            Label = viewPublicPageLabel,
-                            ToolTip = viewPublicPageToolTip,
-                            Icon = pageIsPublished ? PageViewPublicScope : PageViewPublicScopeDisabled,
-                            Disabled = !pageIsPublished,
-                            ActionLocation = new ActionLocation
-                            {
-                                ActionType = ActionType.Other,
-                                IsInFolder = false,
-                                IsInToolbar = false,
-                                ActionGroup = ViewActionGroup
-                            }
-                        }
-                    });
-
-
-                    // Creates a problem for the front-end "toolbar caching" mechanism - dont re-introduce this right befroe a release
-                    // Reason: ActionTokin is always unique for a page, making the ActionKey (hash) unique
-
-                    //if (RuntimeInformation.IsDebugBuild)
-                    //{
-                    //    element.AddAction(new ElementAction(new ActionHandle(new DisplayLocalOrderingActionToken(page.Id)))
-                    //    {
-                    //        VisualData = new ActionVisualizedData
-                    //        {
-                    //            Label = displayLocalOrderingLabel,
-                    //            ToolTip = displayLocalOrderingToolTip,
-                    //            Icon = CommonElementIcons.Nodes,
-                    //            Disabled = false,
-                    //            ActionLocation = new ActionLocation
-                    //            {
-                    //                ActionType = ActionType.DeveloperMode,
-                    //                IsInFolder = false,
-                    //                IsInToolbar = false,
-                    //                ActionGroup = AppendedActionGroup
-                    //            }
-                    //        }
-                    //    });
-                    //}
-
-                    _pageAccociatedHelper.AttachElementActions(element, page);
+                    _pageAssociatedHelper.AttachElementActions(element, page);
                 }
-                else if (kvp.Key == PageLocaleState.ForiegnActive)
+                else if (kvp.Key == PageLocaleState.ForeignActive)
                 {
                     // Localized actions
                     bool addAction = false;
@@ -859,45 +777,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                             }
                         });
                     }
-
-
-                    element.AddAction(new ElementAction(new ActionHandle(new ViewPublicActionToken()))
-                    {
-                        VisualData = new ActionVisualizedData
-                        {
-                            Label = viewPublicPageLabel,
-                            ToolTip = viewPublicPageToolTip,
-                            Icon = PageElementProvider.PageViewPublicScope,// (page.MajorVersionNumber == 0 ? PageElementProvider.PageViewPublicScopeDisabled : PageElementProvider.PageViewPublicScope),
-                            Disabled = false, //(page.MajorVersionNumber == 0),
-                            ActionLocation = new ActionLocation
-                            {
-                                ActionType = ActionType.Other,
-                                IsInFolder = false,
-                                IsInToolbar = false,
-                                ActionGroup = ViewActionGroup
-                            }
-                        }
-                    });
-
-
-
-                    //element.AddAction(new ElementAction(new ActionHandle(new ViewDraftActionToken()))
-                    //{
-                    //    VisualData = new ActionVisualizedData
-                    //    {
-                    //        Label = viewDraftPageLabel,
-                    //        ToolTip = viewDraftPageToolTip,
-                    //        Icon = PageElementProvider.PageViewAdministratedScope,
-                    //        Disabled = false,
-                    //        ActionLocation = new ActionLocation
-                    //        {
-                    //            ActionType = ActionType.Other,
-                    //            IsInFolder = false,
-                    //            IsInToolbar = false,
-                    //            ActionGroup = ViewActionGroup
-                    //        }
-                    //    }
-                    //});
                 }
 
                 elements[i] = element;
@@ -910,13 +789,15 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 
         private ElementVisualizedData MakeVisualData(IPage page, PageLocaleState pageLocaleState, string urlMappingName, bool isRootPage)
         {
-            ElementVisualizedData visualizedElement = new ElementVisualizedData();
 
-            bool hasChildren = PageServices.GetChildrenCount(page.Id) > 0 || _pageAccociatedHelper.HasChildren(page);
+            bool hasChildren = PageServices.GetChildrenCount(page.Id) > 0 || _pageAssociatedHelper.HasChildren(page);
 
-            visualizedElement.HasChildren = hasChildren;
-            visualizedElement.Label = (isRootPage || string.IsNullOrWhiteSpace(page.MenuTitle)) ? page.Title : page.MenuTitle;
-            visualizedElement.ToolTip = page.Description;
+            var visualizedElement = new ElementVisualizedData
+            {
+                HasChildren = hasChildren,
+                Label = (isRootPage || string.IsNullOrWhiteSpace(page.MenuTitle)) ? page.Title : page.MenuTitle,
+                ToolTip = page.Description
+            };
 
             if (pageLocaleState == PageLocaleState.Own)
             {
@@ -941,7 +822,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                     visualizedElement.OpenedIcon = PageElementProvider.PagePublication;
                 }
             }
-            else if (pageLocaleState == PageLocaleState.ForiegnActive)
+            else if (pageLocaleState == PageLocaleState.ForeignActive)
             {
                 visualizedElement.Icon = PageElementProvider.PageGhosted;
                 visualizedElement.OpenedIcon = PageElementProvider.PageGhosted;
@@ -971,133 +852,14 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         #endregion
     }
 
-
-
-    internal sealed class PreviewActionExecutor : Composite.C1Console.Actions.IActionExecutor
-    {
-        public FlowToken Execute(EntityToken entityToken, ActionToken actionToken, FlowControllerServicesContainer flowControllerServicesContainer)
-        {
-            DataEntityToken token = (DataEntityToken)entityToken;
-            IPage page = token.Data as IPage;
-
-            PublicationScope publicationScope = PublicationScope.Unpublished;
-            if (actionToken is ViewPublicActionToken)
-            {
-                publicationScope = PublicationScope.Published;
-
-                // Checking whether the page exist in 'Public' scope
-                using (new DataScope(DataScopeIdentifier.Public, page.DataSourceId.LocaleScope))
-                {
-                    bool exist = DataFacade.GetData<IPage>(x => x.Id == page.Id).Any();
-                    if (!exist)
-                    {
-                        var managementConsoleMessageService = flowControllerServicesContainer.GetService<IManagementConsoleMessageService>();
-
-                        managementConsoleMessageService.ShowMessage(DialogType.Message,
-                            StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "Preview.PublishedPage.NotPublishedTitle"),
-                            StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "Preview.PublishedPage.NotPublishedMessage"));
-
-                        return null;
-                    }
-                }
-            }
-
-            IPage previewPage;
-            using(new DataScope(publicationScope, page.DataSourceId.LocaleScope))
-            {
-                previewPage = PageManager.GetPageById(page.Id);
-            }
-
-            PageUrlData pageUrlData = new PageUrlData(previewPage);
-
-            var httpContext = HttpContext.Current;
-
-            var urlSpace = new UrlSpace();
-            if(HostnameBindingsFacade.GetBindingForCurrentRequest() != null
-                || HostnameBindingsFacade.GetAliasBinding(httpContext) != null)
-            {
-                urlSpace.ForceRelativeUrls = true;
-            }
-
-            string url = PageUrls.BuildUrl(pageUrlData, UrlKind.Public, urlSpace)
-                      ?? PageUrls.BuildUrl(pageUrlData, UrlKind.Renderer, urlSpace); 
-
-            var arguments = new Dictionary<string, string> {{"URL", url}};
-            IManagementConsoleMessageService consoleServices = flowControllerServicesContainer.GetService<IManagementConsoleMessageService>();
-            ConsoleMessageQueueFacade.Enqueue(new OpenHandledViewMessageQueueItem(EntityTokenSerializer.Serialize(entityToken, true), "Composite.Management.Browser", arguments), consoleServices.CurrentConsoleId);
-
-            return null;
-        }
-    }
-
-
-
     // Not to used on elements. This is only for determin drag'n'drop security
     internal sealed class DragAndDropActionToken : ActionToken
     {
-        private static PermissionType[] _permissoinTypes = new PermissionType[] { PermissionType.Administrate, PermissionType.Edit };
-
-        public override IEnumerable<PermissionType> PermissionTypes
-        {
-            get { return _permissoinTypes; }
-        }
-    }
-
-
-
-    [IgnoreEntityTokenLocking]
-    [ActionExecutor(typeof(PreviewActionExecutor))]
-    internal sealed class ViewPublicActionToken : ActionToken
-    {
-        private static IEnumerable<PermissionType> _permissionTypes = new PermissionType[] { PermissionType.Read };
-
-        public ViewPublicActionToken()
-        {
-        }
+        private static readonly PermissionType[] _permissionTypes = { PermissionType.Administrate, PermissionType.Edit };
 
         public override IEnumerable<PermissionType> PermissionTypes
         {
             get { return _permissionTypes; }
-        }
-
-        public override string Serialize()
-        {
-            return "ViewPublic";
-        }
-
-
-        public static ActionToken Deserialize(string serializedData)
-        {
-            return new ViewPublicActionToken();
-        }
-    }
-
-
-
-    [IgnoreEntityTokenLocking]
-    [ActionExecutor(typeof(PreviewActionExecutor))]
-    internal sealed class ViewDraftActionToken : ActionToken
-    {
-        private static IEnumerable<PermissionType> _permissionTypes = new PermissionType[] { PermissionType.Read };
-
-        public ViewDraftActionToken()
-        {
-        }
-
-        public override IEnumerable<PermissionType> PermissionTypes
-        {
-            get { return _permissionTypes; }
-        }
-
-        public override string Serialize()
-        {
-            return "ViewDraft";
-        }
-
-
-        public static ActionToken Deserialize(string serializedData)
-        {
-            return new ViewDraftActionToken();
         }
     }
 

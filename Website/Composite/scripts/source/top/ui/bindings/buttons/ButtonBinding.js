@@ -10,7 +10,7 @@ ButtonBinding.TYPE_RADIOBUTTON = "radio";
 
 ButtonBinding.CLASSNAME_FOCUSABLE = "focusable";
 ButtonBinding.CLASSNAME_FOCUSED = "focused";
-ButtonBinding.CLASSNAME_DEFAULT = "default";
+ButtonBinding.CLASSNAME_DEFAULT = "primary";
 
 /**
  * @class
@@ -169,7 +169,7 @@ ButtonBinding.prototype.toString = function () {
 }
 
 /**
- * @overloads {MatrixBinding#onBindingRegister} 
+ * @overloads {Binding#onBindingRegister} 
  */
 ButtonBinding.prototype.onBindingRegister = function () {
 
@@ -178,7 +178,7 @@ ButtonBinding.prototype.onBindingRegister = function () {
 }
 
 /**
- * @overloads {MatrixBinding#onBindingAttach} 
+ * @overloads {Binding#onBindingAttach} 
  */
 ButtonBinding.prototype.onBindingAttach = function () {
 
@@ -203,6 +203,11 @@ ButtonBinding.prototype.onBindingDispose = function () {
 		this._stateManager.dispose ();
 		this._stateManager = null;
 	}
+
+    var callbackid = this.getProperty("callbackid");
+    if (callbackid != null) {
+        this.bindingWindow.DataManager.unRegisterDataBinding(callbackid);
+    }
 }
 
 /**
@@ -603,8 +608,10 @@ ButtonBinding.prototype.check = function ( isDisableCommand ) {
 			if ( !isDisableCommand == true ) {
 				this.fireCommand ();
 			}
+		} else {
+			this.setProperty("ischecked", true);
 		}
-		this.setProperty ( "ischecked", true );
+		
 	}
 }
 
@@ -619,6 +626,7 @@ ButtonBinding.prototype._check = function ( isStateManager ) {
 	if ( !isStateManager ) {
 		this._stateManager.invokeActiveState ();
 	}
+	this.setProperty("ischecked", true);
 }
 
 /**
@@ -629,12 +637,14 @@ ButtonBinding.prototype.uncheck = function ( isDisableCommand ) {
 
 	if (( this.isCheckButton || this.isRadioButton ) && this.isChecked ) {
 		if (this.isAttached == true && !this.isDisposed) {
-			this._uncheck ();
-			if ( !isDisableCommand == true ) {
-				this.fireCommand ();
+			this._uncheck();
+			if (!isDisableCommand == true) {
+				this.fireCommand();
 			}
+		} else {
+			this.setProperty("ischecked", false);
 		}
-		this.setProperty ( "ischecked", false );
+
 	}
 }
 
@@ -649,6 +659,7 @@ ButtonBinding.prototype._uncheck = function ( isStateManager ) {
 	if ( !isStateManager ) {
 		this._stateManager.invokeNormalState ();
 	}
+	this.setProperty("ischecked", false);
 }
 
 /**

@@ -62,10 +62,15 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.SharpZipLib">
-      <HintPath>..\Packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Framework.DependencyInjection, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Framework.DependencyInjection.1.0.0-beta8\lib\net45\Microsoft.Framework.DependencyInjection.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Framework.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Framework.DependencyInjection.Abstractions.1.0.0-beta8\lib\net45\Microsoft.Framework.DependencyInjection.Abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\bin\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
@@ -90,19 +95,34 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.EnterpriseServices" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel.Activation" />
     <Reference Include="System.ServiceModel.Web">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web.Extensions" />
-    <Reference Include="System.Web.WebPages, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
+    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.Razor.3.2.3\lib\net45\System.Web.Razor.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Services">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Workflow.Activities" />
     <Reference Include="System.Workflow.ComponentModel" />
@@ -137,6 +157,16 @@
     <Compile Include="AspNet\UserControlFunction.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="C1Console\Elements\IUrlToEntityTokenMapper.cs" />
+    <Compile Include="C1Console\Elements\UrlToEntityTokenFacade.cs" />
+    <Compile Include="C1Console\Commands\ConsoleCommandFacade.cs" />
+    <Compile Include="C1Console\Commands\Foundation\PluginFacades\ConsoleCommandHandlerPluginFacade.cs" />
+    <Compile Include="C1Console\Commands\IConsoleCommandHandler.cs" />
+    <Compile Include="C1Console\Commands\Plugins\ConsoleCommandHandler\ConsoleCommandHandlerData.cs" />
+    <Compile Include="C1Console\Commands\Plugins\ConsoleCommandHandler\NonConfigurableConsoleCommandHandler.cs" />
+    <Compile Include="C1Console\Commands\Plugins\ConsoleCommandHandler\Runtime\ConsoleCommandHandlerCustomFactory.cs" />
+    <Compile Include="C1Console\Commands\Plugins\ConsoleCommandHandler\Runtime\ConsoleCommandHandlerFactory.cs" />
+    <Compile Include="C1Console\Commands\Plugins\ConsoleCommandHandler\Runtime\ConsoleCommandHandlerSettings.cs" />
     <Compile Include="C1Console\Drawing\FunctionPresentation.cs" />
     <Compile Include="C1Console\Elements\ElementProviderHelpers\DataGroupingProviderHelper\ElipsisEntityToken.cs" />
     <Compile Include="C1Console\Forms\CoreUiControls\FontIconSelectorUiControl.cs" />
@@ -152,6 +182,7 @@
     <Compile Include="C1Console\Trees\ITreeActionProvider.cs" />
     <Compile Include="C1Console\Trees\SortDataTreeActionProvider.cs" />
     <Compile Include="C1Console\Trees\SortDirection.cs" />
+    <Compile Include="Core\Application\ServiceLocator.cs" />
     <Compile Include="Core\Application\Job.cs" />
     <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="Core\Caching\FileRelatedDataCache.cs" />
@@ -164,12 +195,40 @@
     <Compile Include="Core\PageTemplates\ISharedCodePageTemplateProvider.cs" />
     <Compile Include="Core\PageTemplates\SharedFile.cs" />
     <Compile Include="Core\Parallelization\AsyncLock.cs" />
+    <Compile Include="Core\ResourceSystem\IIconResourceSystemFacade.cs" />
     <Compile Include="Core\ResourceSystem\LocalizationFiles.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>LocalizationFiles.tt</DependentUpon>
     </Compile>
     <Compile Include="Core\ResourceSystem\Plugins\ResourceProvider\ILocalizationProvider.cs" />
+    <Compile Include="Core\Routing\AttributeBasedRoutingHelper.cs" />
+    <Compile Include="Core\Routing\DataReferenceRelativeRouteToPredicateMapper.cs" />
+    <Compile Include="Core\Routing\DataUrlCollisionException.cs" />
+    <Compile Include="Core\Routing\DataUrls.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Core\Routing\DefaultRelativeRouteToPredicateMapper.cs" />
+    <Compile Include="Core\Routing\IRelativeRouteToPredicateMapper.cs" />
+    <Compile Include="Core\Routing\IInternalUrlProvider.cs" />
+    <Compile Include="Core\Routing\IDataUrlMapper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Core\Routing\IInternalUrlConverter.cs" />
+    <Compile Include="Core\Routing\IMediaUrlProvider.cs" />
+    <Compile Include="Core\Routing\InternalUrls.cs" />
+    <Compile Include="Core\WebClient\Services\TreeServiceObjects\ClientBrowserViewSettings.cs" />
+    <Compile Include="Data\DynamicTypes\DataUrlProfile.cs" />
+    <Compile Include="Data\InternalUrlAttribute.cs" />
+    <Compile Include="Data\PageRenderingHistory.cs" />
+    <Compile Include="Data\RouteDateSegmentAttribute.cs" />
+    <Compile Include="Data\RouteSegmentAttribute.cs" />
+    <Compile Include="Functions\AttributeBasedRoutedDataUrlMapper.cs" />
+    <Compile Include="Functions\ContentFilterFacade.cs" />
+    <Compile Include="Functions\IContentFilter.cs" />
+    <Compile Include="Functions\IRoutedDataUrlMapper.cs" />
+    <Compile Include="Functions\PathInfoRoutedDataUrlMapper.cs" />
+    <Compile Include="Functions\RoutedData.cs" />
     <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectHttpHandler.cs" />
     <Compile Include="Core\Routing\Pages\SeoFriendlyRedirectRouteHandler.cs" />
     <Compile Include="Core\Threading\ThreadCultureScope.cs" />
@@ -189,6 +248,7 @@
     <Compile Include="Core\WebClient\Services\WysiwygEditor\PageTemplatePreview.cs" />
     <Compile Include="Core\WebClient\StyleLoader.cs" />
     <Compile Include="Core\Xml\XmlSerializationHelper.cs" />
+    <Compile Include="Data\DefaultFieldRandomStringValueAttribute.cs" />
     <Compile Include="Data\DynamicTypes\Configuration\XmlConfigurationExtensionMethods.cs" />
     <Compile Include="Data\DynamicTypes\DataFieldTreeOrderingProfile.cs" />
     <Compile Include="Data\DynamicTypes\DataTypeIndex.cs" />
@@ -205,16 +265,26 @@
     <Compile Include="Data\Types\IPublishSchedule.cs" />
     <Compile Include="Data\Types\ISchedule.cs" />
     <Compile Include="Data\Types\IUnpublishSchedule.cs" />
+    <Compile Include="Data\Types\IUserFormLogin.cs" />
     <Compile Include="Data\Types\IUserPasswordHistory.cs" />
     <Compile Include="Data\PublishScheduling\PublishScheduleHelper.cs" />
     <Compile Include="Data\Types\TypeVersionAttribute.cs" />
+    <Compile Include="Data\Validation\Validators\DecimalRangeValidatorAttribute.cs" />
     <Compile Include="Data\Validation\Validators\NullDateTimeRangeValidatorAttribute.cs" />
-    <Compile Include="Functions\ContentFilterFacade.cs" />
+    <Compile Include="Data\Validation\Validators\NullDecimalRangeValidatorAttribute.cs" />
     <Compile Include="Functions\FunctionParameterIgnoreAttribute.cs" />
     <Compile Include="Functions\DynamicMethodHelper.cs" />
     <Compile Include="Functions\FunctionCallEditorManager.cs" />
     <Compile Include="Functions\FunctionCallEditorSettings.cs" />
-    <Compile Include="Functions\IContentFilter.cs" />
+    <Compile Include="Plugins\Commands\ConsoleCommandHandlers\BrowseUrl.cs" />
+    <Compile Include="Plugins\Commands\ConsoleCommandHandlers\ConsoleCommandHelper.cs" />
+    <Compile Include="Plugins\Commands\ConsoleCommandHandlers\FocusElement.cs" />
+    <Compile Include="Plugins\Commands\ConsoleCommandHandlers\FocusData.cs" />
+    <Compile Include="Plugins\Logging\LogTraceListeners\FileLogTraceListener\CircullarList.cs" />
+    <Compile Include="Plugins\Logging\LogTraceListeners\FileLogTraceListener\LogReaderHelper.cs" />
+    <Compile Include="Plugins\Routing\InternalUrlConverters\DataInternalUrlConverter.cs" />
+    <Compile Include="Plugins\Routing\InternalUrlProviders\DataInternalUrlProvider.cs" />
+    <Compile Include="Plugins\Routing\MediaUrlProviders\DefaultMediaUrlProvider.cs" />
     <Compile Include="Plugins\Data\DataProviders\MSSqlServerDataProvider\CodeGeneration\DataContextAssembler.cs" />
     <Compile Include="Plugins\Data\DataProviders\VirtualImageFileProvider\VirtualImageFileQueryable.cs" />
     <Compile Include="Plugins\Data\DataProviders\VirtualImageFileProvider\VirtualImageFileQueryableVisitor.cs" />
@@ -229,6 +299,7 @@
     <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\AttachProviderVirtualElement.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\SimpleVirtualElement.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\VirtualElementProvider\VirtualElementConfigurationElement.cs" />
+    <Compile Include="Plugins\Elements\UrlToEntityToken\ServerLogUrlToEntityTokenMapper.cs" />
     <Compile Include="Plugins\Forms\WebChannel\UiControlFactories\TemplatedFontIconSelectorUiControlFactory.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -403,7 +474,6 @@
     <Compile Include="Core\WebClient\Media\ResizingAction.cs" />
     <Compile Include="Core\WebClient\Media\ImageResizer.cs" />
     <Compile Include="Core\WebClient\Media\ResizingOptions.cs" />
-    <Compile Include="Core\WebClient\Presentation\LessRequestHandler.cs" />
     <Compile Include="Core\WebClient\Renderings\Data\XhtmlRenderingEncodingEnum.cs" />
     <Compile Include="Core\WebClient\Renderings\Page\PagePreviewBuilder.cs" />
     <Compile Include="Core\Routing\Pages\C1PageRoute.cs" />
@@ -634,8 +704,8 @@
     <Compile Include="Core\Localization\LocalizationFacade.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\LocalePackageFragmentInstaller.cs" />
     <Compile Include="Core\PackageSystem\PackageFragmentInstallers\LocalePackageFragmentUninstaller.cs" />
-    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageVersionBumberFragmentInstaller.cs" />
-    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageVersionBumberFragmentUninstaller.cs" />
+    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageVersionBumperFragmentInstaller.cs" />
+    <Compile Include="Core\PackageSystem\PackageFragmentInstallers\PackageVersionBumperFragmentUninstaller.cs" />
     <Compile Include="Data\PageManager.cs" />
     <Compile Include="Data\PageUrl.cs" />
     <Compile Include="Core\Parallelization\IndexEnumerator.cs" />
@@ -757,6 +827,8 @@
     <Compile Include="Plugins\ResourceSystem\AggregationLocalizationProvider\AggregationLocalizationProvider.cs" />
     <Compile Include="Plugins\ResourceSystem\XmlLocalizationProvider\XmlLocalizationProvider.cs" />
     <Compile Include="Plugins\Routing\Hostnames\FormFunctions.cs" />
+    <Compile Include="Plugins\Routing\InternalUrlConverters\MediaInternalUrlConverter.cs" />
+    <Compile Include="Plugins\Routing\InternalUrlConverters\PageInternalUrlConverter.cs" />
     <Compile Include="Plugins\Routing\Pages\PageUrlBuilder.cs" />
     <Compile Include="Core\WebClient\Renderings\Plugins\RenderingResponseHandler\IDataRenderingResponseHandler.cs" />
     <Compile Include="Core\WebClient\Renderings\Plugins\RenderingResponseHandler\IRenderingResponseHandler.cs" />
@@ -858,7 +930,7 @@
     <Compile Include="C1Console\Trees\CustomUrlActionNode.cs" />
     <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\BaseAttachmentPoint.cs" />
     <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\BasePossibleAttachmentPoint.cs" />
-    <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\CustomAttadchmentPoint.cs" />
+    <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\CustomAttachmentPoint.cs" />
     <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\DataItemAttachmentPoint.cs" />
     <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\DynamicDataItemAttachmentPoint.cs" />
     <Compile Include="C1Console\Trees\Foundation\AttachmentPoints\DataItemPossibleAttachmentPoint.cs" />
@@ -961,7 +1033,7 @@
     <Compile Include="Plugins\Routing\Pages\DefaultPageUrlProvider.cs" />
     <Compile Include="Plugins\Routing\UrlFormatters\StringReplaceUrlFormatter.cs" />
     <Compile Include="Plugins\Routing\UrlFormatters\ToLowerCaseUrlFormatter.cs" />
-    <Compile Include="Plugins\Security\LoginProviderPlugins\DataBasedFormLoginProvider\UserPasswordManager.cs" />
+    <Compile Include="Plugins\Security\LoginProviderPlugins\DataBasedFormLoginProvider\UserFormLoginManager.cs" />
     <Compile Include="Plugins\Security\PasswordRules\DifferentCharacterGroups\DifferentCharacterGroupsPasswordRule.cs" />
     <Compile Include="Plugins\Security\PasswordRules\DoNotUseUserName\DoNotUseUserNamePasswordRule.cs" />
     <Compile Include="Plugins\Security\PasswordRules\EnforcePasswordHistory\EnforcePasswordHistoryPasswordRule.cs" />
@@ -1017,6 +1089,7 @@
     <Compile Include="Core\Types\CompatibilityCheckResult.cs" />
     <Compile Include="C1Console\Users\UserSettingsMock.cs" />
     <Compile Include="Data\Validation\Validators\StringSizeValidatorAttribute.cs" />
+    <Compile Include="Plugins\Elements\UrlToEntityToken\DataUrlToEntityTokenMapper.cs" />
     <Compile Include="Verify.cs" />
     <Compile Include="C1Console\Events\BroadcastMessageQueueItem.cs" />
     <Compile Include="C1Console\Events\CollapseAndRefreshConsoleMessageQueueItem.cs" />
@@ -1104,7 +1177,7 @@
     <Compile Include="Data\Types\IPackageServerSource.cs" />
     <Compile Include="Core\Extensions\ByteArrayExtensionMethods.cs" />
     <Compile Include="C1Console\Forms\BindablePropertyAttribute.cs" />
-    <Compile Include="C1Console\Forms\ControlVaulePropertyAttribute.cs" />
+    <Compile Include="C1Console\Forms\ControlValuePropertyAttribute.cs" />
     <Compile Include="C1Console\Forms\CoreFunctions\BooleanCheckFunctionFactory.cs" />
     <Compile Include="C1Console\Forms\CoreFunctions\CompositeFunctionCall.cs" />
     <Compile Include="C1Console\Forms\CoreFunctions\NamedValueFunctionFactory.cs" />
@@ -1248,7 +1321,6 @@
     <Compile Include="Core\IO\Zip\IZipFileSystem.cs" />
     <Compile Include="Core\WebClient\Renderings\CultureExtrator.cs" />
     <Compile Include="Core\ResourceSystem\IconResourceSystemFacade.cs" />
-    <Compile Include="Core\ResourceSystem\IIconResourceSystemFacade.cs" />
     <Compile Include="C1Console\Security\DataHookMapper.cs" />
     <Compile Include="Core\Serialization\CompositeCollectionValueXmlSerializer.cs" />
     <Compile Include="Core\Serialization\ISerializerHandlerFacade.cs" />
@@ -1342,7 +1414,6 @@
     <Compile Include="Core\WebClient\MediaUrlHelper.cs" />
     <Compile Include="Core\WebClient\PageUrlHelper.cs" />
     <Compile Include="Core\WebClient\Presentation\CssRequestHandler.cs" />
-    <Compile Include="Core\WebClient\Presentation\JsRequestHandler.cs" />
     <Compile Include="Core\WebClient\Presentation\OutputTransformationManager.cs" />
     <Compile Include="Core\WebClient\ScriptHandler.cs" />
     <Compile Include="Core\WebClient\Services\ConsoleMessageService\ActionTypeEnum.cs" />
@@ -1392,7 +1463,6 @@
     <Compile Include="Core\WebClient\State\Runtime\SessionStateProviderFactory.cs" />
     <Compile Include="Core\WebClient\State\Runtime\SessionStateProviderSettings.cs" />
     <Compile Include="Core\WebClient\State\StateManager.cs" />
-    <Compile Include="Core\WebClient\StyleCompiler.cs" />
     <Compile Include="Core\WebClient\UiControlLib\BindingUpdatePanel.cs" />
     <Compile Include="Core\WebClient\UiControlLib\CheckBox.cs" />
     <Compile Include="Core\WebClient\UiControlLib\ClickButton.cs" />
@@ -1507,7 +1577,6 @@
     <Compile Include="Data\Foundation\DataStoreExistenceVerifier.cs" />
     <Compile Include="Data\Types\IDynamicTypeFormDefinitionFile.cs" />
     <Compile Include="Data\Types\ILockingInformation.cs" />
-    <Compile Include="Data\Types\IPageHostNameBinding.cs" />
     <Compile Include="Data\Types\Foundation\PagePublishControlledAuxiliary.cs" />
     <Compile Include="Data\Types\IPagePlaceholderContent.cs" />
     <Compile Include="Data\Types\IPageUnpublishSchedule.cs" />
@@ -1909,9 +1978,7 @@
     <Compile Include="Core\WebClient\Renderings\Page\XElementToAspNetExtensions.cs" />
     <Compile Include="Core\ResourceSystem\Foundation\PluginFacades\ResourceProviderPluginFacade.cs" />
     <Compile Include="Core\ResourceSystem\Foundation\ResourceProviderRegistry.cs" />
-    <Compile Include="Core\ResourceSystem\IconSize.cs" />
     <Compile Include="Core\ResourceSystem\Icons\BuildInIconProviderName.cs" />
-    <Compile Include="Core\ResourceSystem\Plugins\ResourceProvider\IIconResourceProvider.cs" />
     <Compile Include="Core\ResourceSystem\Plugins\ResourceProvider\IResourceProvider.cs" />
     <Compile Include="Core\ResourceSystem\Plugins\ResourceProvider\IStringResourceProvider.cs" />
     <Compile Include="Core\ResourceSystem\Plugins\ResourceProvider\NonConfigurableResourceProvider.cs" />
@@ -2204,8 +2271,6 @@
     <Compile Include="Plugins\Data\DataProviders\XmlDataProvider\IXmlDataProviderHelper.cs" />
     <Compile Include="Plugins\Data\DataProviders\XmlDataProvider\XmlDataProvider.cs" />
     <Compile Include="Plugins\Logging\LogTraceListeners\ManagementConsoleLogTracer\ManagementConsoleLogTracer.cs" />
-    <Compile Include="Plugins\ResourceSystem\FileSystemBasedIconResourceProvider\FileSystemBasedIconResourceProvider.cs" />
-    <Compile Include="Plugins\ResourceSystem\FileSystemBasedIconResourceProvider\Foundation\FileSystemBasedIconResourceProviderHelper.cs" />
     <Compile Include="Plugins\ResourceSystem\XmlStringResourceProvider\XmlStringResourceProvider.cs" />
     <Compile Include="Plugins\Security\HookRegistrators\ElementHookRegistrator\ElementHookRegistrator.cs" />
     <Compile Include="Plugins\Security\LoginProviderPlugins\ConfigBasedFormLoginProvider\ConfigBasedFormLoginProvider.cs" />
@@ -2271,7 +2336,7 @@
     <Compile Include="Data\Validation\ClientValidationRules\NotNullClientValidationRule.cs" />
     <Compile Include="Data\Validation\ClientValidationRules\RegexClientValidationRule.cs" />
     <Compile Include="Data\Validation\ClientValidationRules\StringLengthClientValidationRule.cs" />
-    <Compile Include="Data\Validation\ConstrucorBasedPropertyValidatorBuilder.cs" />
+    <Compile Include="Data\Validation\ConstructorBasedPropertyValidatorBuilder.cs" />
     <Compile Include="Data\Validation\DataValidationResult.cs" />
     <Compile Include="Data\Validation\Foundation\ClientValidationRuleTranslatorRegistryImpl.cs" />
     <Compile Include="Data\Validation\Foundation\PluginFacades\ClientValidationRuleTranslatorPluginFacadeImpl.cs" />
@@ -2352,7 +2417,7 @@
     <Compile Include="C1Console\Workflow\ActivityExtensionMethods.cs" />
     <Compile Include="C1Console\Workflow\AllowPersistingWorkflowAttribute.cs" />
     <Compile Include="C1Console\Workflow\EntityTokenLockAttribute.cs" />
-    <Compile Include="C1Console\Workflow\FilePersisetenceService.cs" />
+    <Compile Include="C1Console\Workflow\FilePersistenceService.cs" />
     <Compile Include="C1Console\Workflow\FormsEventArgs.cs" />
     <Compile Include="C1Console\Workflow\Foundation\FormData.cs" />
     <Compile Include="C1Console\Workflow\Foundation\FormsWorkflowActivityService.cs" />
@@ -2401,6 +2466,7 @@
   <ItemGroup>
     <Folder Include="Core\Cloud\" />
     <Folder Include="Core\Logging\WCF\" />
+    <Folder Include="Core\Routing\Plugins\InternalUrls\" />
     <Folder Include="Functions\ManagedParameters\Types\" />
     <Folder Include="Functions\Types\" />
     <Folder Include="Plugins\Elements\Design\" />

@@ -67,6 +67,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                     XAttribute allowOverwriteAttribute = fileElement.Attribute("allowOverwrite");
                     XAttribute assemblyLoadAttribute = fileElement.Attribute("assemblyLoad");
                     XAttribute onlyUpdateAttribute = fileElement.Attribute("onlyUpdate");
+                    XAttribute addAssemblyBindingAttribute = fileElement.Attribute("addAssemblyBinding");
 
 
                     bool allowOverwrite = false;
@@ -83,6 +84,12 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
                     bool onlyUpdate = false;
                     if (!ParseBoolAttribute(onlyUpdateAttribute, validationResult, ref onlyUpdate))
+                    {
+                        continue;
+                    }
+
+                    bool addAssemblyBinding = false;
+                    if (!ParseBoolAttribute(addAssemblyBindingAttribute, validationResult, ref addAssemblyBinding))
                     {
                         continue;
                     }
@@ -131,7 +138,8 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                         SourceFilename = sourceFilename,
                         TargetRelativeFilePath = targetFilenameAttribute.Value,
                         TargetFilePath = targetFilename,
-                        Overwrite = allowOverwrite || onlyUpdate
+                        Overwrite = allowOverwrite || onlyUpdate,
+                        AddAssemblyBinding = addAssemblyBinding
                     };
 
                     _filesToCopy.Add(fileToCopy);
@@ -178,7 +186,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
             Verify.IsNotNull(_filesToCopy, "{0} has not been validated", this.GetType().Name);
 
             var dependencies = new List<Pair<string, Version>>();
-            var updatedDlls = new List<UpdatedDllInfo>();
+            var asmBindingsToAdd = new List<AssemblyBindingInfo>();
 
             var fileElements = new List<XElement>();
             foreach (FileToCopy fileToCopy in _filesToCopy)
@@ -192,7 +200,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
                 // Checking for dll version here:
                 var sourceFileVersionInfo = FileVersionInfo.GetVersionInfo(tempFileName);
-                var sourceFileVersion = new Version(sourceFileVersionInfo.FileVersion);
+                var sourceFileVersion = GetDllProductVersion(tempFileName);
 
                 dependencies.Add(new Pair<string, Version>(fileToCopy.TargetRelativeFilePath, sourceFileVersion));
 
@@ -204,10 +212,11 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
                 string backupFileName = null;
 
+                bool addAssemblyBinding = fileToCopy.AddAssemblyBinding;
+
                 if (C1File.Exists(fileToCopy.TargetFilePath) && fileToCopy.Overwrite)
                 {
-                    var existingFileVersionInfo = FileVersionInfo.GetVersionInfo(fileToCopy.TargetFilePath);
-                    var existingFileVersion = new Version(existingFileVersionInfo.FileVersion);
+                    var existingFileVersion = GetDllProductVersion(fileToCopy.TargetFilePath);
 
                     if (existingFileVersion == sourceFileVersion)
                     {
@@ -225,13 +234,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                         continue;
                     }
 
-                    updatedDlls.Add(new UpdatedDllInfo { 
-                        ExistingFileVersionInfo = existingFileVersionInfo,
-                        NewFileVersionInfo = sourceFileVersionInfo,
-                        FilePath = fileToCopy.TargetFilePath
-                    });
-
-
+                    addAssemblyBinding = true;
                     if ((C1File.GetAttributes(fileToCopy.TargetFilePath) & FileAttributes.ReadOnly) > 0)
                     {
                         FileUtils.RemoveReadOnly(fileToCopy.TargetFilePath);
@@ -251,6 +254,17 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                     Log.LogInformation(LogTitle, "Overwriting existing file '{0}' version '{2}', new version is '{1}'",
                         fileToCopy.TargetRelativeFilePath, sourceFileVersion, existingFileVersion);
                 }
+                
+                if (addAssemblyBinding)
+                {
+                    asmBindingsToAdd.Add(new AssemblyBindingInfo
+                    {
+                        FilePath = fileToCopy.TargetFilePath,
+                        FileVersionInfo = sourceFileVersionInfo,
+                        VersionInfo = sourceFileVersion
+                    });
+                }
+                
 
                 File.Delete(fileToCopy.TargetFilePath);
                 File.Move(tempFileName, fileToCopy.TargetFilePath);
@@ -267,12 +281,21 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                 fileElements.Add(fileElement);
             }
 
-            UpdateBindingRedirects(updatedDlls);
+            UpdateBindingRedirects(asmBindingsToAdd);
 
             yield return new XElement("Files", fileElements);
         }
 
-        private void UpdateBindingRedirects(IEnumerable<UpdatedDllInfo> changedFiles)
+        private Version GetDllProductVersion(string dllFilePath)
+        {
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(dllFilePath);
+            return new Version(
+                fileVersionInfo.ProductMajorPart, 
+                fileVersionInfo.ProductMinorPart, 
+                fileVersionInfo.ProductBuildPart);
+        }
+
+        private void UpdateBindingRedirects(IEnumerable<AssemblyBindingInfo> changedFiles)
         {
             string webConfigPath = PathUtil.Resolve("~/web.config");
 
@@ -282,7 +305,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
             foreach (var file in changedFiles)
             {
-                assemblyBindingConfig.AddRedirectsForAssembly(file.FilePath, file.NewFileVersionInfo);
+                assemblyBindingConfig.AddRedirectsForAssembly(file.FilePath, file.FileVersionInfo, file.VersionInfo);
             }
 
             assemblyBindingConfig.SaveIfChanged(webConfigPath);
@@ -297,10 +320,10 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
             return directory.GetHashCode() + "_" + fileName;
         }
 
-        private class UpdatedDllInfo
+        private class AssemblyBindingInfo
         {
-            public FileVersionInfo ExistingFileVersionInfo;
-            public FileVersionInfo NewFileVersionInfo;
+            public FileVersionInfo FileVersionInfo;
+            public Version VersionInfo;
             public string FilePath;
         }
 
@@ -310,6 +333,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
             public string SourceFilename { get; set; }
             public string TargetRelativeFilePath { get; set; }
             public string TargetFilePath { get; set; }
+            public bool AddAssemblyBinding { get; set; }
             public bool Overwrite { get; set; }
         }
 
@@ -321,7 +345,7 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
             private readonly XDocument _document;
             private readonly XElement _assemblyBindingElement;
-            private bool _changed = false;
+            private bool _changed;
 
             public AssemblyBindingConfiguration(XDocument configFile)
             {
@@ -354,10 +378,9 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                         .ToArray();
             }
 
-            public void AddRedirectsForAssembly(string filePath, FileVersionInfo fileVersionInfo)
+            public void AddRedirectsForAssembly(string filePath, FileVersionInfo fileVersionInfo, Version version)
             {
-                var targetVersion = new Version(fileVersionInfo.FileVersion);
-                string newTargetVersionStr = "{0}.{1}.0.0".FormatWith(targetVersion.Major, targetVersion.Minor);
+                string newTargetVersionStr = "{0}.{1}.{2}.0".FormatWith(version.Major, version.Minor, version.Build);
 
                 AssemblyName assemblyName;
 
@@ -383,8 +406,9 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
                     }
 
                     var oldRedirectToVersion = new Version(existingBinding.NewVersion);
-                    if (oldRedirectToVersion.Major == targetVersion.Major
-                        && oldRedirectToVersion.Minor == targetVersion.Minor)
+                    if (oldRedirectToVersion.Major == version.Major
+                        && oldRedirectToVersion.Minor == version.Minor
+                        && oldRedirectToVersion.Build == version.Build)
                     {
                         return;
                     }
@@ -433,14 +457,14 @@ namespace Composite.Core.PackageSystem.PackageFragmentInstallers
 
             internal class DependantAssembly
             {
-                private readonly XElement _innerElement;
-                private XElement _assemblyIdentity;
-                private XElement _bindingRedirect;
+                private readonly XElement _assemblyIdentity;
+                private readonly XElement _bindingRedirect;
+
                 public DependantAssembly(XElement innerElement)
                 {
-                    _innerElement = innerElement;
-                    _assemblyIdentity = _innerElement.Element(AssemblyBindingXNamespace + "assemblyIdentity");
-                    _bindingRedirect = _innerElement.Element(AssemblyBindingXNamespace + "bindingRedirect");
+                    XElement innerElement1 = innerElement;
+                    _assemblyIdentity = innerElement1.Element(AssemblyBindingXNamespace + "assemblyIdentity");
+                    _bindingRedirect = innerElement1.Element(AssemblyBindingXNamespace + "bindingRedirect");
                 }
 
                 public string Name

@@ -2,6 +2,7 @@ StartPageBinding.prototype = new PageBinding;
 StartPageBinding.prototype.constructor = StartPageBinding;
 StartPageBinding.superclass = PageBinding.prototype;
 
+StartPageBinding.VIEW_CLASSNAME = "startpage-view";
 /**
  * @class
  */
@@ -17,6 +18,18 @@ function StartPageBinding () {
 	 * @type {CompositeStart}
 	 */
 	this._starter = null;
+
+	/**
+	 * True when Start screen is visible.
+	 * @type {boolean}
+	 */
+	this._isShowingStart = false;
+
+	/**
+	 * Container ViewBinding.
+	 * @type {ViewBinding}
+	 */
+	this._viewBinding = null;
 }
 
 /**
@@ -31,13 +44,25 @@ StartPageBinding.prototype.toString = function () {
  * @overloads {PageBinding#onBindingRegister}
  */
 StartPageBinding.prototype.onBindingRegister = function () {
-	
+
 	StartPageBinding.superclass.onBindingRegister.call ( this );
-	this.addActionListener ( WindowBinding.ACTION_ONLOAD );
-	this.addActionListener ( ControlBinding.ACTION_COMMAND );
-	EventBroadcaster.subscribe ( BroadcastMessages.START_COMPOSITE, this );
-	EventBroadcaster.subscribe ( BroadcastMessages.STOP_COMPOSITE , this );
-	EventBroadcaster.subscribe ( BroadcastMessages.COMPOSITE_START, this );
+
+	Application.hasStartPage = Application.hasExternalConnection;
+
+	if (Application.hasStartPage) {
+		this.addActionListener(WindowBinding.ACTION_ONLOAD);
+		this.addActionListener(ControlBinding.ACTION_COMMAND);
+		EventBroadcaster.subscribe(BroadcastMessages.START_COMPOSITE, this);
+		EventBroadcaster.subscribe(BroadcastMessages.STOP_COMPOSITE, this);
+		EventBroadcaster.subscribe(BroadcastMessages.COMPOSITE_START, this);
+		EventBroadcaster.subscribe(BroadcastMessages.COMPOSITE_STOP, this);
+		EventBroadcaster.subscribe(BroadcastMessages.KEY_ESCAPE, this);
+		this._viewBinding = this.getAncestorBindingByType(ViewBinding, true);
+		if (this._viewBinding) {
+			DOMEvents.addEventListener(this._viewBinding.bindingElement, DOMEvents.CLICK, this);
+			this._viewBinding.attachClassName(StartPageBinding.VIEW_CLASSNAME);
+		}
+	}
 }
 
 /**
@@ -49,10 +74,30 @@ StartPageBinding.prototype.onBindingAttach = function () {
 	/*
 	 * compositestart/CompositeStart.aspx
 	 */
-	StartPageBinding.superclass.onBindingAttach.call ( this );
-	this.bindingWindow.bindingMap.start.setURL ( 
-		"GetStartPage.ashx?random=" + KeyMaster.getUniqueKey ()
-	);
+	StartPageBinding.superclass.onBindingAttach.call(this);
+	if (Application.hasStartPage) {
+		this.bindingWindow.bindingMap.start.setURL(
+			"GetStartPage.ashx?random=" + KeyMaster.getUniqueKey()
+		);
+	}
+}
+
+/**
+ * @overloads {PageBinding#handleEvent}
+ * @implements {IEventListener}
+ * @param {Event} e
+ */
+StartPageBinding.prototype.handleEvent = function (e) {
+
+	StartPageBinding.superclass.handleEvent.call(this, e);
+	var element = DOMEvents.getTarget(e);
+	switch (e.type) {
+		case DOMEvents.CLICK:
+			if (this._viewBinding && this._viewBinding.bindingElement == element) {
+				this.stop();
+			}
+			break;
+	}
 }
 
 /**
@@ -69,28 +114,64 @@ StartPageBinding.prototype.handleAction = function ( action ) {
 	switch ( action.type ) {
 	
 		case WindowBinding.ACTION_ONLOAD :
-		
 			if ( action.target == bindingMap.start ) {
 				this._starter = bindingMap.start.getContentWindow ().CompositeStart;
-				if ( this._starter ) {
-					this._starter.start ();
+				if (this._starter && this._starter.hasCloseButton)
+				{
+					bindingMap.controlgroup.hide();
+				}
+				if (this._isShowingStart) {
+					this.start();
 				}
 			}
 			break;
 			
 		case ControlBinding.ACTION_COMMAND :
-		
 			if ( action.target == bindingMap.closecontrol ) {
 				if ( bindingMap.cover ) {
 					bindingMap.cover.show ();
 				}
-				if ( this._starter ) {
-					this._starter.stop ();
-				}
+				this.stop();
 			}
 			break;
 	}
 }
+
+/**
+ * Open starter page
+ */
+StartPageBinding.prototype.start = function () {
+
+	//check that starter page have start function, otherwise send direct broadcast
+	if (this._starter && this._starter.start) {
+		try {
+			this._starter.start();
+		} catch (exception) {
+			SystemDebug.stack(arguments);
+		}
+	} else {
+		EventBroadcaster.broadcast(BroadcastMessages.COMPOSITE_START);
+	}
+}
+
+/**
+ * Close starter page
+ */
+StartPageBinding.prototype.stop = function () {
+
+	//check that starter page have stop function, otherwise send direct broadcast
+	if (this._starter) {
+		try {
+			this._starter.stop();
+		} catch (exception) {
+			SystemDebug.stack(arguments);
+			EventBroadcaster.broadcast(BroadcastMessages.COMPOSITE_STOP);
+		}
+	} else {
+		EventBroadcaster.broadcast(BroadcastMessages.COMPOSITE_STOP);
+	}
+}
+
 
 /**
  * @implements {IBroadcastListener}
@@ -104,21 +185,25 @@ StartPageBinding.prototype.handleBroadcast = function ( broadcast, arg ) {
 	
 	switch ( broadcast ) {
 			
-		case BroadcastMessages.START_COMPOSITE :
-			if ( this._starter ) {
-				this._starter.start ();
-			}
+		case BroadcastMessages.START_COMPOSITE:
+			this._isShowingStart = true;
+			this.start();
 			break;
 			
 		case BroadcastMessages.STOP_COMPOSITE :
-			if ( this._starter ) {
-				this._starter.stop ();
-			}
+			this.stop();
 			break;
-			
-		case BroadcastMessages.COMPOSITE_START : // broadcated by CompositeStart when ready
+		case BroadcastMessages.COMPOSITE_START: // broadcated by CompositeStart when ready
 			if ( bindingMap.cover ) {
 				bindingMap.cover.hide ();
+			}
+			break;
+		case BroadcastMessages.COMPOSITE_STOP:
+			this._isShowingStart = false;
+			break;
+		case BroadcastMessages.KEY_ESCAPE:
+			if (this._isShowingStart) {
+				this.stop();
 			}
 			break;
 	}

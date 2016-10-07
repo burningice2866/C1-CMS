@@ -2,7 +2,7 @@ DialogPageBinding.prototype = new PageBinding;
 DialogPageBinding.prototype.constructor = DialogPageBinding;
 DialogPageBinding.superclass = PageBinding.prototype;
 
-DialogPageBinding.DEFAULT_WIDTH = 443;
+DialogPageBinding.DEFAULT_WIDTH = 531;
 DialogPageBinding.DEFAULT_TABBOXED_WIDTH = 476;
 DialogPageBinding.DEFAULT_HEIGHT = "auto";
 DialogPageBinding.DEFAULT_CONTROLS = "close";
@@ -68,6 +68,11 @@ function DialogPageBinding () {
 	 * @type {boolean}
 	 */
 	this.isAutoHeightLayoutMode = false;
+
+	/**
+	 * @type {boolean}
+	 */
+	this.isNonAjaxPage = true;
 }
 
 /**
@@ -105,6 +110,16 @@ DialogPageBinding.prototype.parseDOMProperties = function () {
 
 	DialogPageBinding.superclass.parseDOMProperties.call ( this );
 	
+	var isBranded = this.getProperty("branded");
+	var dialog = this.getAncestorBindingByType(DialogBinding, true);
+	if (dialog) {
+		if (isBranded) {
+			dialog.attachClassName("branded");
+		} else {
+			dialog.detachClassName("branded");
+		}
+	}
+
 	if ( this.width == null ) {
 		var width = this.getProperty ( "width" );
 		if ( !width ) {
@@ -132,13 +147,46 @@ DialogPageBinding.prototype.parseDOMProperties = function () {
 		var isResizable = this.getProperty ( "resizable" );
 		this.isResizable = isResizable ? isResizable : DialogPageBinding.DEFAULT_RESIZABLE;
 	}
-	
+
 	/*
 	 * Comment here please!
 	 */
 	if ( this.height == "auto" ) {
 		this.enableAutoHeightLayoutMode ( true );
 	}
+}
+
+
+/**
+ * @overloads {PageBinding#onBindingAttach}
+ */
+DialogPageBinding.prototype.onBindingAttach = function () {
+
+	DialogPageBinding.superclass.onBindingAttach.call(this);
+
+	var image = this.getProperty("image");
+	var dialogvignette = this.getDescendantElementsByLocalName("dialogvignette").getFirst();
+	if (image && dialogvignette) {
+		this.labelBinding = LabelBinding.newInstance(this.bindingDocument);
+		this.labelBinding.setImage(image);
+		dialogvignette.appendChild(
+			this.labelBinding.bindingElement
+		);
+		this.labelBinding.attach();
+	}
+
+}
+
+/**
+ * @overloads {PageBinding#setPageArgument}
+ * @param {object} arg
+ */
+DialogPageBinding.prototype.setPageArgument = function (arg) {
+
+	DialogPageBinding.superclass.setPageArgument.call(this, arg);
+
+	if (arg && arg.image)
+		this.setProperty("image", arg.image);
 }
 
 /**

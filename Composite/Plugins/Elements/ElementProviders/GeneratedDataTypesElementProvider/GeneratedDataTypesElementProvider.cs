@@ -110,13 +110,16 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
         public static ResourceHandle RootClosed { get { return GetIconHandle("generated-root-closed"); } }
 
         /// <exclude />
-        public static ResourceHandle DynamicDataTypeIcon { get { return GetIconHandle("generated-type-edit"); } }
+        public static ResourceHandle DynamicDataTypeIconOpen { get { return GetIconHandle("generated-type-open"); } }
 
         /// <exclude />
-        public static ResourceHandle InterfaceOpen { get { return GetIconHandle("generated-interface-open"); } }
+        public static ResourceHandle DynamicDataTypeIconClosed { get { return GetIconHandle("generated-type-closed"); } }
 
         /// <exclude />
-        public static ResourceHandle InterfaceClosed { get { return GetIconHandle("generated-interface-closed"); } }
+        public static ResourceHandle InterfaceOpen { get { return GetIconHandle("data-interface-open"); } }
+
+        /// <exclude />
+        public static ResourceHandle InterfaceClosed { get { return GetIconHandle("data-interface-closed"); } }
 
         /// <exclude />
         public static ResourceHandle AddDataTypeIcon { get { return GetIconHandle("generated-type-add"); } }
@@ -182,11 +185,13 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
         /// <exclude />
         static GeneratedDataTypesElementProvider()
         {
-            DataIconLookup = new Dictionary<string, ResourceHandle>();
-            DataIconLookup.Add(GenericPublishProcessController.Draft, DataIconFacade.DataDraftIcon);
-            DataIconLookup.Add(GenericPublishProcessController.AwaitingApproval, DataIconFacade.DataAwaitingApprovalIcon);
-            DataIconLookup.Add(GenericPublishProcessController.AwaitingPublication, DataIconFacade.DataAwaitingPublicationIcon);
-            DataIconLookup.Add(GenericPublishProcessController.Published, DataIconFacade.DataPublishedIcon);
+            DataIconLookup = new Dictionary<string, ResourceHandle>
+            {
+                {GenericPublishProcessController.Draft, DataIconFacade.DataDraftIcon},
+                {GenericPublishProcessController.AwaitingApproval, DataIconFacade.DataAwaitingApprovalIcon},
+                {GenericPublishProcessController.AwaitingPublication, DataIconFacade.DataAwaitingPublicationIcon},
+                {GenericPublishProcessController.Published, DataIconFacade.DataPublishedIcon}
+            };
         }
 
 
@@ -205,29 +210,30 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
             set
             {
                 _providerContext = value;
-                _dataGroupingProviderHelper = new DataGroupingProviderHelper(_providerContext);
-                _dataGroupingProviderHelper.FolderOpenIcon = GetIconHandle("generated-interface-open");
-                _dataGroupingProviderHelper.FolderClosedIcon = GetIconHandle("generated-interface-closed");
-                _dataGroupingProviderHelper.OnCreateLeafElement = GetElementFromData;
-                _dataGroupingProviderHelper.OnCreateGhostedLeafElement = GetGhostedElementFromData;
-                _dataGroupingProviderHelper.OnCreateDisabledLeafElement = GetDisabledElementFromData;
-                _dataGroupingProviderHelper.OnAddActions = AddGroupFolderActions;
-                _dataGroupingProviderHelper.OnGetRootParentEntityToken = GetRootParentEntityToken;
-                _dataGroupingProviderHelper.OnOwnsType = type =>
+                _dataGroupingProviderHelper = new DataGroupingProviderHelper(_providerContext)
                 {
-                    if (!type.IsGenerated() && !type.IsStaticDataType()) return false;
-                    if (PageFolderFacade.GetAllFolderTypes().Contains(type)) return false;
-                    if (PageMetaDataFacade.GetAllMetaDataTypes().Contains(type)) return false;
-
-                    if (_websiteItemsView)
+                    FolderOpenIcon = InterfaceOpen,
+                    FolderClosedIcon = InterfaceClosed,
+                    OnCreateLeafElement = GetElementFromData,
+                    OnCreateGhostedLeafElement = GetGhostedElementFromData,
+                    OnCreateDisabledLeafElement = GetDisabledElementFromData,
+                    OnAddActions = AddGroupFolderActions,
+                    OnGetRootParentEntityToken = GetRootParentEntityToken,
+                    OnOwnsType = type =>
                     {
-                        return IsTypeWhiteListed(type);
-                    }
+                        if (!type.IsGenerated() && !type.IsStaticDataType()) return false;
+                        if (PageFolderFacade.GetAllFolderTypes().Contains(type)) return false;
+                        if (PageMetaDataFacade.GetAllMetaDataTypes().Contains(type)) return false;
 
-                    return true;
+                        if (_websiteItemsView)
+                        {
+                            return IsTypeWhiteListed(type);
+                        }
+
+                        return true;
+                    },
+                    OnGetPayload = token => null
                 };
-                _dataGroupingProviderHelper.OnGetPayload = token => null;
-
             }
         }
         
@@ -238,15 +244,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
         {
             get
             {
-                foreach (Type type in DataFacade.GetGeneratedInterfaces())
-                {
-                    if (DataLocalizationFacade.IsLocalized(type))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
+                return DataFacade.GetGeneratedInterfaces().Any(DataLocalizationFacade.IsLocalized);
             }
         }
 
@@ -336,7 +334,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
             {
                 bool pageDataFolderHasChildren = PageFolderFacade.GetAllFolderTypes().Any();
 
-                Element pageDataFolderElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)))
+                var pageDataFolderElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)))
                 {
                     VisualData = new ElementVisualizedData
                     {
@@ -349,7 +347,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 };
 
                 pageDataFolderElement.AddAction(
-                    new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.AddNewAggregationTypeWorkflow"), _addNewInterfaceTypePermissionTypes) { Payload = TypeManager.SerializeType(typeof(IPage)) }))
+                    new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.AddNewInterfaceTypeWorkflow"), _addNewInterfaceTypePermissionTypes) { Payload = TypeManager.SerializeType(typeof(IPage)) }))
                     {
                         VisualData = new ActionVisualizedData
                         {
@@ -373,7 +371,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 bool pageMetaDataHasChildren = PageMetaDataFacade.GetAllMetaDataTypes().Any();
 
 
-                Element pageMetaDataElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageMetaDataTypeFolderId)))
+                var pageMetaDataElement = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderRootEntityToken(_providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageMetaDataTypeFolderId)))
                 {
                     VisualData = new ElementVisualizedData
                     {
@@ -604,10 +602,10 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                 bool failedToLoad = queryDataException != null;
                 bool isStaticType = type.IsStaticDataType();
 
-                var openIcon = _websiteItemsView || isStaticType ? InterfaceOpen : DynamicDataTypeIcon;
-                var closedIcon = _websiteItemsView ||isStaticType ? InterfaceClosed : DynamicDataTypeIcon;
+                var openIcon = _websiteItemsView || isStaticType ? InterfaceOpen : DynamicDataTypeIconOpen;
+                var closedIcon = _websiteItemsView ||isStaticType ? InterfaceClosed : DynamicDataTypeIconClosed;
 
-                Element element = new Element(_providerContext.CreateElementHandle(
+                var element = new Element(_providerContext.CreateElementHandle(
                     new GeneratedDataTypesElementProviderTypeEntityToken(typeName, _providerContext.ProviderName,
                         GeneratedDataTypesElementProviderRootEntityToken.GlobalDataTypeFolderId)))
                 {
@@ -616,8 +614,8 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                         Label = label,
                         ToolTip = !failedToLoad ? label : GetNestedExceptionMessage(queryDataException),
                         HasChildren = hasChildren,
-                        Icon = !failedToLoad ? openIcon : ErrorIcon,
-                        OpenedIcon = !failedToLoad ? closedIcon : ErrorIcon
+                        Icon = !failedToLoad ? closedIcon : ErrorIcon,
+                        OpenedIcon = !failedToLoad ? openIcon : ErrorIcon
                     }
                 };
 
@@ -834,7 +832,7 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
 
         private List<Element> GetPageFolderDataTypesElements(SearchToken searchToken)
         {
-            List<Element> elements = new List<Element>();
+            var elements = new List<Element>();
 
             IEnumerable<Type> types = PageFolderFacade.GetAllFolderTypes();
 
@@ -850,15 +848,15 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
 
                 string typeName = TypeManager.SerializeType(type);
 
-                Element element = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderTypeEntityToken(typeName, _providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)))
+                var element = new Element(_providerContext.CreateElementHandle(new GeneratedDataTypesElementProviderTypeEntityToken(typeName, _providerContext.ProviderName, GeneratedDataTypesElementProviderRootEntityToken.PageDataFolderTypeFolderId)))
                 {
                     VisualData = new ElementVisualizedData
                     {
                         Label = type.FullName,
                         ToolTip = type.FullName,
                         HasChildren = false,
-                        Icon = isEditable ? DynamicDataTypeIcon : InterfaceClosed,
-                        OpenedIcon = isEditable ? DynamicDataTypeIcon : InterfaceOpen
+                        Icon = isEditable ? DynamicDataTypeIconClosed : InterfaceClosed,
+                        OpenedIcon = isEditable ? DynamicDataTypeIconOpen : InterfaceOpen
                     }
                 };
 
@@ -869,7 +867,8 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
 
 
                 element.AddAction(
-                    new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.EditAggregationTypeWorkflow"), _editInterfaceTypePermissionTypes) { Payload = typeName }))
+                    new ElementAction(new ActionHandle(new WorkflowActionToken(
+                        WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementProvider.EditInterfaceTypeWorkflow"), _editInterfaceTypePermissionTypes) { Payload = typeName }))
                     {
                         VisualData = new ActionVisualizedData
                         {
@@ -959,8 +958,8 @@ namespace Composite.Plugins.Elements.ElementProviders.GeneratedDataTypesElementP
                         Label = type.FullName,
                         ToolTip = type.FullName,
                         HasChildren = false,
-                        Icon = isEditable ? DynamicDataTypeIcon : InterfaceClosed,
-                        OpenedIcon = isEditable ? DynamicDataTypeIcon : InterfaceOpen
+                        Icon = isEditable ? DynamicDataTypeIconClosed : InterfaceClosed,
+                        OpenedIcon = isEditable ? DynamicDataTypeIconOpen : InterfaceOpen
                     }
                 };
 

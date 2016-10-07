@@ -4,12 +4,10 @@
 var KickStart = new function () {
 	
 	var isLocalStoreReady = false;
-	var isLoggedIn = null;
-	var isFirstTime = false;
 	var isQualified = Client.qualifies ();
 	
-	var DEVUSERNAME = "admin";
-	var DEVPASSWORD = "123456";
+	var DEFAULT_USERNAME = "admin";
+	var DEFAULT_PASSWORD = "123456";
 	
 
 	if ( !isQualified ) {
@@ -42,9 +40,11 @@ var KickStart = new function () {
 			setTimeout(function () {
 				Persistance.initialize(); // NOTE: We are not using this stuff!
 			}, 0);
-		
 	};
-
+	/*
+	 * Indicate user just logged to console
+	 */
+	this.justLogged = false;
 	
 	/**
 	 * @implements {IBroadcastListener}
@@ -82,11 +82,19 @@ var KickStart = new function () {
 				
 			case BroadcastMessages.APPLICATION_LOGIN :
 				var appwindow = window.bindingMap.appwindow;
+				//Workarrond for iPad - "div layout creashed on some reflex"
+				if (Client.isPad) {
+					appwindow.bindingElement.style.borderLeft = "1px solid #333";
+				}
 				appwindow.setURL ( "app.aspx" );
 				break;
 				
-			case BroadcastMessages.APPLICATION_OPERATIONAL :
-				showWorkbench ();
+			case BroadcastMessages.APPLICATION_OPERATIONAL:
+				showWorkbench();
+
+				setTimeout(function() {
+					StageBinding.bindingInstance.handleHash(window);
+				}, 0);
 				break;
 				
 			case BroadcastMessages.APPLICATION_SHUTDOWN :
@@ -140,26 +148,25 @@ var KickStart = new function () {
 				accessGranted ();
 			} else {
 				if ( bindingMap.decks != null ) {
-					splashScreenData ();
 					showLogin ();
 				} else {
 					showWelcome ();
 				}
 			}
 		}
+
+		splashScreenData();
 	}
 	
 	/**
 	 * Splash screen data.
 	 */
 	function splashScreenData () {
-		
-		var ver = document.getElementById ( "version" );	
-		ver.firstChild.data = ver.firstChild.data.replace ( "${version}", Installation.versionPrettyString );
-		
-		var build = document.getElementById ( "build" );
-		build.firstChild.data = build.firstChild.data.replace("${build}", Installation.versionString);
-
+		var elems = document.getElementsByClassName("js-applicationname");
+		for(var  index = 0; index < elems.length; ++index)
+		{
+			elems[index].innerHTML = Installation.applicationName;
+		}
 	}
 	
 	/*
@@ -183,10 +190,17 @@ var KickStart = new function () {
 		bindingMap.decks.select ( "logindeck" );
 		
 		setTimeout ( function () {
-			if ( Application.isDeveloperMode && Application.isLocalHost ) {
-				DataManager.getDataBinding ( "username" ).setValue ( DEVUSERNAME );
-				DataManager.getDataBinding ( "password" ).setValue ( DEVPASSWORD );
-			} 
+			if (Application.isLocalHost) {
+				if(Application.isDeveloperMode || Client.isPerformanceTest)
+				{
+					DataManager.getDataBinding("username").setValue(DEFAULT_USERNAME);
+					DataManager.getDataBinding("password").setValue(DEFAULT_PASSWORD);
+				}
+				// Auto login for the performance test
+				if (Client.isPerformanceTest) {
+					KickStart.login();
+				}
+			}
 			setTimeout ( function () {
 				DataManager.getDataBinding ( "username" ).focus ();
 			}, 250 );
@@ -366,6 +380,7 @@ var KickStart = new function () {
 			changePasswordRequired();
 		}else if ( isAllowed ) {
 			EventBroadcaster.unsubscribe ( BroadcastMessages.KEY_ENTER, KickStart );
+			this.justLogged = true;
 			accessGranted ();
 		} else {
 			Application.unlock ( KickStart );
@@ -383,7 +398,6 @@ var KickStart = new function () {
 	 * Access granted.
 	 */
 	function accessGranted () {
-		
 		setTimeout ( function () {
 			if ( bindingMap.decks != null ) {
 				bindingMap.decks.select ( "loadingdeck" );
@@ -406,8 +420,8 @@ var KickStart = new function () {
 				bindingMap.cover.attachClassName("widesplash");
 
 				setTimeout(function () {
-					var passwordexpired = document.getElementById("passwordexpired");
-					passwordexpired.firstChild.data = passwordexpired.firstChild.data.replace("{0}", Installation.passwordExpirationTimeInDays);
+				    var passwordexpired = document.getElementById("passwordexpired");
+				    passwordexpired.textContent = passwordexpired.textContent.replace("{0}", Installation.passwordExpirationTimeInDays);
 
 					DataManager.getDataBinding("usernameold").setValue(DataManager.getDataBinding("username").getResult());
 					DataManager.getDataBinding("passwordold").focus();

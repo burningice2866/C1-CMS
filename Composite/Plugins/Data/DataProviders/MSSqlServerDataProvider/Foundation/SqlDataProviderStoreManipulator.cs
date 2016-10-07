@@ -68,15 +68,10 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
         {
             if (typeDescriptor.Localizeable)
             {
-                foreach (var culture in DataLocalizationFacade.ActiveLocalizationCultures)
-                {
-                    yield return culture;
-                }
+                return DataLocalizationFacade.ActiveLocalizationCultures;
             }
-            else
-            {
-                yield return CultureInfo.InvariantCulture;
-            }
+            
+            return new [] { CultureInfo.InvariantCulture };
         }
 
         private void CreateScopeData(DataTypeDescriptor typeDescriptor, DataScopeIdentifier dataScope)
@@ -105,7 +100,9 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             }
 
             var sql = new StringBuilder();
-            var sqlColumns = typeDescriptor.Fields.Select(fieldDescriptor => GetColumnInfo(tableName, fieldDescriptor.Name, fieldDescriptor, true, false)).ToList();
+            var sqlColumns = typeDescriptor.Fields.Select(fieldDescriptor 
+                => GetColumnInfo(tableName, fieldDescriptor.Name, fieldDescriptor, true, false)
+                ).ToList();
 
             sql.AppendFormat("CREATE TABLE dbo.[{0}]({1});", tableName, string.Join(",", sqlColumns));
             sql.Append(SetPrimaryKey(tableName, typeDescriptor.KeyPropertyNames, typeDescriptor.PrimaryKeyIsClusteredIndex));
@@ -283,10 +280,10 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
 
         private static StringBuilder GetCommonFields(DataTypeChangeDescriptor changeDescriptor)
         {
-            StringBuilder fieldList = new StringBuilder();
+            var fieldList = new StringBuilder();
             foreach (DataFieldDescriptor dataFieldDescriptor in changeDescriptor.OriginalType.Fields)
             {
-                if (!changeDescriptor.AlteredType.Fields.Where(f => f.Id == dataFieldDescriptor.Id).Any()) continue;
+                if (!changeDescriptor.AlteredType.Fields.Any(f => f.Id == dataFieldDescriptor.Id)) continue;
 
                 if (fieldList.Length > 0) fieldList.Append(", ");
 
@@ -314,11 +311,11 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                             FROM [{1}];", newTableName, oldTableName, fieldList);
                 ExecuteNonQuery(copyCommandText);
 
-                string updateOldCommandTesxt = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", oldTableName, "PublicationStatus", GenericPublishProcessController.Published);
-                ExecuteNonQuery(updateOldCommandTesxt);
+                string updateOldCommandText = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", oldTableName, "PublicationStatus", GenericPublishProcessController.Published);
+                ExecuteNonQuery(updateOldCommandText);
 
-                string updateNewCommandTesxt = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", newTableName, "PublicationStatus", GenericPublishProcessController.Published);
-                ExecuteNonQuery(updateNewCommandTesxt);
+                string updateNewCommandText = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", newTableName, "PublicationStatus", GenericPublishProcessController.Published);
+                ExecuteNonQuery(updateNewCommandText);
             }
         }
 
@@ -366,8 +363,8 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                             FROM [{1}];", toTableName, fromTableName, fieldList);
                     ExecuteNonQuery(copyCommandText);
 
-                    string updateCommandTesxt = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", toTableName, "SourceCultureName", locale.Name);
-                    ExecuteNonQuery(updateCommandTesxt);
+                    string updateCommandText = string.Format("UPDATE [{0}] SET [{1}] = '{2}'", toTableName, "SourceCultureName", locale.Name);
+                    ExecuteNonQuery(updateCommandText);
                 }
 
                 string removeCommandText = string.Format(@"DELETE FROM [{0}];", fromTableName);
@@ -451,8 +448,10 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                 Dictionary<string, object> defaultValues = null;
                 if (updateDataTypeDescriptor.PublicationAdded)
                 {
-                    defaultValues = new Dictionary<string, object>();
-                    defaultValues.Add("PublicationStatus", GenericPublishProcessController.Draft);
+                    defaultValues = new Dictionary<string, object>
+                    {
+                        {"PublicationStatus", GenericPublishProcessController.Draft}
+                    };
                 }
 
                 AppendFields(alteredTableName, changeDescriptor.AddedFields, defaultValues);
@@ -552,15 +551,18 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
             }
         }
 
-        private void ImplementFieldChanges(string tableName, IEnumerable<DataTypeChangeDescriptor.ExistingFieldInfo> existingFieldDescription)
+        private void ImplementFieldChanges(
+            string tableName, 
+            IEnumerable<DataTypeChangeDescriptor.ExistingFieldInfo> existingFieldDescription)
         {
             foreach (var changedFieldDescriptor in existingFieldDescription)
             {
-                // Recreating deleted contraints, if necessary - renaming the column/changing its type
+                // Recreating deleted constraints, if necessary - renaming the column/changing its type
                 bool changes = changedFieldDescriptor.AlteredFieldHasChanges;
                 var columnName = changedFieldDescriptor.OriginalField.Name;
 
-                ConfigureColumn(tableName, columnName, changedFieldDescriptor.AlteredField, changedFieldDescriptor.OriginalField, changes);
+                ConfigureColumn(tableName, columnName, 
+                    changedFieldDescriptor.AlteredField, changedFieldDescriptor.OriginalField, changes);
             }
         }
 
@@ -746,7 +748,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                         AlterColumn(tableName, GetColumnInfo(tableName, fieldDescriptor.Name, fieldDescriptor, false, true));
                     }
 
-                    string defaultValue = fieldDescriptor.DefaultValue != null
+                    string defaultValue = TranslatesIntoDefaultConstraint(fieldDescriptor.DefaultValue)
                                               ? GetDefaultValueText(fieldDescriptor.DefaultValue)
                                               : GetDefaultValueText(fieldDescriptor.StoreType); 
 
@@ -769,7 +771,7 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
         {
             string defaultInfo = string.Empty;
 
-            if (fieldDescriptor.DefaultValue != null)
+            if (TranslatesIntoDefaultConstraint(fieldDescriptor.DefaultValue))
             {
                 if (includeDefault)
                 {
@@ -777,17 +779,28 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
                 }
             }
 
+            // Enabling case sensitive comparison for the random string fields
+            
+            var defaultValue = fieldDescriptor.DefaultValue;
+
+            string collation = string.Empty;
+            if (defaultValue != null && defaultValue.ValueType == DefaultValueType.RandomString)
+            {
+                collation = "COLLATE Latin1_General_CS_AS";
+            }
+            
             return string.Format(
-                "[{0}] {1} {2} {3}",
+                "[{0}] {1} {2} {3} {4}",
                 fieldDescriptor.Name,
                 DynamicTypesCommon.MapStoreTypeToSqlDataType(fieldDescriptor.StoreType),
+                collation,
                 fieldDescriptor.IsNullable || forceNullable ? "NULL" : "NOT NULL",
                 defaultInfo);
         }
 
         private string SetDefaultValue(string tableName, string columnName, DefaultValue defaultValue)
         {
-            if (defaultValue == null)
+            if (!TranslatesIntoDefaultConstraint(defaultValue))
                 return string.Empty;
 
             string constraintName = SqlSafeName("DF", tableName, columnName);
@@ -817,6 +830,11 @@ namespace Composite.Plugins.Data.DataProviders.MSSqlServerDataProvider.Foundatio
 
             throw new NotImplementedException("Supplied StoreFieldType contains an unsupported PhysicalStoreType '{0}'."
                                               .FormatWith(storeFieldType.PhysicalStoreType));
+        }
+
+        private bool TranslatesIntoDefaultConstraint(DefaultValue defaultValue)
+        {
+            return defaultValue != null && defaultValue.ValueType != DefaultValueType.RandomString;
         }
 
         private string GetDefaultValueText(DefaultValue defaultValue)
