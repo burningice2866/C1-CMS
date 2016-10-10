@@ -8,6 +8,7 @@ namespace Composite.Core.Configuration
     internal interface IGlobalSettingsFacade
     {
         string ApplicationName { get; }
+        string ApplicationShortName { get; }
         string BrandedVersionAssemblySource { get; }
         CultureInfo DefaultCultureInfo { get; }
         string DefaultCultureName { get; }
@@ -41,5 +42,7 @@ namespace Composite.Core.Configuration
         int ImageQuality { get; }
         bool PrettifyPublicMarkup { get; }
         bool PrettifyRenderFunctionExceptions { get; }
+        bool FunctionPreviewEnabled { get; }
+        TimeZoneInfo TimeZone { get; }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
+using Composite.Core.ResourceSystem;
 
 
 namespace Composite.Core.Configuration
@@ -76,6 +77,17 @@ namespace Composite.Core.Configuration
             get
             {
                 return _globalSettingsFacade.ApplicationName;
+            }
+        }
+
+        /// <summary>
+        /// The short name of the application to be displayed in the UI.
+        /// </summary>
+        public static string ApplicationShortName
+        {
+            get
+            {
+                return _globalSettingsFacade.ApplicationShortName;
             }
         }
 
@@ -461,7 +473,13 @@ namespace Composite.Core.Configuration
                 return _globalSettingsFacade.PrettifyRenderFunctionExceptions;
             }
         }
-        
+
+        /// <exclude />
+        public static bool FunctionPreviewEnabled => _globalSettingsFacade.FunctionPreviewEnabled;
+
+        /// <exclude />
+        public static TimeZoneInfo TimeZone => _globalSettingsFacade.TimeZone;
+
         // Overload
         /// <exclude />
         public static CachingSettings GetNamedCaching(string name)

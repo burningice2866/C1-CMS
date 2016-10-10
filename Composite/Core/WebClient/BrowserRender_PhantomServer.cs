@@ -2,11 +2,13 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Hosting;
 using Composite.Core.Application;
+using Composite.Core.Configuration;
 using Composite.Core.Extensions;
 using Composite.Core.IO;
 using Composite.Core.Parallelization;
@@ -39,13 +41,17 @@ namespace Composite.Core.WebClient
             [SuppressMessage("Composite.IO", "Composite.DotNotUseStreamWriterClass:DotNotUseStreamWriterClass")]
             private PhantomServer()
             {
+                var tempDirectory = PathUtil.Resolve(GlobalSettingsFacade.TempDirectory);
+                var cachePath = Path.Combine(tempDirectory, "phantomjs_cache");
+                var localStoragePath = Path.Combine(tempDirectory, "phantomjs_ls");
+
                 _process = new Process
                 {
                     StartInfo =
                     {
                         WorkingDirectory = _phantomJsFolder,
                         FileName = "\"" + _phantomJsPath + "\"",
-                        Arguments = string.Format("--config={0} {1}", ConfigFileName, ScriptFileName),
+                        Arguments = $"\"--local-storage-path={localStoragePath}\" \"--disk-cache-path={cachePath}\" --config={ConfigFileName} {ScriptFileName}",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         RedirectStandardInput = true,
@@ -107,15 +113,16 @@ namespace Composite.Core.WebClient
             }
 
 
-            public static async Task<RenderingResult> RenderUrlAsync(HttpCookie authenticationCookie, string url, string outputImageFilePath, string mode)
+            public static async Task<RenderingResult> RenderUrlAsync(HttpCookie[] cookies, string url, string outputImageFilePath, string mode)
             {
                 using (await _instanceAsyncLock.LockAsync())
                 {
                     _lastUsageDate = DateTime.Now;
-                    var renderingResult = Instance.RenderUrlImpl(authenticationCookie, url, outputImageFilePath, mode);
+                    var renderingResult = Instance.RenderUrlImpl(cookies, url, outputImageFilePath, mode);
 
                     if (renderingResult.Status == RenderingResultStatus.PhantomServerTimeout
-                        || renderingResult.Status == RenderingResultStatus.PhantomServerIncorrectResponse)
+                        || renderingResult.Status == RenderingResultStatus.PhantomServerIncorrectResponse
+                        || renderingResult.Status == RenderingResultStatus.PhantomServerNoOutput)
                     {
                         Log.LogWarning("PhantomServer", "Shutting down PhantomJs server. Reason: {0}, Output: {1}", renderingResult.Status, renderingResult.Output);
 
@@ -134,14 +141,15 @@ namespace Composite.Core.WebClient
             }
 
 
-            private RenderingResult RenderUrlImpl(HttpCookie authenticationCookie, string url, string outputImageFilePath, string mode)
+            private RenderingResult RenderUrlImpl(HttpCookie[] cookies, string url, string outputImageFilePath, string mode)
             {
-                Verify.ArgumentNotNull(authenticationCookie, "authenticationCookie");
+                Verify.ArgumentNotNull(cookies, nameof(cookies));
 
                 string cookieDomain = new Uri(url).Host;
-                string cookieInfo = authenticationCookie.Name + "," + authenticationCookie.Value + "," + cookieDomain;
+                string cookieInfo = string.Join(",",
+                    cookies.Select(cookie => cookie.Name + "," + cookie.Value + "," + cookieDomain));
 
-                string requestLine = cookieInfo + "|" + url + "|" + outputImageFilePath + "|" + mode;
+                string requestLine = cookieInfo + ";" + url + ";" + outputImageFilePath + ";" + mode;
 
                 // Async way:
                 //Task<string> readerTask = Task.Run(async () =>
@@ -156,7 +164,8 @@ namespace Composite.Core.WebClient
                     return _stdout.ReadLine();
                 });
 
-                double timeout = (DateTime.Now - _process.StartTime).TotalSeconds < 120 ? 65 : 30;
+                var secondsSinceStartup = (DateTime.Now - _process.StartTime).TotalSeconds;
+                double timeout = secondsSinceStartup < 120 || mode == "test" ? 65 : 30;
 
                 readerTask.Wait(TimeSpan.FromSeconds(timeout));
 
@@ -166,6 +175,14 @@ namespace Composite.Core.WebClient
                 {
                     case TaskStatus.RanToCompletion:
                         output = readerTask.Result;
+                        if (output == null)
+                        {
+                            return new RenderingResult
+                            {
+                                Status = RenderingResultStatus.PhantomServerNoOutput,
+                                Output = "(null)"
+                            };
+                        }
                         break;
                     default:
                         return new RenderingResult
@@ -275,34 +292,48 @@ namespace Composite.Core.WebClient
                     _stdin.WriteLine("exit");
                 }
 
-                Task<string> errorFeedbackTask = Task.Factory.StartNew(() =>
+                bool streamsClosed = false;
+
+                Task<string> errorFeedbackTask = null;
+                string processOutputSummary = null;
+
+                if (!silent)
                 {
-                    try
+                    errorFeedbackTask = Task.Factory.StartNew(() =>
                     {
-                        string stdOut = _stdout.ReadToEnd();
-                        string stdError = _stderror.ReadToEnd();
-
-                        string result = !string.IsNullOrEmpty(stdOut) ? "output: '{0}'".FormatWith(stdOut) : "";
-
-                        if (!string.IsNullOrEmpty(stdError))
+                        try
                         {
-                            if (result.Length > 0) { result += ", ";}
+                            if (streamsClosed)
+                            {
+                                // Simplifies debugging
+                                return null;
+                            }
 
-                            result += string.Format("error: '{0}'", stdError);
+                            string stdOut = _stdout.ReadToEnd();
+                            string stdError = _stderror.ReadToEnd();
+
+                            string result = !string.IsNullOrEmpty(stdOut) ? $"stdout: '{stdOut}'" : "";
+
+                            if (!string.IsNullOrWhiteSpace(stdError))
+                            {
+                                if (result.Length > 0) { result += Environment.NewLine; }
+
+                                result += $"stderr: {stdError}";
+                            }
+
+                            return result;
                         }
+                        catch (Exception ex)
+                        {
+                            return ex.Message;
+                        }
+                    });
 
-                        return result;
-                    }
-                    catch (Exception ex)
-                    {
-                        return ex.Message;
-                    }
-                });
 
-                
-                errorFeedbackTask.Wait(500);
+                    errorFeedbackTask.Wait(500);
 
-                string errorFeedback = errorFeedbackTask.Status == TaskStatus.RanToCompletion ? errorFeedbackTask.Result : "Process Hang";
+                    processOutputSummary = errorFeedbackTask.Status == TaskStatus.RanToCompletion ? errorFeedbackTask.Result : "Process Hang";
+                }
 
                 if (!processHasExited)
                 {
@@ -317,6 +348,8 @@ namespace Composite.Core.WebClient
 
                     if (!processHasExited)
                     {
+                        streamsClosed = true;
+
                         _stdin.Close();
                         _stdout.Close();
                         _stderror.Close();
@@ -327,6 +360,8 @@ namespace Composite.Core.WebClient
 
                 int exitCode = _process.ExitCode;
 
+                streamsClosed = true;
+
                 _stdin.Dispose();
                 _stdout.Dispose();
                 _stderror.Dispose();
@@ -336,14 +371,21 @@ namespace Composite.Core.WebClient
 
                 bool meaningfullExitCode = exitCode != 0 && exitCode != -1073741819 /* Access violation, the ExitCode property returns this value by default for some reason */;
 
-                if (!silent && (meaningfullExitCode || errorFeedbackTask.Status != TaskStatus.RanToCompletion))
+                if (silent)
+                {
+                    return;
+                }
+
+                if (meaningfullExitCode
+                    || errorFeedbackTask.Status != TaskStatus.RanToCompletion
+                    || !string.IsNullOrEmpty(processOutputSummary))
                 {
                     string errorMessage = "Error executing PhantomJs.exe";
                     if (meaningfullExitCode) errorMessage += "; Exit code: {0}".FormatWith(exitCode);
 
-                    if (!string.IsNullOrEmpty(errorFeedback))
+                    if (!string.IsNullOrEmpty(processOutputSummary))
                     {
-                        errorMessage += ", " + errorMessage;
+                        errorMessage += Environment.NewLine + processOutputSummary;
                     }
                     throw new InvalidOperationException(errorMessage);
                 }

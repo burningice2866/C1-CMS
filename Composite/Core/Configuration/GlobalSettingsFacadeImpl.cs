@@ -20,6 +20,14 @@ namespace Composite.Core.Configuration
             }
         }
 
+        public string ApplicationShortName
+        {
+            get
+            {
+                return GlobalSettingsProviderPluginFacade.ApplicationShortName;
+            }
+        }
+
         public string BrandedVersionAssemblySource
         {
             get { return GlobalSettingsProviderPluginFacade.BrandedVersionAssemblySource; }
@@ -341,5 +349,9 @@ namespace Composite.Core.Configuration
                 return GlobalSettingsProviderPluginFacade.PrettifyRenderFunctionExceptions;
             }
         }
+
+        public bool FunctionPreviewEnabled => GlobalSettingsProviderPluginFacade.FunctionPreviewEnabled;
+
+        public TimeZoneInfo TimeZone => GlobalSettingsProviderPluginFacade.TimeZone;
     }
 }

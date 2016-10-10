@@ -11,7 +11,7 @@
     <AssemblyName>Composite</AssemblyName>
     <ProjectTypeGuids>{14822709-B5A1-4724-98CA-57A101D1B079};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -63,12 +63,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Framework.DependencyInjection, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Framework.DependencyInjection.1.0.0-beta8\lib\net45\Microsoft.Framework.DependencyInjection.dll</HintPath>
+    <Reference Include="Microsoft.Extensions.DependencyInjection, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.1.0.0-rc1-final\lib\net451\Microsoft.Extensions.DependencyInjection.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.Framework.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Framework.DependencyInjection.Abstractions.1.0.0-beta8\lib\net45\Microsoft.Framework.DependencyInjection.Abstractions.dll</HintPath>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0-rc1-final\lib\net451\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -86,6 +86,10 @@
     <Reference Include="Microsoft.Practices.ObjectBuilder, Version=1.0.51206.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\bin\Microsoft.Practices.ObjectBuilder.dll</HintPath>
+    </Reference>
+    <Reference Include="NodaTime, Version=1.3.0.0, Culture=neutral, PublicKeyToken=4226afe0d9b296d1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NodaTime.1.3.2\lib\net35-Client\NodaTime.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
@@ -157,6 +161,21 @@
     <Compile Include="AspNet\UserControlFunction.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="C1Console\Actions\Data\ActionIdentifier.cs" />
+    <Compile Include="C1Console\Actions\Data\DataActionTokenRegisterHandler.cs" />
+    <Compile Include="C1Console\Actions\Data\DataActionTokenResolver.cs" />
+    <Compile Include="C1Console\Actions\Data\DataActionTokenResolverFacade.cs" />
+    <Compile Include="C1Console\Actions\Data\DataActionTokenResolverRegistery.cs" />
+    <Compile Include="C1Console\Elements\DialogStrings.cs" />
+    <Compile Include="Data\ICreationHistory.cs" />
+    <Compile Include="Data\Types\PageInsertPosition.cs" />
+    <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\PageAddActionExecuter.cs" />
+    <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\PageAddActionToken.cs" />
+    <Compile Include="C1Console\Actions\Data\ProxyDataActionExecuter.cs" />
+    <Compile Include="C1Console\Actions\Data\ProxyDataActionToken.cs" />
+    <Compile Include="Data\ProcessControlled\ProcessControllers\GenericPublishProcessController\GenericPublishProcessDynamicActionTokens.cs" />
+    <Compile Include="Plugins\Elements\ElementProviders\GeneratedDataTypesElementProvider\GeneratedDataTypesElementDynamicActionTokens.cs" />
+    <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\PageElementDynamicActionTokens.cs" />
     <Compile Include="C1Console\Elements\IUrlToEntityTokenMapper.cs" />
     <Compile Include="C1Console\Elements\UrlToEntityTokenFacade.cs" />
     <Compile Include="C1Console\Commands\ConsoleCommandFacade.cs" />
@@ -169,7 +188,10 @@
     <Compile Include="C1Console\Commands\Plugins\ConsoleCommandHandler\Runtime\ConsoleCommandHandlerSettings.cs" />
     <Compile Include="C1Console\Drawing\FunctionPresentation.cs" />
     <Compile Include="C1Console\Elements\ElementProviderHelpers\DataGroupingProviderHelper\ElipsisEntityToken.cs" />
+    <Compile Include="C1Console\Forms\CoreUiControls\SvgIconSelectorUiControl.cs" />
     <Compile Include="C1Console\Forms\CoreUiControls\FontIconSelectorUiControl.cs" />
+    <Compile Include="C1Console\Forms\CoreUiControls\HierarchicalSelectorUiControl.cs" />
+    <Compile Include="C1Console\Forms\CoreUiControls\HierarchicalSelectorUiControlFactoryData.cs" />
     <Compile Include="C1Console\Security\Foundation\PluginFacades\PasswordRulePluginFacade.cs" />
     <Compile Include="C1Console\Security\PasswordPolicyFacade.cs" />
     <Compile Include="C1Console\Security\Plugins\PasswordPolicy\IPasswordRule.cs" />
@@ -280,6 +302,14 @@
     <Compile Include="Plugins\Commands\ConsoleCommandHandlers\ConsoleCommandHelper.cs" />
     <Compile Include="Plugins\Commands\ConsoleCommandHandlers\FocusElement.cs" />
     <Compile Include="Plugins\Commands\ConsoleCommandHandlers\FocusData.cs" />
+    <Compile Include="Plugins\Forms\WebChannel\UiControlFactories\TemplatedHierarchicalSelectorUiControlFactory.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Plugins\Forms\WebChannel\UiControlFactories\TemplatedSvgIconSelectorUiControlFactory.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\Utils\ConsoleIconSelectorWidgetFuntion.cs" />
+    <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\Utils\SvgIconSelectorWidgetFuntion.cs" />
     <Compile Include="Plugins\Logging\LogTraceListeners\FileLogTraceListener\CircullarList.cs" />
     <Compile Include="Plugins\Logging\LogTraceListeners\FileLogTraceListener\LogReaderHelper.cs" />
     <Compile Include="Plugins\Routing\InternalUrlConverters\DataInternalUrlConverter.cs" />
@@ -1607,7 +1637,6 @@
     <Compile Include="C1Console\Security\BuildinPlugins\BuildinUserPermissionDefinitionProvider\BuildinUserRoleDefinitionProvider.cs" />
     <Compile Include="C1Console\Security\ConstructorBasedUserPermissionDefinition.cs" />
     <Compile Include="C1Console\Security\Foundation\PluginFacades\UserRoleDefinitionProviderPluginFacade.cs" />
-    <Compile Include="C1Console\Security\IgnoreEntityTokenLocking.cs" />
     <Compile Include="C1Console\Security\ParentsFacade.cs" />
     <Compile Include="C1Console\Security\PermissionDescriptor.cs" />
     <Compile Include="C1Console\Security\PermissionType.cs" />
@@ -1842,9 +1871,6 @@
     <Compile Include="C1Console\Actions\ActionExecutorAttribute.cs" />
     <Compile Include="C1Console\Actions\ActionExecutorFacade.cs" />
     <Compile Include="C1Console\Actions\ActionResult.cs" />
-    <Compile Include="C1Console\Actions\DataActionFacade.cs" />
-    <Compile Include="C1Console\Actions\DataActionProviderContext.cs" />
-    <Compile Include="C1Console\Actions\DataActionSourceId.cs" />
     <Compile Include="C1Console\Actions\FlowControllerAttribute.cs" />
     <Compile Include="C1Console\Actions\FlowControllerFacade.cs" />
     <Compile Include="C1Console\Actions\FlowControllerServicesContainer.cs" />
@@ -1852,25 +1878,14 @@
     <Compile Include="C1Console\Actions\FlowToken.cs" />
     <Compile Include="C1Console\Actions\FlowUiDefinitionBase.cs" />
     <Compile Include="C1Console\Actions\Foundation\ActionExecutorCache.cs" />
-    <Compile Include="C1Console\Actions\Foundation\DataActionProviderPluginRegistry.cs" />
     <Compile Include="C1Console\Actions\Foundation\FlowExecutorCache.cs" />
-    <Compile Include="C1Console\Actions\Foundation\PluginFacades\DataActionProviderPluginFacade.cs" />
     <Compile Include="C1Console\Actions\IActionExecutionService.cs" />
     <Compile Include="C1Console\Actions\IActionExecutor.cs" />
-    <Compile Include="C1Console\Actions\IDataAction.cs" />
-    <Compile Include="C1Console\Actions\IDataActionId.cs" />
     <Compile Include="C1Console\Actions\IFlowController.cs" />
     <Compile Include="C1Console\Actions\IFlowControllerService.cs" />
     <Compile Include="C1Console\Actions\IFlowUiContainerType.cs" />
     <Compile Include="C1Console\Actions\IFlowUiDefinition.cs" />
     <Compile Include="C1Console\Actions\NullFlow.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\DataActionProviderData.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\IDataActionProvider.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\NonConfigurableDataActionProvider.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\Runtime\DataActionProviderCustomFactory.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\Runtime\DataActionProviderDefaultNameRetriever.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\Runtime\DataActionProviderFactory.cs" />
-    <Compile Include="C1Console\Actions\Plugins\DataActionProvider\Runtime\DataActionProviderSettings.cs" />
     <Compile Include="C1Console\Actions\StandardUiContainerTypes.cs" />
     <Compile Include="Core\Collections\Generic\CastEnumerable.cs" />
     <Compile Include="Core\Collections\Generic\CastEnumerator.cs" />
@@ -2457,7 +2472,9 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LocalizationFiles.cs</LastGenOutput>
     </None>
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Plugins\Functions\FunctionProviders\app.config" />
   </ItemGroup>
   <ItemGroup>

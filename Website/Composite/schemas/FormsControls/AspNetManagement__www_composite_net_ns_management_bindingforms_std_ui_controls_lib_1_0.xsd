@@ -37,6 +37,9 @@
   <xsd:element name="MultiContentXhtmlEditor" type="MultiContentXhtmlEditor" />
   <xsd:element name="InlineXhtmlEditor" type="InlineXhtmlEditor" />
   <xsd:element name="FontIconSelector" type="FontIconSelector" />
+  <xsd:element name="SvgIconSelector" type="SvgIconSelector" />
+  <xsd:element name="ConsoleIconSelector" type="ConsoleIconSelector" />
+  <xsd:element name="HierarchicalSelector" type="HierarchicalSelector" />
   <xsd:group name="ElementList">
     <xsd:sequence>
       <xsd:choice minOccurs="0">
@@ -75,6 +78,9 @@
         <xsd:element name="MultiContentXhtmlEditor" type="MultiContentXhtmlEditor" />
         <xsd:element name="InlineXhtmlEditor" type="InlineXhtmlEditor" />
         <xsd:element name="FontIconSelector" type="FontIconSelector" />
+        <xsd:element name="SvgIconSelector" type="SvgIconSelector" />
+        <xsd:element name="ConsoleIconSelector" type="ConsoleIconSelector" />
+        <xsd:element name="HierarchicalSelector" type="HierarchicalSelector" />
       </xsd:choice>
     </xsd:sequence>
   </xsd:group>
@@ -2577,6 +2583,210 @@
     <xsd:attribute name="ClassNameOptions" type="xsd:string" use="optional" />
     <xsd:attribute name="StylesheetPath" type="xsd:string" use="optional" />
     <xsd:attribute name="ClassNamePrefix" type="xsd:string" use="optional" />
+    <xsd:attribute name="Required" type="xsd:boolean" use="optional" />
+    <xsd:attribute name="Label" type="xsd:string" use="optional" />
+    <xsd:attribute name="Help" type="xsd:string" use="optional" />
+  </xsd:complexType>
+  <xsd:complexType name="SvgIconSelector" mixed="true">
+    <xsd:sequence maxOccurs="unbounded" minOccurs="0">
+      <xsd:choice>
+        <xsd:element name="SvgIconSelector.Selected">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:bind" />
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="SvgIconSelector.SvgSpritePath">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="SvgIconSelector.Required">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="SvgIconSelector.Label">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="SvgIconSelector.Help">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:choice>
+    </xsd:sequence>
+    <xsd:attribute name="Selected" type="xsd:string" use="optional" />
+    <xsd:attribute name="SvgSpritePath" type="xsd:string" use="optional" />
+    <xsd:attribute name="Required" type="xsd:boolean" use="optional" />
+    <xsd:attribute name="Label" type="xsd:string" use="optional" />
+    <xsd:attribute name="Help" type="xsd:string" use="optional" />
+  </xsd:complexType>
+  <xsd:complexType name="ConsoleIconSelector" mixed="true">
+    <xsd:sequence maxOccurs="unbounded" minOccurs="0">
+      <xsd:choice>
+        <xsd:element name="ConsoleIconSelector.Selected">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:bind" />
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="ConsoleIconSelector.SvgSpritePath">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="ConsoleIconSelector.Required">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="ConsoleIconSelector.Label">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="ConsoleIconSelector.Help">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:choice>
+    </xsd:sequence>
+    <xsd:attribute name="Selected" type="xsd:string" use="optional" />
+    <xsd:attribute name="SvgSpritePath" type="xsd:string" use="optional" />
+    <xsd:attribute name="Required" type="xsd:boolean" use="optional" />
+    <xsd:attribute name="Label" type="xsd:string" use="optional" />
+    <xsd:attribute name="Help" type="xsd:string" use="optional" />
+  </xsd:complexType>
+  <xsd:complexType name="HierarchicalSelector" mixed="true">
+    <xsd:sequence maxOccurs="unbounded" minOccurs="0">
+      <xsd:choice>
+        <xsd:element name="HierarchicalSelector.SelectedKeys">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:bind" />
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="HierarchicalSelector.TreeNodes">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="HierarchicalSelector.AutoSelectChildren">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="HierarchicalSelector.Required">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="HierarchicalSelector.Label">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="HierarchicalSelector.Help">
+          <xsd:complexType mixed="true">
+            <xsd:sequence maxOccurs="1" minOccurs="0">
+              <xsd:choice>
+                <xsd:element ref="cms:read" />
+                <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+              </xsd:choice>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:sequence maxOccurs="1" minOccurs="0">
+          <xsd:choice>
+            <xsd:element ref="cms:bind" />
+            <xsd:element ref="cms:read" />
+            <xsd:any namespace="http://www.composite.net/ns/management/bindingforms/std.function.lib/1.0" />
+          </xsd:choice>
+        </xsd:sequence>
+      </xsd:choice>
+    </xsd:sequence>
+    <xsd:attribute name="SelectedKeys" type="xsd:string" use="optional" />
+    <xsd:attribute name="TreeNodes" type="xsd:string" use="optional" />
+    <xsd:attribute name="AutoSelectChildren" type="xsd:boolean" use="optional" />
     <xsd:attribute name="Required" type="xsd:boolean" use="optional" />
     <xsd:attribute name="Label" type="xsd:string" use="optional" />
     <xsd:attribute name="Help" type="xsd:string" use="optional" />

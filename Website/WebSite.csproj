@@ -11,7 +11,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Composite</RootNamespace>
     <AssemblyName>Composite.Website</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>4.0</OldToolsVersion>
@@ -169,7 +169,7 @@
     </Content>
     <Content Include="Composite\content\branding\start-page-content.inc" />
     <Content Include="Composite\content\branding\start-page-js.inc" />
-    <Content Include="Composite\content\views\browser\BrowserPathBinding.js" />
+    <Content Include="Composite\content\forms\Administrative\SetTimeZone_select.xml" />
     <Content Include="Composite\content\views\browser\deviceoptions.xml">
       <SubType>Designer</SubType>
     </Content>
@@ -207,8 +207,14 @@
     <Content Include="Composite\content\forms\Administrative\DeleteUserControlFunctionConfirm.xml" />
     <Content Include="Composite\content\forms\Administrative\PageTemplate\EditMasterPage.xml" />
     <Content Include="Composite\content\forms\Administrative\PageTemplate\AddNewPageTemplate.xml" />
+    <Content Include="Composite\content\views\publishworkflowstatus\bindings\SortButtonBinding.js" />
+    <Content Include="Composite\content\views\publishworkflowstatus\bindings\UnpublishedPageBinding.js" />
     <Content Include="Composite\controls\BrandingSnippet.ascx" />
+    <Content Include="Composite\controls\FormsControls\FormUiControlTemplates\Selectors\HierarchicalSelector.ascx" />
+    <Content Include="Composite\controls\FormsControls\FormUiControlTemplates\Selectors\SvgIconSelector.ascx" />
+    <Content Include="Composite\controls\FormsControls\FormUiControlTemplates\Selectors\FontIconSelector.ascx" />
     <Content Include="Composite\images\branding\brand-icon.png" />
+    <Content Include="Composite\images\icons\svg\optimizely.svg" />
     <Content Include="Composite\images\icons\svg\website-remove-folder-from-whitelist.svg" />
     <Content Include="Composite\images\icons\svg\website-add-folder-to-whitelist.svg" />
     <Content Include="Composite\lib\codemirror\addon\dropmedia\dropmedia.js" />
@@ -316,9 +322,6 @@
     <Compile Include="Composite\content\views\publishworkflowstatus\ViewUnpublishedItems.aspx.cs">
       <DependentUpon>ViewUnpublishedItems.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="Composite\content\views\publishworkflowstatus\ViewUnpublishedItems.aspx.designer.cs">
-      <DependentUpon>ViewUnpublishedItems.aspx</DependentUpon>
     </Compile>
     <Compile Include="Composite\content\views\relationshipgraph\Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
@@ -551,9 +554,16 @@
     <Content Include="Composite\images\touch-cursor.png" />
     <Content Include="Composite\images\welcome\accept-green.svg" />
     <Content Include="Composite\images\welcome\cancel.svg" />
+    <Content Include="Composite\localization\Composite.Plugins.TimezoneDisplayNames.en-us.xml" />
+    <Content Include="Composite\localization\Composite.Plugins.TimezoneAbbriviations.en-us.xml" />
     <Content Include="Composite\scripts\source\top\core\ImageProvider.js" />
     <Content Include="Composite\scripts\source\top\ui\bindings\branding\BrandSnippetBinding.js" />
+    <Content Include="Composite\scripts\source\top\ui\bindings\data\radiocheck\CheckTreeBinding.js" />
+    <Content Include="Composite\scripts\source\top\ui\bindings\data\radiocheck\CheckTreeNodeBinding.js" />
+    <Content Include="Composite\scripts\source\top\ui\bindings\data\selectors\HierarchicalSelectorBinding.js" />
+    <Content Include="Composite\scripts\source\top\ui\bindings\genericview\AddressBarBinding.js" />
     <Content Include="Composite\scripts\source\top\ui\bindings\genericview\GenericViewBinding.js" />
+    <Content Include="Composite\scripts\source\top\ui\bindings\genericview\PathBinding.js" />
     <Content Include="Composite\scripts\source\top\util\LocalStorage.js" />
     <Content Include="Composite\styles\default\fields\fields-base.less" />
     <Content Include="Composite\styles\default\dialogs\dialog-multiselector.less" />
@@ -564,6 +574,9 @@
     <Content Include=".bowerrc" />
     <Content Include="bower.json" />
     <Content Include="Composite\styles\default\branding.less" />
+    <Content Include="App_Data\Composite\PhantomJs\config.json" />
+    <Content Include="Composite\services\Setup\web.config" />
+    <Content Include="App_Data\Composite\DebugBuild.Composite.config" />
     <None Include="Composite\styles\default\splash.less" />
     <Content Include="Composite\GenerateIconSprite.aspx" />
     <Content Include="Composite\images\editfunction.png" />
@@ -1264,11 +1277,14 @@
       <DependentUpon>Page.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Content Include="packages.config" />
+    <Content Include="Frontend\Config\VisualEditor\Default.common.xml" />
+    <Content Include="packages.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="DebugBuild.Web.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\Composite\Configuration\UrlFormatting.xml" />
-    <Content Include="Composite\content\dialogs\treeselector\special\treeactionselector.aspx" />
     <Content Include="Composite\content\dialogs\treeselector\TreeSelectorToolBarBinding.js" />
     <Content Include="Composite\content\forms\Administrative\FunctionTesterEditFunction.xml" />
     <Content Include="Composite\content\forms\Administrative\UrlConfiguration.xml" />
@@ -1842,9 +1858,6 @@
     <Content Include="Composite\content\dialogs\tests\wizard\wizard4.aspx" />
     <Content Include="Composite\content\dialogs\translations\translations.aspx" />
     <Content Include="Composite\content\dialogs\translations\TranslationsDialogPageBinding.js" />
-    <Content Include="Composite\content\dialogs\treeselector\special\imageselector.aspx" />
-    <Content Include="Composite\content\dialogs\treeselector\special\imageselector.css" />
-    <Content Include="Composite\content\dialogs\treeselector\special\ImageSelectorDialogPageBinding.js" />
     <Content Include="Composite\content\dialogs\treeselector\treeselector.aspx" />
     <Content Include="Composite\content\dialogs\treeselector\treeselector.css" />
     <Content Include="Composite\content\dialogs\treeselector\TreeSelectorDialogPageBinding.js" />
@@ -2033,7 +2046,6 @@
     <Content Include="Composite\content\views\browser\browser.aspx" />
     <Content Include="Composite\content\views\browser\browser.css" />
     <Content Include="Composite\content\views\browser\BrowserPageBinding.js" />
-    <Content Include="Composite\content\views\browser\BrowserTabBinding.js" />
     <Content Include="Composite\content\views\browser\BrowserTabBoxBinding.js" />
     <Content Include="Composite\content\views\browser\LanguageSelectorBinding.js" />
     <Content Include="Composite\content\views\datatypedescriptor\ToXml.aspx" />
@@ -2576,9 +2588,21 @@
     </VisualStudio>
   </ProjectExtensions>
   <PropertyGroup>
-    <PreBuildEvent>if not exist "$(ProjectDir)App_Data\Composite\PhantomJs\phantomjs.exe" (
-    copy /Y "$(ProjectDir)\..\Packages\PhantomJS.1.9.7\tools\phantomjs\phantomjs.exe" "$(ProjectDir)App_Data\Composite\PhantomJs\phantomjs.exe"
-)</PreBuildEvent>
+    <PreBuildEvent>if not exist "$(ProjectDir)web.config" (
+   copy "$(ProjectDir)DebugBuild.Web.config" "$(ProjectDir)Web.config"
+)
+
+if not exist "$(ProjectDir)App_Data\Composite\Composite.config" (
+   copy "$(ProjectDir)App_Data\Composite\DebugBuild.Composite.config" "$(ProjectDir)App_Data\Composite\Composite.config"
+)
+
+if not exist "$(ProjectDir)Frontend\Config\VisualEditor\common.xml" (
+   copy "$(ProjectDir)Frontend\Config\VisualEditor\Default.common.xml" "$(ProjectDir)Frontend\Config\VisualEditor\common.xml"
+)
+
+robocopy "$(ProjectDir)\..\Packages\PhantomJS.2.1.1\tools\phantomjs" "$(ProjectDir)App_Data\Composite\PhantomJs" "phantomjs.exe"
+set rce=%25errorlevel%25
+if not %25rce%25==1 exit %25rce%25 else exit 0</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PostBuildEvent>

@@ -288,8 +288,6 @@ DockBinding.prototype.prepareOpenView = function ( definition, tabBinding ) {
 	var viewBinding = this._getBindingForDefinition ( definition );
 	tabBinding.setAssociatedView ( viewBinding );
 	
-	//tabPanelBinding.add ( viewBinding ); // this would create a non-floating view
-
 	viewBinding.snapToBinding(tabPanelBinding, definition.isFloating);
 	UserInterface.getBinding ( this.bindingDocument.body ).add ( viewBinding );
 	viewBinding.attach ();
@@ -561,26 +559,26 @@ DockBinding.prototype._highlightTabByEntityToken = function (entityToken) {
 	}
 }
 
-///**
-// * Find a (more or less random) tab with a given entityToken and select it.
-// * @param {string} entityToken
-// */
-//DockBinding.prototype._selectTabByEntityToken = function ( entityToken ) {
+/**
+ * Find a tab with a given view and select it.
+ * @param {ViewBinding} view
+ */
+DockBinding.prototype._selectTabByView = function ( view ) {
 	
-//	var tabs = this.getTabBindings (); 
-//	var hasSelected = false;
+	var tabs = this.getTabBindings (); 
+	var hasSelected = false;
 	
-//	while ( tabs.hasNext () && !hasSelected ) {
-//		var tab = tabs.getNext ();
-//		var token = tab.getEntityToken ();
-//		if ( token != null && token == entityToken ) {
-//			if ( !tab.isSelected ) {
-//				this.select ( tab, true );
-//				hasSelected = true;
-//			}
-//		}
-//	}
-//}
+	while ( tabs.hasNext () && !hasSelected ) {
+		var tab = tabs.getNext ();
+		var associatedView = tab.getAssociatedView();
+		if (associatedView != null && associatedView == view) {
+			if ( !tab.isSelected ) {
+				this.select ( tab, true );
+			}
+			hasSelected = true;
+		}
+	}
+}
 
 /**
  * Collapse tabpanels. Invoked by the {@link StageSplitPanelBinding}

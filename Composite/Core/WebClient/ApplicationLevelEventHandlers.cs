@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Web;
 using Composite.AspNet;
+using Composite.C1Console.Actions.Data;
 using Composite.C1Console.Elements;
 using Composite.C1Console.Events;
 using Composite.Core.Application;
@@ -54,6 +55,8 @@ namespace Composite.Core.WebClient
 
             SystemSetupFacade.SetFirstTimeStart();
 
+            InitializeServices();
+
             if (!SystemSetupFacade.IsSystemFirstTimeInitialized)
             {
                 return;
@@ -72,8 +75,6 @@ namespace Composite.Core.WebClient
             
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
 
-            InitializeServices();
-
             lock (_syncRoot)
             {
                 if (_systemIsInitialized) return;
@@ -91,6 +92,12 @@ namespace Composite.Core.WebClient
             UrlToEntityTokenFacade.Register(new ServerLogUrlToEntityTokenMapper());
 
             RoutedData.ConfigureServices(ServiceLocator.ServiceCollection);
+
+
+            using (new LogExecutionTime(_verboseLogEntryTitle, "Initializing dynamic data action tokens"))
+            {
+                DataActionTokenResolverRegistery.Register(ServiceLocator.ServiceCollection);
+            }
 
             InternalUrls.Register(new MediaInternalUrlConverter());
             InternalUrls.Register(new PageInternalUrlConverter());

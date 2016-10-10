@@ -162,31 +162,32 @@ namespace Composite.Plugins.Elements.ElementProviders.VirtualElementProvider
             });
 
 
-
-            element.AddAction(new ElementAction(new ActionHandle(
-                new WorkflowActionToken(
-                    WorkflowFacade.GetWorkflowType("Composite.C1Console.Users.Workflows.ChangeOwnPasswordWorkflow"),
-                    new PermissionType[] { }
-                )
-                { DoIgnoreEntityTokenLocking = true }))
+            if (UserValidationFacade.CanSetUserPassword)
             {
-                VisualData = new ActionVisualizedData
+                element.AddAction(new ElementAction(new ActionHandle(
+                    new WorkflowActionToken(
+                        WorkflowFacade.GetWorkflowType("Composite.C1Console.Users.Workflows.ChangeOwnPasswordWorkflow"),
+                        new PermissionType[] { }
+                    )
+                    { DoIgnoreEntityTokenLocking = true }))
                 {
-                    Label = UserTexts.ChangeOwnPasswordWorkflow_ElementActionLabel,
-                    ToolTip = UserTexts.ChangeOwnPasswordWorkflow_ElementActionToolTip,
-                    Icon = VirtualElementProvider.ChangeOwnPasswordIcon,
-                    Disabled = false,
-                    ActionLocation = new ActionLocation
+                    VisualData = new ActionVisualizedData
                     {
-                        ActionType = ActionType.Add,
-                        IsInFolder = false,
-                        IsInToolbar = true,
-                        ActionGroup = PrimaryActionGroup
-                    }
-                },
-                TagValue = "User"
-            });
-
+                        Label = UserTexts.ChangeOwnPasswordWorkflow_ElementActionLabel,
+                        ToolTip = UserTexts.ChangeOwnPasswordWorkflow_ElementActionToolTip,
+                        Icon = VirtualElementProvider.ChangeOwnPasswordIcon,
+                        Disabled = false,
+                        ActionLocation = new ActionLocation
+                        {
+                            ActionType = ActionType.Add,
+                            IsInFolder = false,
+                            IsInToolbar = true,
+                            ActionGroup = PrimaryActionGroup
+                        }
+                    },
+                    TagValue = "User"
+                });
+            }
 
             // Other actions
 
@@ -206,11 +207,34 @@ namespace Composite.Plugins.Elements.ElementProviders.VirtualElementProvider
                         ActionType = ActionType.Other,
                         IsInFolder = false,
                         IsInToolbar = false,
-                        ActionGroup = PrimaryActionGroup
+                        ActionGroup = PrimaryActionGroup,
+                        ActionBundle = StringResourceSystemFacade.GetString("Composite.Management", "VirtualElementProviderElementProvider.RootActions.GlobalSetting")
                     }
                 }
             });
 
+            element.AddAction(
+                    new ElementAction(
+                        new ActionHandle(
+                            new WorkflowActionToken(
+                                WorkflowFacade.GetWorkflowType("Composite.C1Console.Tools.SetTimeZoneWorkflow"))))
+                    {
+                        VisualData = new ActionVisualizedData
+                        {
+                            Label = StringResourceSystemFacade.GetString("Composite.Management", "VirtualElementProviderElementProvider.RootActions.SetTimezoneLabel"),
+                            ToolTip = StringResourceSystemFacade.GetString("Composite.Management", "VirtualElementProviderElementProvider.RootActions.SetTimezoneTooltip"),
+                            Icon = VirtualElementProvider.ChangeOwnCultureIcon,
+                            Disabled = false,
+                            ActionLocation = new ActionLocation
+                            {
+                                ActionType = ActionType.Other,
+                                IsInFolder = false,
+                                IsInToolbar = false,
+                                ActionGroup = PrimaryActionGroup,
+                                ActionBundle = StringResourceSystemFacade.GetString("Composite.Management", "VirtualElementProviderElementProvider.RootActions.GlobalSetting")
+                            }
+                        }
+                    });
 
             element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Tools.SendMessageToConsolesWorkflow"))))
             {
@@ -229,8 +253,9 @@ namespace Composite.Plugins.Elements.ElementProviders.VirtualElementProvider
                     }
                 }
             });
-
-
+            
+                
+            
             element.AddAction(new ElementAction(new ActionHandle(new RestartApplicationActionToken()))
             {
                 VisualData = new ActionVisualizedData

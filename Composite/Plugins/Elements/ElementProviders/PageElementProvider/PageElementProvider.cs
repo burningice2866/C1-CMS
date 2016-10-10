@@ -2,27 +2,29 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Composite.C1Console.Actions;
+using Composite.C1Console.Actions.Data;
 using Composite.C1Console.Elements;
 using Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper;
 using Composite.C1Console.Elements.ElementProviderHelpers.DataGroupingProviderHelper;
 using Composite.C1Console.Elements.Plugins.ElementProvider;
+using Composite.C1Console.Events;
+using Composite.C1Console.Security;
+using Composite.C1Console.Users;
+using Composite.C1Console.Workflow;
 using Composite.Core.Extensions;
 using Composite.Core.Linq;
-using Composite.Data;
-using Composite.Data.ProcessControlled;
-using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
-using Composite.Data.Types;
 using Composite.Core.Parallelization;
 using Composite.Core.ResourceSystem;
 using Composite.Core.ResourceSystem.Icons;
-using Composite.C1Console.Security;
+using Composite.Data;
+using Composite.Data.ProcessControlled;
+using Composite.Data.ProcessControlled.ProcessControllers.GenericPublishProcessController;
 using Composite.Data.Transactions;
-using Composite.C1Console.Users;
-using Composite.C1Console.Workflow;
+using Composite.Data.Types;
 using Microsoft.Practices.EnterpriseLibrary.Common.Configuration;
 using Microsoft.Practices.EnterpriseLibrary.Common.Configuration.ObjectBuilder;
 using Microsoft.Practices.ObjectBuilder;
-
+using Composite.C1Console.Security.Foundation;
 
 namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
 {
@@ -77,6 +79,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         public PageElementProvider()
         {
             AuxiliarySecurityAncestorFacade.AddAuxiliaryAncestorProvider<DataEntityToken>(this);
+            DataEvents<IPageType>.OnStoreChanged += new StoreEventHandler(DataEvents_IPageType_OnStoreChanged);
         }
 
 
@@ -105,7 +108,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
         }
 
 
-
         public IEnumerable<Element> GetRoots(SearchToken searchToken)
         {
             int pages;
@@ -132,23 +134,38 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 }
             };
 
-            element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.PageElementProvider.AddNewPageWorkflow"), AddWebsitePermissionTypes) { DoIgnoreEntityTokenLocking = true }))
+            var allPageTypes = DataFacade.GetData<IPageType>();
+
+            foreach (
+                var pageType in
+                    allPageTypes.Where(f => f.HomepageRelation != PageTypeHomepageRelation.OnlySubPages.ToPageTypeHomepageRelationString())
+                        .OrderByDescending(f=>f.Id))
             {
-                VisualData = new ActionVisualizedData
-                {
-                    Label = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.AddPageAtRoot"),
-                    ToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.AddPageAtRootToolTip"),
-                    Icon = PageElementProvider.AddPage,
-                    Disabled = false,
-                    ActionLocation = new ActionLocation
+                element.AddAction(
+                    new ElementAction(
+                        new ActionHandle(new PageAddActionToken(pageType.Id, ActionIdentifier.Add, AddPermissionTypes) {DoIgnoreEntityTokenLocking = true} ))
                     {
-                        ActionType = ActionType.Add,
-                        IsInFolder = false,
-                        IsInToolbar = true,
-                        ActionGroup = PrimaryActionGroup
-                    }
-                }
-            });
+                        VisualData = new ActionVisualizedData
+                        {
+                            Label = string.Format(StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider",
+                                    "PageElementProvider.AddPageAtRootFormat"), pageType.Name),
+                            ToolTip =
+                                StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider",
+                                    "PageElementProvider.AddPageAtRootToolTip"),
+                            Icon = PageElementProvider.AddPage,
+                            Disabled = false,
+                            ActionLocation = new ActionLocation
+                            {
+                                ActionType = ActionType.Add,
+                                IsInFolder = false,
+                                IsInToolbar = true,
+                                ActionGroup = PrimaryActionGroup,
+                                ActionBundle = "AddWebsite"
+                            }
+                        }
+
+                    });
+            }
 
 
             element.AddAction(new ElementAction(new ActionHandle(new ViewUnpublishedItemsActionToken()))
@@ -171,7 +188,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 }
             });
 
-
             element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.AddMetaDataWorkflow"), AssociatedDataElementProviderHelper<IPage>.AddAssociatedTypePermissionTypes) { DoIgnoreEntityTokenLocking = true }))
             {
                 VisualData = new ActionVisualizedData
@@ -190,7 +206,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 }
             });
 
-
             element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.EditMetaDataWorkflow"), AssociatedDataElementProviderHelper<IPage>.EditAssociatedTypePermissionTypes)))
             {
                 VisualData = new ActionVisualizedData
@@ -208,7 +223,6 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                     }
                 }
             });
-
 
             element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.C1Console.Elements.ElementProviderHelpers.AssociatedDataElementProviderHelper.DeleteMetaDataWorkflow"), AssociatedDataElementProviderHelper<IPage>.RemoveAssociatedTypePermissionTypes)))
             {
@@ -645,7 +659,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             string editPageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.EditPageToolTip");
             string localizePageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.LocalizePage");
             string localizePageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.LocalizePageToolTip");
-            string addNewPageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.AddSubPage");
+            string addNewPageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.AddSubPageFormat");
             string addNewPageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.AddSubPageToolTip");
             string deletePageLabel = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.Delete");
             string deletePageToolTip = StringResourceSystemFacade.GetString("Composite.Plugins.PageElementProvider", "PageElementProvider.DeleteToolTip");
@@ -657,6 +671,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             }
 
             var elements = new Element[pages.Count];
+            var allPageTypes = DataFacade.GetData<IPageType>();
 
             ParallelFacade.For("PageElementProvider. Getting elements", 0, pages.Count, i =>
             {
@@ -678,7 +693,7 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                 if (kvp.Key == PageLocaleState.Own)
                 {
                     // Normal actions
-                    element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.PageElementProvider.EditPageWorkflow"), EditPermissionTypes)))
+                    element.AddAction(new ElementAction(new ActionHandle(new ProxyDataActionToken(ActionIdentifier.Edit,EditPermissionTypes)))
                     {
                         VisualData = new ActionVisualizedData
                         {
@@ -696,25 +711,32 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
                         }
                     });
 
-                    element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.PageElementProvider.AddNewPageWorkflow"), AddPermissionTypes) { DoIgnoreEntityTokenLocking = true }))
-                    {
-                        VisualData = new ActionVisualizedData
-                        {
-                            Label = addNewPageLabel,
-                            ToolTip = addNewPageToolTip,
-                            Icon = PageElementProvider.AddPage,
-                            Disabled = false,
-                            ActionLocation = new ActionLocation
-                            {
-                                ActionType = ActionType.Add,
-                                IsInFolder = false,
-                                IsInToolbar = true,
-                                ActionGroup = PrimaryActionGroup
-                            }
-                        }
-                    });
+                    IPageType parentPageType = allPageTypes.First(f => f.Id == page.PageTypeId);
 
-                    element.AddAction(new ElementAction(new ActionHandle(new WorkflowActionToken(WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.PageElementProvider.DeletePageWorkflow"), DeletePermissionTypes)))
+                    foreach (var pageType in page.GetChildPageSelectablePageTypes().OrderByDescending(pt => pt.Id == parentPageType.DefaultChildPageType))
+                    {
+                        element.AddAction(new ElementAction(new ActionHandle(new PageAddActionToken(pageType.Id,ActionIdentifier.Add, AddPermissionTypes) { DoIgnoreEntityTokenLocking = true }))
+                        {
+                            VisualData = new ActionVisualizedData
+                            {
+                                Label = string.Format(addNewPageLabel, pageType.Name),
+                                ToolTip = pageType.Description,
+                                Icon = PageElementProvider.AddPage,
+                                Disabled = false,
+                                ActionLocation = new ActionLocation
+                                {
+                                    ActionType = ActionType.Add,
+                                    IsInFolder = false,
+                                    IsInToolbar = true,
+                                    ActionGroup = PrimaryActionGroup,
+                                    ActionBundle = "AddPage"
+                                }
+                            }
+                        });
+                    }
+
+
+                    element.AddAction(new ElementAction(new ActionHandle(new ProxyDataActionToken(ActionIdentifier.Delete,DeletePermissionTypes)))
                     {
                         VisualData = new ActionVisualizedData
                         {
@@ -839,6 +861,24 @@ namespace Composite.Plugins.Elements.ElementProviders.PageElementProvider
             }
 
             return visualizedElement;
+        }
+
+
+
+
+        private void DataEvents_IPageType_OnStoreChanged(object sender, StoreEventArgs storeEventArgs)
+        {
+            EntityToken entityToken = new PageElementProviderEntityToken(_context.ProviderName);
+
+            var parents = HookingFacade.GetHookies(entityToken);
+
+            if (parents != null)
+            {
+                foreach (var parentEntityToken in parents)
+                {
+                    ConsoleMessageQueueFacade.Enqueue(new RefreshTreeMessageQueueItem { EntityToken = parentEntityToken }, null);
+                }
+            }
         }
 
 

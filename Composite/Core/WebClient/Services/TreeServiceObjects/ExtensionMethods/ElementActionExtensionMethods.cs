@@ -21,6 +21,7 @@ namespace Composite.Core.WebClient.Services.TreeServiceObjects.ExtensionMethods
                           ToolTip = action.VisualData.ToolTip,
                           Disabled = action.VisualData.Disabled,
                           Icon = action.VisualData.Icon,
+                          BulkExecutionDialog = action.VisualData.BulkExecutionDialog,
                           CheckboxStatus = GetCheckboxStatusString(action.VisualData.ActionCheckedStatus),
                           ActivePositions = (int)action.VisualData.ActivePositions,
                           TagValue = action.TagValue,                          
@@ -31,8 +32,9 @@ namespace Composite.Core.WebClient.Services.TreeServiceObjects.ExtensionMethods
                                    Name = action.VisualData.ActionLocation.ActionType.ToString(),
                                    IsInFolder = action.VisualData.ActionLocation.IsInFolder,
                                    IsInToolbar = action.VisualData.ActionLocation.IsInToolbar,
-                                   FolderName = action.VisualData.ActionLocation.FolderName
-                               }
+                                   FolderName = action.VisualData.ActionLocation.FolderName,
+                                   ActionBundle = action.VisualData.ActionLocation.ActionBundle
+                          }
                       };
 
             return clientActions.ToList();

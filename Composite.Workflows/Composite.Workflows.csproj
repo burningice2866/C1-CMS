@@ -11,7 +11,7 @@
     <RootNamespace>Composite</RootNamespace>
     <AssemblyName>Composite.Workflows</AssemblyName>
     <ProjectTypeGuids>{14822709-B5A1-4724-98CA-57A101D1B079};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -223,6 +223,12 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="C1Console\Scheduling\PublishControlledHelper.cs" />
+    <Compile Include="C1Console\Tools\SetTimeZoneWorkflow.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="C1Console\Tools\SetTimeZoneWorkflow.designer.cs">
+      <DependentUpon>SetTimeZoneWorkflow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Plugins\Elements\ElementProviders\AllFunctionsElementProvider\FunctionTesterWorkflow.cs">
       <SubType>Component</SubType>
     </Compile>
