@@ -45,6 +45,7 @@ namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvide
         public static IDictionary<string, FunctionParameter> GetParameters(object functionObject, Type baseFunctionType, string filePath)
         {
             var dict = new Dictionary<string, FunctionParameter>();
+            ParameterWidgets parameterWidgets = null;
 
             var type = functionObject.GetType();
             while (type != baseFunctionType && type != null)
@@ -90,6 +91,26 @@ namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvide
                             Log.LogWarning(LogTitle, "Failed to get widget function provider for parameter property {0}. Location: '{1}'"
                                                      .FormatWith(property.Name, filePath));
                             Log.LogWarning(LogTitle, ex);
+                        }
+                    }
+                    else
+                    {
+                        if (parameterWidgets == null)
+                        {
+                            var widgetsProvider = functionObject as IParameterWidgetsProvider;
+                            if (widgetsProvider == null)
+                            {
+                                parameterWidgets = new ParameterWidgets();
+                            }
+                            else
+                            {
+                                parameterWidgets = widgetsProvider.GetParameterWidgets() ?? new ParameterWidgets();
+                            }
+                        }
+
+                        if (parameterWidgets.ContainsKey(property))
+                        {
+                            widgetProvider = parameterWidgets[property];
                         }
                     }
 

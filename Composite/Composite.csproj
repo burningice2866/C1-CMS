@@ -149,6 +149,8 @@
     <Compile Include="AspNet\CompositeC1SiteMapProvider.cs" />
     <Compile Include="AspNet\DisplayModeFacade.cs" />
     <Compile Include="AspNet\LegacyC1DisplayMode.cs" />
+    <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\IParameterWidgetsProvider.cs" />
+    <Compile Include="Plugins\Functions\FunctionProviders\FileBasedFunctionProvider\ParameterWidgets.cs" />
     <Compile Include="AspNet\Razor\RazorFunction.cs" />
     <Compile Include="AspNet\Razor\RazorHelper.cs" />
     <Compile Include="AspNet\Razor\RazorPageTemplate.cs" />
