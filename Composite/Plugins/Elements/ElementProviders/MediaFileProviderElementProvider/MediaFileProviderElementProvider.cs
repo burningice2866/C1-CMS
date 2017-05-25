@@ -131,52 +131,55 @@ namespace Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementPr
                            }
                        });
 
-                    element.AddAction(
-                     new ElementAction(new ActionHandle(
-                         new WorkflowActionToken(
-                             WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddNewMediaFileWorkflow"),
-                             new PermissionType[] { PermissionType.Add }
-                        )))
-                     {
-                         VisualData = new ActionVisualizedData
-                         {
-                             Label = GetResourceString("MediaFileProviderElementProvider.AddMediaFile"),
-                             ToolTip = GetResourceString("MediaFileProviderElementProvider.AddMediaFileToolTip"),
-                             Icon = MediaFileProviderElementProvider.AddMediaFile,
-                             Disabled = false,
-                             ActivePositions = ElementActionActivePosition.NavigatorTree | ElementActionActivePosition.SelectorTree,
-                             ActionLocation = new ActionLocation
-                             {
-                                 ActionType = ActionType.Add,
-                                 IsInFolder = false,
-                                 IsInToolbar = true,
-                                 ActionGroup = PrimaryFileActionGroup
-                             }
-                         }
-                     });
+                    if (!AppContext.TryGetSwitch("MediaFileProviderElementProvider.DisableBuiltInAddFileActions", out var flag) || !flag)
+                    {
+                        element.AddAction(
+                            new ElementAction(new ActionHandle(
+                                new WorkflowActionToken(
+                                    WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddNewMediaFileWorkflow"),
+                                    new PermissionType[] { PermissionType.Add }
+                                )))
+                            {
+                                VisualData = new ActionVisualizedData
+                                {
+                                    Label = GetResourceString("MediaFileProviderElementProvider.AddMediaFile"),
+                                    ToolTip = GetResourceString("MediaFileProviderElementProvider.AddMediaFileToolTip"),
+                                    Icon = MediaFileProviderElementProvider.AddMediaFile,
+                                    Disabled = false,
+                                    ActivePositions = ElementActionActivePosition.NavigatorTree | ElementActionActivePosition.SelectorTree,
+                                    ActionLocation = new ActionLocation
+                                    {
+                                        ActionType = ActionType.Add,
+                                        IsInFolder = false,
+                                        IsInToolbar = true,
+                                        ActionGroup = PrimaryFileActionGroup
+                                    }
+                                }
+                            });
 
-                    element.AddAction(
-                       new ElementAction(new ActionHandle(
-                           new WorkflowActionToken(
-                               WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddMediaZipFileWorkflow"),
-                               new PermissionType[] { PermissionType.Add }
-                            ) { DoIgnoreEntityTokenLocking = true }))
-                       {
-                           VisualData = new ActionVisualizedData
-                           {
-                               Label = GetResourceString("MediaFileProviderElementProvider.UploadZipFile"),
-                               ToolTip = GetResourceString("MediaFileProviderElementProvider.UploadZipFileToolTip"),
-                               Icon = MediaFileProviderElementProvider.UploadZipFile,
-                               Disabled = false,
-                               ActionLocation = new ActionLocation
-                               {
-                                   ActionType = ActionType.Add,
-                                   IsInFolder = false,
-                                   IsInToolbar = true,
-                                   ActionGroup = PrimaryFileActionGroup
-                               }
-                           }
-                       });
+                        element.AddAction(
+                            new ElementAction(new ActionHandle(
+                                new WorkflowActionToken(
+                                    WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddMediaZipFileWorkflow"),
+                                    new PermissionType[] { PermissionType.Add }
+                                ) { DoIgnoreEntityTokenLocking = true }))
+                            {
+                                VisualData = new ActionVisualizedData
+                                {
+                                    Label = GetResourceString("MediaFileProviderElementProvider.UploadZipFile"),
+                                    ToolTip = GetResourceString("MediaFileProviderElementProvider.UploadZipFileToolTip"),
+                                    Icon = MediaFileProviderElementProvider.UploadZipFile,
+                                    Disabled = false,
+                                    ActionLocation = new ActionLocation
+                                    {
+                                        ActionType = ActionType.Add,
+                                        IsInFolder = false,
+                                        IsInToolbar = true,
+                                        ActionGroup = PrimaryFileActionGroup
+                                    }
+                                }
+                            });
+                    }
                 }
 
                 elements.Add(element);
@@ -1032,52 +1035,55 @@ namespace Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementPr
                            }
                        });
 
-                folderActions.Add(
-                    new ElementAction(new ActionHandle(
-                        new WorkflowActionToken(
-                            WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddNewMediaFileWorkflow"),
-                            new PermissionType[] { PermissionType.Add }
-                        )))
-                    {
-                        VisualData = new ActionVisualizedData
+                if (!AppContext.TryGetSwitch("MediaFileProviderElementProvider.DisableBuiltInAddFileActions", out var flag) || !flag)
+                {
+                    folderActions.Add(
+                        new ElementAction(new ActionHandle(
+                            new WorkflowActionToken(
+                                WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddNewMediaFileWorkflow"),
+                                new PermissionType[] { PermissionType.Add }
+                            )))
                         {
-                            Label = GetResourceString("MediaFileProviderElementProvider.AddMediaFile"),
-                            ToolTip = GetResourceString("MediaFileProviderElementProvider.AddMediaFileToolTip"),
-                            Icon = MediaFileProviderElementProvider.AddMediaFile,
-                            Disabled = false,
-                            ActivePositions = ElementActionActivePosition.NavigatorTree | ElementActionActivePosition.SelectorTree,
-                            ActionLocation = new ActionLocation
+                            VisualData = new ActionVisualizedData
                             {
-                                ActionType = ActionType.Add,
-                                IsInFolder = false,
-                                IsInToolbar = true,
-                                ActionGroup = PrimaryFileActionGroup
+                                Label = GetResourceString("MediaFileProviderElementProvider.AddMediaFile"),
+                                ToolTip = GetResourceString("MediaFileProviderElementProvider.AddMediaFileToolTip"),
+                                Icon = MediaFileProviderElementProvider.AddMediaFile,
+                                Disabled = false,
+                                ActivePositions = ElementActionActivePosition.NavigatorTree | ElementActionActivePosition.SelectorTree,
+                                ActionLocation = new ActionLocation
+                                {
+                                    ActionType = ActionType.Add,
+                                    IsInFolder = false,
+                                    IsInToolbar = true,
+                                    ActionGroup = PrimaryFileActionGroup
+                                }
                             }
-                        }
-                    });
+                        });
 
-                folderActions.Add(
-                     new ElementAction(new ActionHandle(
-                         new WorkflowActionToken(
-                             WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddMediaZipFileWorkflow"),
-                             new PermissionType[] { PermissionType.Add }
-                         )))
-                     {
-                         VisualData = new ActionVisualizedData
-                         {
-                             Label = GetResourceString("MediaFileProviderElementProvider.UploadZipFile"),
-                             ToolTip = GetResourceString("MediaFileProviderElementProvider.UploadZipFileToolTip"),
-                             Icon = MediaFileProviderElementProvider.UploadZipFile,
-                             Disabled = false,
-                             ActionLocation = new ActionLocation
-                             {
-                                 ActionType = ActionType.Add,
-                                 IsInFolder = false,
-                                 IsInToolbar = true,
-                                 ActionGroup = PrimaryFileActionGroup
-                             }
-                         }
-                     });
+                    folderActions.Add(
+                        new ElementAction(new ActionHandle(
+                            new WorkflowActionToken(
+                                WorkflowFacade.GetWorkflowType("Composite.Plugins.Elements.ElementProviders.MediaFileProviderElementProvider.AddMediaZipFileWorkflow"),
+                                new PermissionType[] { PermissionType.Add }
+                            )))
+                        {
+                            VisualData = new ActionVisualizedData
+                            {
+                                Label = GetResourceString("MediaFileProviderElementProvider.UploadZipFile"),
+                                ToolTip = GetResourceString("MediaFileProviderElementProvider.UploadZipFileToolTip"),
+                                Icon = MediaFileProviderElementProvider.UploadZipFile,
+                                Disabled = false,
+                                ActionLocation = new ActionLocation
+                                {
+                                    ActionType = ActionType.Add,
+                                    IsInFolder = false,
+                                    IsInToolbar = true,
+                                    ActionGroup = PrimaryFileActionGroup
+                                }
+                            }
+                        });
+                }
             }
 
             return folderActions;
