@@ -2,8 +2,7 @@
 using Composite.Data;
 using System.IO;
 using System.Text;
-
-
+using System;
 namespace Composite.Core.Implementation
 {
     /// <summary>
@@ -48,7 +47,10 @@ namespace Composite.Core.Implementation
             }
         }
 
-
+        internal object ResolveService(Type t)
+        {
+            return DataServiceScopeManager.GetService(t);
+        }
 
         /// <summary>
         /// Documentation pending

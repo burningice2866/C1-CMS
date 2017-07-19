@@ -168,9 +168,21 @@
     <Compile Include="C1Console\Actions\Data\DataActionTokenResolver.cs" />
     <Compile Include="C1Console\Actions\Data\DataActionTokenResolverFacade.cs" />
     <Compile Include="C1Console\Actions\Data\DataActionTokenResolverRegistery.cs" />
+    <Compile Include="C1Console\Forms\ITestAutomationLocatorInformation.cs" />
     <Compile Include="C1Console\Elements\DialogStrings.cs" />
-    <Compile Include="Data\ICreationHistory.cs" />
+    <Compile Include="C1Console\Elements\IServiceUrlToEntityTokenMapper.cs" />
+    <Compile Include="C1Console\Events\OpenSlideViewQueueItem.cs" />
+    <Compile Include="C1Console\Workflow\FormsWorkflowExtensions.cs" />
+    <Compile Include="C1Console\Workflow\IFormsWorkflowExtension.cs" />
+    <Compile Include="Core\Extensions\DateTimeExtensionMethods.cs" />
+    <Compile Include="Core\WebClient\Services\ConsoleMessageService\OpenSlideViewParams.cs" />
+    <Compile Include="Data\DataScopeServicesFacade.cs" />
+    <Compile Include="Data\DataServiceScopeManager.cs" />
+    <Compile Include="Data\Types\IVersioned.cs" />
+    <Compile Include="Data\Types\IVersionedDataHelper.cs" />
     <Compile Include="Data\Types\PageInsertPosition.cs" />
+    <Compile Include="Data\ICreationHistory.cs" />
+    <Compile Include="Data\VersionKeyPropertyName.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\PageAddActionExecuter.cs" />
     <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\PageAddActionToken.cs" />
     <Compile Include="C1Console\Actions\Data\ProxyDataActionExecuter.cs" />
@@ -1441,7 +1453,6 @@
     <Compile Include="Core\WebClient\HttpModules\AdministrativeAuthorizationHttpModule.cs" />
     <Compile Include="Core\WebClient\HttpModules\AdministrativeCultureSetterHttpModule.cs" />
     <Compile Include="Core\WebClient\HttpModules\AdministrativeDataScopeSetterHttpModule.cs" />
-    <Compile Include="Core\WebClient\HttpModules\AdministrativeOutputGZipperHttpModule.cs" />
     <Compile Include="Core\WebClient\HttpModules\AdministrativeResponseFilterHttpModule.cs" />
     <Compile Include="Core\WebClient\MediaUrlHelper.cs" />
     <Compile Include="Core\WebClient\PageUrlHelper.cs" />
@@ -2517,12 +2528,12 @@
     </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Windows Workflow Foundation\v3.5\Workflow.Targets" />
   <Target Name="BeforeBuild">
   </Target>
-  <Target Name="AfterBuild">    
+  <Target Name="AfterBuild">
   </Target>
   -->
   <PropertyGroup>
