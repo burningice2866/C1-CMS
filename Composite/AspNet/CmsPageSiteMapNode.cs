@@ -10,7 +10,7 @@ namespace Composite.AspNet
     /// <summary>
     /// Represents an <see cref="IPage"/> instance in a sitemap.
     /// </summary>
-    public class CmsPageSiteMapNode: SiteMapNode
+    public class CmsPageSiteMapNode : CompositeC1SiteMapNode
     {
         private int? _depth;
 
@@ -20,7 +20,7 @@ namespace Composite.AspNet
         /// <value>
         /// The culture.
         /// </value>
-        public CultureInfo Culture { get; protected set; }
+        public override CultureInfo Culture { get; protected set; }
 
         /// <summary>
         /// Gets or sets the priority.
@@ -28,12 +28,12 @@ namespace Composite.AspNet
         /// <value>
         /// The priority.
         /// </value>
-        public int? Priority { get; protected set; }
+        public override int? Priority { get; protected set; }
 
         /// <summary>
         /// Gets the current page.
         /// </summary>
-        public IPage Page { get; protected set; }
+        public override IPage Page { get; protected set; }
 
         /// <summary>
         /// Gets or sets the depth.
@@ -41,7 +41,7 @@ namespace Composite.AspNet
         /// <value>
         /// The depth.
         /// </value>
-        public int Depth
+        public override int Depth
         {
             get
             {
@@ -77,7 +77,7 @@ namespace Composite.AspNet
         /// <value>
         /// The last modified.
         /// </value>
-        public DateTime LastModified { get; protected set; }
+        public override DateTime LastModified { get; protected set; }
 
         /// <summary>
         /// Gets or sets the change frequency.
@@ -85,7 +85,7 @@ namespace Composite.AspNet
         /// <value>
         /// The change frequency.
         /// </value>
-        public SiteMapNodeChangeFrequency? ChangeFrequency { get; protected set; }
+        public override SiteMapNodeChangeFrequency? ChangeFrequency { get; protected set; }
 
         /// <summary>
         /// Gets or sets the document title.
@@ -93,7 +93,7 @@ namespace Composite.AspNet
         /// <value>
         /// The document title.
         /// </value>
-        public string DocumentTitle { get; protected set; }
+        public override string DocumentTitle { get; protected set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CmsPageSiteMapNode"/> class.
@@ -101,7 +101,7 @@ namespace Composite.AspNet
         /// <param name="provider">The provider.</param>
         /// <param name="page">The page.</param>
         public CmsPageSiteMapNode(SiteMapProvider provider, IPage page)
-            : base(provider, page.Id.ToString(), PageUrls.BuildUrl(page), page.MenuTitle, page.Description)
+            : base(provider, page)
         {
             Page = page;
             DocumentTitle = page.Title;

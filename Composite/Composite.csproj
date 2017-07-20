@@ -148,6 +148,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AspNet\CompositeC1SiteMapNode.cs" />
     <Compile Include="AspNet\CmsPageSiteMapProvider.cs" />
     <Compile Include="AspNet\DisplayModeFacade.cs" />
     <Compile Include="AspNet\LegacyC1DisplayMode.cs" />
