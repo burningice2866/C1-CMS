@@ -1,9 +1,12 @@
-﻿namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvider
+﻿using System.Collections.Generic;
+using Composite.Functions;
+
+namespace Composite.Plugins.Functions.FunctionProviders.FileBasedFunctionProvider
 {
     /// <exclude />
     public interface IParameterWidgetsProvider
     {
         /// <exclude />
-        ParameterWidgets GetParameterWidgets();
+        IDictionary<string, WidgetFunctionProvider> GetParameterWidgets();
     }
 }

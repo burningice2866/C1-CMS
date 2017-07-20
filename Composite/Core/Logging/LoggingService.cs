@@ -10,17 +10,14 @@ using Composite.Core.IO;
 using Microsoft.Practices.EnterpriseLibrary.Logging;
 using Microsoft.Practices.EnterpriseLibrary.Logging.Configuration;
 
-
 namespace Composite.Core.Logging
 {
-    /// <summary>    
-    /// </summary>
     /// <exclude />
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public static class LoggingService
     {
         /// <exclude />
-        [FlagsAttribute()]
+        [Flags]
         public enum Category
         {
             /// <exclude />
@@ -59,7 +56,12 @@ namespace Composite.Core.Logging
         }
 
         /// <exclude />
-        static public void LogEntry(string title, string message, Exception exc, Category category, System.Diagnostics.TraceEventType severity, int priority, int eventid)
+        static private void LogEntry(string title, string message, Exception exc, Category category, System.Diagnostics.TraceEventType severity)
+        {
+            LogEntry(title, message, exc, category, severity, -1, 0);
+        }
+
+        static private void LogEntry(string title, string message, Exception exc, Category category, System.Diagnostics.TraceEventType severity, int priority, int eventid)
         {
             var entry = new Microsoft.Practices.EnterpriseLibrary.Logging.LogEntry();
 
@@ -95,24 +97,10 @@ namespace Composite.Core.Logging
         }
 
         /// <exclude />
-        static public void LogEntry(string title, string message, Exception exc, Category category, System.Diagnostics.TraceEventType severity, int priority)
-        {
-            LogEntry(title, message, exc, category, severity, priority, 0);
-        }
-
-
-        /// <exclude />
         static public void LogEntry(string title, string message, Category category, System.Diagnostics.TraceEventType severity)
         {
             LogEntry(title, message, category, severity, -1, 0);
         }
-
-        /// <exclude />
-        static public void LogEntry(string title, string message, Exception exc, Category category, System.Diagnostics.TraceEventType severity)
-        {
-            LogEntry(title, message, exc, category, severity, -1, 0);
-        }
-
 
         /// <exclude />
         static public void LogError(string title, string message)
