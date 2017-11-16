@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -17,11 +17,12 @@ namespace Composite.Core.WebClient.Media
     /// Resizing options for <see ref="Composite.Core.WebClient.Media.ImageResizer" />
     /// </summary>
     /// <exclude />
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public class ResizingOptions
     {
         private const string ResizedImageKeys = "~/App_Data/Composite/Media/ResizingOptions.xml";
         private static string _resizedImageKeysFilePath;
+
+        private int? _qualityOverride;
 
         /// <summary>
         /// Image heigth
@@ -44,33 +45,17 @@ namespace Composite.Core.WebClient.Media
         public int? MaxWidth { get; set; }
 
         /// <summary>
-        /// Image quality (when doing lossy compression)
-        /// </summary>
-        private int? QualityOverride { get; set; }
-
-        /// <summary>
         /// Indicate if resizing options has a default or non-default quality setting (used when doing lossy compression). 
         /// </summary>
-        public bool CustomQuality {
-            get
-            {
-                return QualityOverride.HasValue;
-            } 
-        }
+        public bool CustomQuality => _qualityOverride.HasValue;
 
         /// <summary>
         /// Image quality (when doing lossy compression)
         /// </summary>
         public int Quality
         {
-            get
-            {
-                if (QualityOverride.HasValue)
-                {
-                    return QualityOverride.Value;
-                }
-                return GlobalSettingsFacade.ImageQuality;
-            }
+            get => _qualityOverride ?? GlobalSettingsFacade.ImageQuality;
+            set => _qualityOverride = value;
         }
 
         /// <summary>
@@ -81,19 +66,11 @@ namespace Composite.Core.WebClient.Media
         /// <summary>
         /// Indicates whether any options were specified
         /// </summary>
-        public bool IsEmpty
-        {
-            get
-            {
-                return Height == null && Width == null && MaxHeight == null && MaxWidth == null && QualityOverride == null;
-            }
-        }
+        public bool IsEmpty => Height == null && Width == null && MaxHeight == null && MaxWidth == null && _qualityOverride == null;
 
 
         /// <exclude />
-        public ResizingOptions()
-        {
-        }
+        public ResizingOptions() { }
 
 
         /// <summary>
@@ -115,13 +92,9 @@ namespace Composite.Core.WebClient.Media
         /// <returns>Resizing options</returns>
         public static ResizingOptions Parse(NameValueCollection queryString)
         {
-            string resizingKey = queryString["k"];
-            if (!string.IsNullOrEmpty(resizingKey))
-            {
-                return new ResizingOptions(resizingKey);
-            }
+            var resizingKey = queryString["k"];
 
-            return FromQueryString(queryString);
+            return string.IsNullOrEmpty(resizingKey) ? FromQueryString(queryString) : new ResizingOptions(resizingKey);
         }
 
         /// <exclude />
@@ -130,13 +103,13 @@ namespace Composite.Core.WebClient.Media
             //Load the xml file
             var options = GetPredefinedResizingOptions().Elements("image");
 
-            foreach (XElement e in options.Where(e => (string)e.Attribute("name") == predefinedOptionsName))
+            foreach (var e in options.Where(e => (string)e.Attribute("name") == predefinedOptionsName))
             {
                 Height = ParseOptionalIntAttribute(e, "height");
                 Width = ParseOptionalIntAttribute(e, "width");
                 MaxHeight = ParseOptionalIntAttribute(e, "maxheight");
                 MaxWidth = ParseOptionalIntAttribute(e, "maxwidth");
-                QualityOverride = ParseOptionalIntAttribute(e, "quality");
+                _qualityOverride = ParseOptionalIntAttribute(e, "quality");
 
                 var attr = e.Attribute("action");
                 if (attr != null)
@@ -148,8 +121,9 @@ namespace Composite.Core.WebClient.Media
 
         private static int? ParseOptionalIntAttribute(XElement element, string attributeName)
         {
-            XAttribute attribute = element.Attribute(attributeName);
-            return attribute == null ? (int?) null : int.Parse(attribute.Value);
+            var attribute = element.Attribute(attributeName);
+
+            return attribute == null ? (int?)null : int.Parse(attribute.Value);
         }
 
         /// <summary>
@@ -161,7 +135,7 @@ namespace Composite.Core.WebClient.Media
         {
             var result = new ResizingOptions();
 
-            string str = queryString["w"];
+            var str = queryString["w"];
             if (!string.IsNullOrEmpty(str))
             {
                 result.Width = int.Parse(str);
@@ -188,20 +162,28 @@ namespace Composite.Core.WebClient.Media
             str = queryString["q"];
             if (!string.IsNullOrEmpty(str))
             {
-                result.QualityOverride = int.Parse(str);
-                if (result.QualityOverride < 1) result.QualityOverride = 1;
-                if (result.QualityOverride > 100) result.QualityOverride = 100;
+                result._qualityOverride = int.Parse(str);
+
+                if (result._qualityOverride < 1)
+                {
+                    result._qualityOverride = 1;
+                }
+
+                if (result._qualityOverride > 100)
+                {
+                    result._qualityOverride = 100;
+                }
             }
 
             ResizingAction resizingAction;
-            string action = queryString["action"];
+            var action = queryString["action"];
             if (!action.IsNullOrEmpty() && Enum.TryParse(action, true, out resizingAction))
             {
                 result.ResizingAction = resizingAction;
             }
             else
             {
-                result.ResizingAction = Media.ResizingAction.Stretch;
+                result.ResizingAction = ResizingAction.Stretch;
             }
 
             return result;
@@ -209,7 +191,7 @@ namespace Composite.Core.WebClient.Media
 
         private static XElement GetPredefinedResizingOptions()
         {
-            XElement xel = HttpRuntime.Cache.Get("ResizedImageKeys") as XElement;
+            var xel = HttpRuntime.Cache.Get("ResizedImageKeys") as XElement;
 
             //If it's not there, load the xml document and then add it to the cache
             if (xel == null)
@@ -221,8 +203,11 @@ namespace Composite.Core.WebClient.Media
 
                 if (!C1File.Exists(_resizedImageKeysFilePath))
                 {
-                    string directoryPath = Path.GetDirectoryName(_resizedImageKeysFilePath);
-                    if (!C1Directory.Exists(directoryPath)) C1Directory.CreateDirectory(directoryPath);
+                    var directoryPath = Path.GetDirectoryName(_resizedImageKeysFilePath);
+                    if (!C1Directory.Exists(directoryPath))
+                    {
+                        C1Directory.CreateDirectory(directoryPath);
+                    }
 
                     var config = new XElement("ResizedImages",
                         new XElement("image",
@@ -241,8 +226,10 @@ namespace Composite.Core.WebClient.Media
                 }
 
                 xel = XElementUtils.Load(_resizedImageKeysFilePath);
+
                 var cd = new CacheDependency(_resizedImageKeysFilePath);
                 var cacheExpirationTimeSpan = new TimeSpan(24, 0, 0);
+
                 HttpRuntime.Cache.Add("ResizedImageKeys", xel, cd, Cache.NoAbsoluteExpiration, cacheExpirationTimeSpan, CacheItemPriority.Default, null);
             }
 
@@ -250,17 +237,17 @@ namespace Composite.Core.WebClient.Media
         }
 
         /// <exclude />
-        override public string ToString()
+        public override string ToString()
         {
             var sb = new StringBuilder();
-            var parameters = new [] { Width, Height, MaxWidth, MaxHeight, QualityOverride };
+            var parameters = new[] { Width, Height, MaxWidth, MaxHeight, _qualityOverride };
             var parameterNames = new[] { "w", "h", "mw", "mh", "q" };
 
-            for (int i = 0; i < parameters.Length; i++)
+            for (var i = 0; i < parameters.Length; i++)
             {
                 if (parameters[i] != null)
                 {
-                    sb.Append(sb.Length == 0 ? "" : "&");
+                    sb.Append(sb.Length == 0 ? String.Empty : "&");
 
                     sb.Append(parameterNames[i]).Append("=").Append((int)parameters[i]);
                 }
@@ -268,7 +255,7 @@ namespace Composite.Core.WebClient.Media
 
             if (ResizingAction != ResizingAction.Stretch)
             {
-                sb.Append(sb.Length == 0 ? "" : "&");
+                sb.Append(sb.Length == 0 ? String.Empty : "&");
 
                 sb.Append("action=").Append(ResizingAction.ToString().ToLowerInvariant());
             }
