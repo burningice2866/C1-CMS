@@ -7,15 +7,15 @@
 
 	<ElementRoot>
 		<Children>
-			<DataElements Type="Composite.Data.Types.IUrlConfiguration, Composite" Label="${Composite.Web.UrlConfiguration, Tree.ConfigurationElementLabel}" Icon="housefolder" ToolTip="${Composite.Web.UrlConfiguration, Tree.ConfigurationElementToolTip}">
+			<DataElements Type="Composite.Data.Types.IUrlConfiguration, Composite" Label="${Orckestra.Tools.UrlConfiguration, Tree.ConfigurationElementLabel}" Icon="housefolder" ToolTip="${Orckestra.Tools.UrlConfiguration, Tree.ConfigurationElementToolTip}">
 				<Actions>
-					<EditDataAction CustomFormMarkupPath="~/Composite/content/forms/Administrative/UrlConfiguration.xml" Label="${Composite.Web.UrlConfiguration, Tree.ConfigurationElementEditLabel}" ToolTip="${Composite.Web.UrlConfiguration, Tree.ConfigurationElementEditToolTip}" Icon="media-edit-media-folder"/>
+					<EditDataAction CustomFormMarkupPath="~/Composite/content/forms/Administrative/UrlConfiguration.xml" Label="${Orckestra.Tools.UrlConfiguration, Tree.ConfigurationElementEditLabel}" ToolTip="${Orckestra.Tools.UrlConfiguration, Tree.ConfigurationElementEditToolTip}" Icon="media-edit-media-folder"/>
         </Actions>
 
 				<Children>
-					<Element Id="Hostnames" Label="${Composite.Web.UrlConfiguration, Tree.HostnamesFolderLabel}" ToolTip="${Composite.Web.UrlConfiguration, Tree.HostnamesFolderToolTip}" Icon="folder" OpenedIcon="folder-open">
+					<Element Id="Hostnames" Label="${Orckestra.Tools.UrlConfiguration, Tree.HostnamesFolderLabel}" ToolTip="${Orckestra.Tools.UrlConfiguration, Tree.HostnamesFolderToolTip}" Icon="folder" OpenedIcon="folder-open">
 						<Actions>
-							<AddDataAction Type="Composite.Data.Types.IHostnameBinding" CustomFormMarkupPath="~/Composite/content/forms/Administrative/Hostnames.xml" Label="${Composite.Web.UrlConfiguration, Tree.AddHostnameLabel}" ToolTip="${Composite.Web.UrlConfiguration, Tree.AddHostnameToolTip}" Icon="home-add"/>
+							<AddDataAction Type="Composite.Data.Types.IHostnameBinding" CustomFormMarkupPath="~/Composite/content/forms/Administrative/Hostnames.xml" Label="${Orckestra.Tools.UrlConfiguration, Tree.AddHostnameLabel}" ToolTip="${Orckestra.Tools.UrlConfiguration, Tree.AddHostnameToolTip}" Icon="home-add"/>
 						</Actions>
 						<Children>
 
@@ -24,8 +24,8 @@
 									<Field FieldName="Hostname" Direction="ascending"/>
 								</OrderBy>
 								<Actions>
-									<EditDataAction CustomFormMarkupPath="~/Composite/content/forms/Administrative/Hostnames.xml" Icon="home-edit" Label="${Composite.Web.UrlConfiguration, Tree.EditHostnameLabel}" ToolTip="${Composite.Web.UrlConfiguration, Tree.EditHostnameToolTip}" />
-									<DeleteDataAction Icon="home-delete"  Label="${Composite.Web.UrlConfiguration, Tree.DeleteHostnameLabel}" ToolTip="${Composite.Web.UrlConfiguration, Tree.DeleteHostnameToolTip}"/>
+									<EditDataAction CustomFormMarkupPath="~/Composite/content/forms/Administrative/Hostnames.xml" Icon="home-edit" Label="${Orckestra.Tools.UrlConfiguration, Tree.EditHostnameLabel}" ToolTip="${Orckestra.Tools.UrlConfiguration, Tree.EditHostnameToolTip}" />
+									<DeleteDataAction Icon="home-delete"  Label="${Orckestra.Tools.UrlConfiguration, Tree.DeleteHostnameLabel}" ToolTip="${Orckestra.Tools.UrlConfiguration, Tree.DeleteHostnameToolTip}"/>
 								</Actions>
 							</DataElements>
 						</Children>

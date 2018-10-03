@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Web;
 using System.Web.WebPages;
-using System.Xml.Linq;
 using Composite.C1Console.Security;
 using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
@@ -24,7 +23,7 @@ namespace Composite.Core.WebClient.Renderings
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public sealed class RenderingContext : IDisposable
     {
-        private static readonly string LogTitle = typeof (RenderingContext).Name;
+        private static readonly string LogTitle = typeof(RenderingContext).Name;
 
         /// <summary>
         /// Indicates whether performance profiling is enabled.
@@ -44,13 +43,13 @@ namespace Composite.Core.WebClient.Renderings
         /// <value>The page.</value>
         public IPage Page { get; private set; }
 
+        internal PageContentToRender PageContentToRender { get; private set; }
+
         /// <summary>
         /// Indicates whether page caching is disabled.
         /// </summary>
         /// <value><c>true</c> if page caching is disabled; otherwise, <c>false</c>.</value>
         public bool CachingDisabled { get; private set; }
-
-        private static readonly string ProfilerXslPath = UrlUtils.AdminRootPath + "/Transformations/page_profiler.xslt";
 
         private static readonly List<string> _prettifyErrorUrls = new List<string>();
         private static int _prettifyErrorCount;
@@ -126,10 +125,8 @@ namespace Composite.Core.WebClient.Renderings
         {
             using (Profiler.Measure("Converting internal urls to public"))
             {
-                xhtml = InternalUrls.ConvertInternalUrlsToPublic(xhtml);
+                return InternalUrls.ConvertInternalUrlsToPublic(xhtml);
             }
-
-            return xhtml;
         }
 
         /// <exclude />
@@ -159,7 +156,7 @@ namespace Composite.Core.WebClient.Renderings
                                 Log.LogWarning(LogTitle, "Failed to format output xhtml in a pretty way - your page output is likely not strict xml. Url: " + (HttpUtility.UrlDecode(_cachedUrl) ?? "undefined"));
                                 if (maxWarningsToShow == _prettifyErrorCount)
                                 {
-                                    Log.LogInformation(LogTitle, "{0} xhtml format errors logged since startup. No more will be logged until next startup.", maxWarningsToShow);
+                                    Log.LogInformation(LogTitle, $"{maxWarningsToShow} xhtml format errors logged since startup. No more will be logged until next startup.");
                                 }
                             }
                         }
@@ -177,18 +174,12 @@ namespace Composite.Core.WebClient.Renderings
 
             Measurement measurement = Profiler.EndProfiling();
 
-            string xmlHeader = @"<?xml version=""1.0""?>
-                             <?xml-stylesheet type=""text/xsl"" href=""{0}""?>"
-                    .FormatWith(ProfilerXslPath);
+            var url = new UrlBuilder(HttpContext.Current.Request.Url.ToString())
+            {
+                ["c1mode"] = null
+            };
 
-            XElement reportXml = ProfilerReport.BuildReportXml(measurement);
-            var url = new UrlBuilder(HttpContext.Current.Request.Url.ToString());
-            url["c1mode"] = null;
-
-            reportXml.Add(new XAttribute("url", url),
-                          new XAttribute("consoleUrl", UrlUtils.AdminRootPath));
-
-            return xmlHeader + reportXml;
+            return ProfilerReport.BuildReport(measurement, url);
         }
 
 
@@ -253,28 +244,37 @@ namespace Composite.Core.WebClient.Renderings
             _dataScope = new DataScope(Page.DataSourceId.PublicationScope, Page.DataSourceId.LocaleScope);
 
             var pagePlaceholderContents = GetPagePlaceholderContents();
-            var pageRenderingJob = new PageContentToRender(Page, pagePlaceholderContents, PreviewMode);
+            PageContentToRender = new PageContentToRender(Page, pagePlaceholderContents, PreviewMode);
 
-            Verify.IsNotNull(httpContext.Handler, "HttpHandler isn't defined");
+            AttachRendererToAspNetPage(httpContext);
+        }
 
-            var aspnetPage = (System.Web.UI.Page)httpContext.Handler;
-            var qs = request.QueryString;
+        private void AttachRendererToAspNetPage(HttpContextBase context)
+        {
+            Verify.IsNotNull(context.Handler, "HttpHandler isn't defined");
+            var aspnetPage = context.Handler as System.Web.UI.Page;
+            if (aspnetPage == null)
+            {
+                return;
+            }
+
+            var qs = context.Request.QueryString;
 
             if (qs.AllKeys.Length > 0 && qs.Keys[0] == null)
             {
                 if (qs[0] == "mobile")
                 {
-                    httpContext.SetOverriddenBrowser(BrowserOverride.Mobile);
+                    context.SetOverriddenBrowser(BrowserOverride.Mobile);
                 }
 
                 if (qs[0] == "desktop")
                 {
-                    httpContext.SetOverriddenBrowser(BrowserOverride.Desktop);
+                    context.SetOverriddenBrowser(BrowserOverride.Desktop);
                 }
             }
 
             var pageRenderer = PageTemplateFacade.BuildPageRenderer(Page.TemplateId);
-            pageRenderer.AttachToPage(aspnetPage, pageRenderingJob);
+            pageRenderer.AttachToPage(aspnetPage, PageContentToRender);
         }
 
         private void ValidateViewUnpublishedRequest(HttpContextBase httpContext)
@@ -333,10 +333,7 @@ namespace Composite.Core.WebClient.Renderings
         {
             PageRenderingHistory.MarkPageAsRendered(this.Page);
 
-            if (_dataScope != null)
-            {
-                _dataScope.Dispose();
-            }
+            _dataScope?.Dispose();
 
             if (PreviewMode)
             {

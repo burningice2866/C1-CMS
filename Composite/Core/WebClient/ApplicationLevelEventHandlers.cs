@@ -95,7 +95,9 @@ namespace Composite.Core.WebClient
         private static void InitializeServices()
         {
             UrlToEntityTokenFacade.Register(new DataUrlToEntityTokenMapper());
+            UrlToEntityTokenFacade.Register(new MediaUrlToEntityTokenMapper());
             UrlToEntityTokenFacade.Register(new ServerLogUrlToEntityTokenMapper());
+            UrlToEntityTokenFacade.Register(new WebsiteFileUrlToEntityTokenMapper());
 
             var services = ServiceLocator.ServiceCollection;
             services.AddLogging();

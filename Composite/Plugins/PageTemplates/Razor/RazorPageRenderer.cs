@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using System.Web;
@@ -8,7 +8,6 @@ using System.Xml.Linq;
 using Composite.AspNet.Razor;
 using Composite.Core.Application;
 using Composite.Core.Collections.Generic;
-using Composite.Core.Extensions;
 using Composite.Core.Instrumentation;
 using Composite.Core.PageTemplates;
 using Composite.Core.WebClient.Renderings.Page;
@@ -40,9 +39,9 @@ namespace Composite.Plugins.PageTemplates.Razor
             _aspnetPage.Init += RendererPage;
         }
 
-        private void RendererPage(object sender, EventArgs e)
+        public XDocument Render(PageContentToRender contentToRender, FunctionContextContainer functionContextContainer)
         {
-            Guid templateId = _job.Page.TemplateId;
+            Guid templateId = contentToRender.Page.TemplateId;
             var renderingInfo = _renderingInfo[templateId];
 
             if (renderingInfo == null)
@@ -53,11 +52,10 @@ namespace Composite.Plugins.PageTemplates.Razor
                     throw loadingException;
                 }
 
-                Verify.ThrowInvalidOperationException("Missing template '{0}'".FormatWith(templateId));
+                Verify.ThrowInvalidOperationException($"Missing template '{templateId}'");
             }
 
             string output;
-            FunctionContextContainer functionContextContainer;
 
             WebPageBase webPage = null;
             try
@@ -68,18 +66,18 @@ namespace Composite.Plugins.PageTemplates.Razor
 
                 webPage = WebPageBase.CreateInstanceFromVirtualPath(file);
 
-                var razorTemplate = webPage as RazorPageTemplate;
-                if (razorTemplate != null)
+                Verify.IsNotNull(webPage, "Razor compilation failed or base type does not inherit '{0}'",
+                    typeof(RazorPageTemplate).FullName);
+
+                if (webPage is RazorPageTemplate razorTemplate)
                 {
                     razorTemplate.Configure();
                 }
 
-                functionContextContainer = PageRenderer.GetPageRenderFunctionContextContainer();
-
                 using (Profiler.Measure("Evaluating placeholders"))
                 {
-                    TemplateDefinitionHelper.BindPlaceholders(webPage, _job, renderingInfo.PlaceholderProperties,
-                                                              functionContextContainer);
+                    TemplateDefinitionHelper.BindPlaceholders(webPage, contentToRender, renderingInfo.PlaceholderProperties,
+                        functionContextContainer);
                 }
 
                 // Executing razor code
@@ -101,16 +99,25 @@ namespace Composite.Plugins.PageTemplates.Razor
             }
             finally
             {
-                if (webPage is IDisposable)
-                {
-                    ((IDisposable)webPage).Dispose();
-                }
+                (webPage as IDisposable)?.Dispose();
             }
 
-            XDocument resultDocument = XDocument.Parse(output);
+            return XDocument.Parse(output);
+        }
+
+        private void RendererPage(object sender, EventArgs e)
+        {
+            var functionContextContainer = PageRenderer.GetPageRenderFunctionContextContainer();
+
+            var resultDocument = Render(_job, functionContextContainer);
 
             var controlMapper = (IXElementToControlMapper)functionContextContainer.XEmbedableMapper;
-            Control control = PageRenderer.Render(resultDocument, functionContextContainer, controlMapper, _job.Page);
+            Control control;
+
+            using (Profiler.Measure("Rendering the page"))
+            {
+                control = PageRenderer.Render(resultDocument, functionContextContainer, controlMapper, _job.Page);
+            }
 
             using (Profiler.Measure("ASP.NET controls: PagePreInit"))
             {

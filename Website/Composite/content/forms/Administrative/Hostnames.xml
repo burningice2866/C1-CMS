@@ -8,6 +8,7 @@
 		<cms:binding name="IncludeCultureInUrl" type="System.Boolean" optional="true" />
 		<cms:binding name="PageNotFoundUrl" type="System.String" optional="true" />
 		<cms:binding name="Aliases" type="System.String" optional="true" />
+		<cms:binding name="EnforceHttps" type="System.Boolean" />
 	</cms:bindings>
 	<cms:layout>
 		<cms:layout.label>
@@ -16,7 +17,7 @@
 					<cms:read source="Aliases" />
 				</f:NullCheck.CheckValue>
 				<f:NullCheck.WhenNull>
-					${Composite.Web.UrlConfiguration, HostnameBinding.AddNewHostnameTitle}
+					${Orckestra.Tools.UrlConfiguration, HostnameBinding.AddNewHostnameTitle}
 				</f:NullCheck.WhenNull>
 				<f:NullCheck.WhenNotNull>
 					<cms:read source="Hostname" />
@@ -25,12 +26,12 @@
 		</cms:layout.label>
 
 		<FieldGroup>
-			<TextBox Label="${Composite.Web.UrlConfiguration, HostnameBinding.Hostname.Label}" Help="${Composite.Web.UrlConfiguration, HostnameBinding.Hostname.Help}" SpellCheck="false">
+			<TextBox Label="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Hostname.Label}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Hostname.Help}" SpellCheck="false">
 				<TextBox.Text>
 					<cms:bind source="Hostname" />
 				</TextBox.Text>
 			</TextBox>
-			<DoubleKeySelector Label="${Composite.Web.UrlConfiguration, HostnameBinding.Page.Label}" Help="${Composite.Web.UrlConfiguration, HostnameBinding.Page.Help}" Required="true">
+			<DoubleKeySelector Label="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Page.Label}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Page.Help}" Required="true">
 				<DoubleKeySelector.FirstKey>
 					<cms:bind source="HomePageId" />
 				</DoubleKeySelector.FirstKey>
@@ -41,22 +42,27 @@
 					<f:StaticMethodCall Type="Composite.Plugins.Routing.Hostnames.FormFunctions" Method="GetRootPages" />
 				</DoubleKeySelector.Options>
 			</DoubleKeySelector>
-			<CheckBox Label="${Composite.Web.UrlConfiguration, HostnameBinding.IncludeHomepageUrlTitle.Label}" ItemLabel="${Composite.Web.UrlConfiguration, HostnameBinding.IncludeHomepageUrlTitle.ItemLabel}" Help="${Composite.Web.UrlConfiguration, HostnameBinding.IncludeHomepageUrlTitle.Help}">
+			<CheckBox Label="${Orckestra.Tools.UrlConfiguration, HostnameBinding.IncludeHomepageUrlTitle.Label}" ItemLabel="${Orckestra.Tools.UrlConfiguration, HostnameBinding.IncludeHomepageUrlTitle.ItemLabel}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.IncludeHomepageUrlTitle.Help}">
 				<CheckBox.Checked>
 					<cms:bind source="IncludeHomePageInUrl" />
 				</CheckBox.Checked>
 			</CheckBox>
-			<CheckBox Label="" ItemLabel="${Composite.Web.UrlConfiguration, HostnameBinding.IncludeLanguageUrlMapping.ItemLabel}" Help="${Composite.Web.UrlConfiguration, HostnameBinding.IncludeLanguageUrlMapping.Help}">
+			<CheckBox Label="" ItemLabel="${Orckestra.Tools.UrlConfiguration, HostnameBinding.IncludeLanguageUrlMapping.ItemLabel}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.IncludeLanguageUrlMapping.Help}">
 				<CheckBox.Checked>
 					<cms:bind source="IncludeCultureInUrl" />
 				</CheckBox.Checked>
 			</CheckBox>
-			<UrlComboBox Label="${Composite.Web.UrlConfiguration, HostnameBinding.Custom404Page.Label}" Help="${Composite.Web.UrlConfiguration, HostnameBinding.Custom404Page.Help}" SpellCheck="false">
+			<CheckBox Label="" ItemLabel="${Orckestra.Tools.UrlConfiguration, HostnameBinding.EnforceHttps.ItemLabel}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.EnforceHttps.Help}">
+				<CheckBox.Checked>
+					<cms:bind source="EnforceHttps" />
+				</CheckBox.Checked>
+			</CheckBox>
+			<UrlComboBox Label="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Custom404Page.Label}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Custom404Page.Help}" SpellCheck="false">
         <UrlComboBox.Text>
 					<cms:bind source="PageNotFoundUrl" />
 				</UrlComboBox.Text>
 			</UrlComboBox>
-			<TextArea Label="${Composite.Web.UrlConfiguration, HostnameBinding.Aliases.Label}" Help="${Composite.Web.UrlConfiguration, HostnameBinding.Aliases.Help}" SpellCheck="false">
+			<TextArea Label="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Aliases.Label}" Help="${Orckestra.Tools.UrlConfiguration, HostnameBinding.Aliases.Help}" SpellCheck="false">
 				<TextArea.Text>
 					<cms:bind source="Aliases" />
 				</TextArea.Text>
