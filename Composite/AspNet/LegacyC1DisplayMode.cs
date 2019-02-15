@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Web.WebPages;
 
@@ -9,10 +9,7 @@ namespace Composite.AspNet
     /// </summary>
     public class LegacyC1DisplayMode : DefaultDisplayMode
     {
-        public override string DisplayModeId
-        {
-            get { return base.DisplayModeId + "_c1_legacy"; }
-        }
+        public override string DisplayModeId => base.DisplayModeId + "_c1_legacy";
 
         /// <summary>
         /// 

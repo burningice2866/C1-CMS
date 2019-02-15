@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Web;
 using Composite.Core.Routing;
@@ -10,30 +10,20 @@ namespace Composite.AspNet
     /// <summary>
     /// Represents an <see cref="IPage"/> instance in a sitemap.
     /// </summary>
-    public class CmsPageSiteMapNode : CompositeC1SiteMapNode
+    public class CmsPageSiteMapNode : SiteMapNode, ICmsSiteMapNode, ISchemaOrgSiteMapNode
     {
         private int? _depth;
 
-        /// <summary>
-        /// Gets or sets the culture.
-        /// </summary>
-        /// <value>
-        /// The culture.
-        /// </value>
-        public override CultureInfo Culture { get; protected set; }
+        /// <inheritdoc />
+        public CultureInfo Culture { get; }
 
-        /// <summary>
-        /// Gets or sets the priority.
-        /// </summary>
-        /// <value>
-        /// The priority.
-        /// </value>
-        public override int? Priority { get; protected set; }
+        /// <inheritdoc />
+        public int? Priority { get; protected set; }
 
         /// <summary>
         /// Gets the current page.
         /// </summary>
-        public override IPage Page { get; protected set; }
+        public IPage Page { get; }
 
         /// <summary>
         /// Gets or sets the depth.
@@ -41,16 +31,17 @@ namespace Composite.AspNet
         /// <value>
         /// The depth.
         /// </value>
-        public override int Depth
+        public int Depth
         {
             get
             {
                 if (_depth == null)
                 {
-                    int depth = 0;
-                    Guid id = Page.Id;
+                    var depth = 0;
+                    var id = Page.Id;
 
                     const int maxDepth = 1000;
+
                     using (new DataScope(Page.DataSourceId.PublicationScope, Page.DataSourceId.LocaleScope))
                     {
                         while (id != Guid.Empty && depth < maxDepth)
@@ -58,6 +49,7 @@ namespace Composite.AspNet
                             depth++;
                             id = PageManager.GetParentId(id);
                         }
+
                         if (depth == maxDepth)
                         {
                             throw new InvalidOperationException("Endless page loop");
@@ -66,26 +58,18 @@ namespace Composite.AspNet
 
                     _depth = depth;
                 }
+
                 return _depth.Value;
             }
-            protected set { _depth = value; }
+
+            protected set => _depth = value;
         }
 
-        /// <summary>
-        /// Gets or sets the last modified.
-        /// </summary>
-        /// <value>
-        /// The last modified.
-        /// </value>
-        public override DateTime LastModified { get; protected set; }
+        /// <inheritdoc />
+        public DateTime LastModified { get; }
 
-        /// <summary>
-        /// Gets or sets the change frequency.
-        /// </summary>
-        /// <value>
-        /// The change frequency.
-        /// </value>
-        public override SiteMapNodeChangeFrequency? ChangeFrequency { get; protected set; }
+        /// <inheritdoc />
+        public SiteMapNodeChangeFrequency? ChangeFrequency { get; protected set; }
 
         /// <summary>
         /// Gets or sets the document title.
@@ -93,7 +77,7 @@ namespace Composite.AspNet
         /// <value>
         /// The document title.
         /// </value>
-        public override string DocumentTitle { get; protected set; }
+        public string DocumentTitle { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CmsPageSiteMapNode"/> class.
@@ -101,7 +85,7 @@ namespace Composite.AspNet
         /// <param name="provider">The provider.</param>
         /// <param name="page">The page.</param>
         public CmsPageSiteMapNode(SiteMapProvider provider, IPage page)
-            : base(provider, page)
+            : base(provider, page.Id.ToString(), PageUrls.BuildUrl(page), page.MenuTitle, page.Description)
         {
             Page = page;
             DocumentTitle = page.Title;
@@ -111,14 +95,13 @@ namespace Composite.AspNet
             Culture = page.DataSourceId.LocaleScope;
         }
 
-
         /// <exclude />
         public bool Equals(CmsPageSiteMapNode obj)
         {
             return Key == obj.Key && Culture.Equals(obj.Culture);
         }
 
-        /// <exclude />
+        /// <inheritdoc />
         public override bool Equals(object obj)
         {
             var pageSiteMapNode = obj as CmsPageSiteMapNode;
@@ -126,17 +109,17 @@ namespace Composite.AspNet
             {
                 return Equals(pageSiteMapNode);
             }
-            
+
             return base.Equals(obj);
         }
 
-        /// <exclude />
+        /// <inheritdoc />
         public override SiteMapNode Clone()
         {
             return new CmsPageSiteMapNode(this.Provider, Page);
         }
 
-        /// <exclude />
+        /// <inheritdoc />
         public override int GetHashCode()
         {
             return Key.GetHashCode() ^ Culture.GetHashCode();

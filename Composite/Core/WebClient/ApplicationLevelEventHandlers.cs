@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,7 +9,6 @@ using Composite.C1Console.Actions.Data;
 using Composite.C1Console.Elements;
 using Composite.C1Console.Events;
 using Composite.Search;
-using Composite.Search.DocumentSources;
 using Composite.Core.Application;
 using Composite.Core.Configuration;
 using Composite.Core.Extensions;
@@ -19,8 +18,6 @@ using Composite.Core.Logging;
 using Composite.Core.Routing;
 using Composite.Core.Threading;
 using Composite.Core.Types;
-using Composite.Core.WebClient.Services.WampRouter;
-using Composite.Data;
 using Composite.Data.Types;
 using Composite.Functions;
 using Composite.Plugins.Elements.UrlToEntityToken;
@@ -110,6 +107,7 @@ namespace Composite.Core.WebClient
 
             services.AddSingleton<IMailer>(new SmtpMailer());
 
+            services.AddTransient<ISiteMapPlugin, CmsPagesSiteMapPlugin>();
 
             VersionedDataHelper.Initialize();
         }
@@ -160,9 +158,7 @@ namespace Composite.Core.WebClient
                     throw;
                 }
 
-                Log.LogVerbose("Global.asax", string.Format("--- Web Application End, {0} Id = {1}---",
-                              DateTime.Now.ToLongTimeString(),
-                              AppDomain.CurrentDomain.Id));
+                Log.LogVerbose("Global.asax", $"--- Web Application End, {DateTime.Now.ToLongTimeString()} Id = {AppDomain.CurrentDomain.Id}---");
             }
         }
 
@@ -170,7 +166,7 @@ namespace Composite.Core.WebClient
         /// <exclude />
         public static void Application_BeginRequest(object sender, EventArgs e)
         {
-            var context = (sender as HttpApplication).Context;
+            var context = ((HttpApplication) sender).Context;
 
             ThreadDataManager.InitializeThroughHttpContext();
 
@@ -190,7 +186,7 @@ namespace Composite.Core.WebClient
         /// <exclude />
         public static void Application_EndRequest(object sender, EventArgs e)
         {
-            var context = (sender as HttpApplication).Context;
+            var context = ((HttpApplication) sender).Context;
 
             try
             {
@@ -200,7 +196,7 @@ namespace Composite.Core.WebClient
                 {
                     int startTimer = (int)context.Items["Global.asax timer"];
                     string requestPath = context.Request.Path;
-                    Log.LogVerbose("End request", string.Format("{0} - took {1} ms", requestPath, (Environment.TickCount - startTimer)));
+                    Log.LogVerbose("End request", $"{requestPath} - took {Environment.TickCount - startTimer} ms");
                 }
             }
             finally
@@ -214,7 +210,7 @@ namespace Composite.Core.WebClient
         /// <exclude />
         public static void Application_Error(object sender, EventArgs e)
         {
-            var httpApplication = (sender as HttpApplication);
+            var httpApplication = (HttpApplication) sender;
             Exception exception = httpApplication.Server.GetLastError();
 
             var eventType = TraceEventType.Error;
@@ -223,7 +219,8 @@ namespace Composite.Core.WebClient
 
             if (httpContext != null)
             {
-                bool is404 = (exception is HttpException && ((HttpException)exception).GetHttpCode() == 404);
+                bool is404 = exception is HttpException httpException
+                             && httpException.GetHttpCode() == 404;
 
                 if (is404)
                 {
@@ -237,7 +234,7 @@ namespace Composite.Core.WebClient
                         {
                             if (rawUrl == customPageNotFoundUrl)
                             {
-                                throw new HttpException(500, "'Page not found' url isn't handled. Url: '{0}'".FormatWith(rawUrl));
+                                throw new HttpException(500, $"'Page not found' url isn't handled. Url: '{rawUrl}'");
                             }
 
                             httpContext.Server.ClearError();
@@ -269,8 +266,7 @@ namespace Composite.Core.WebClient
                     if (request != null)
                     {
                         LoggingService.LogEntry("Application Error",
-                                            "Failed to process '{0}' request to url '{1}'"
-                                            .FormatWith(request.RequestType, request.RawUrl),
+                                            $"Failed to process '{request.RequestType}' request to url '{request.RawUrl}'",
                                             LoggingService.Category.General, eventType);
                     }
                 }
@@ -375,7 +371,7 @@ namespace Composite.Core.WebClient
         {
             if (RuntimeInformation.IsDebugBuild)
             {
-                Log.LogInformation(_verboseLogEntryTitle, "AppDomain {0} unloaded at {1}", AppDomain.CurrentDomain.Id, DateTime.Now.ToString("HH:mm:ss:ff"));
+                Log.LogInformation(_verboseLogEntryTitle, $"AppDomain {AppDomain.CurrentDomain.Id} unloaded at {DateTime.Now:HH:mm:ss:ff}");
             }
         }
 
@@ -407,9 +403,8 @@ namespace Composite.Core.WebClient
                                                                        System.Reflection.BindingFlags.GetField,
                                                                        null, runtime, null);
 
-            Log.LogVerbose("RGB(250,50,50)ASP.NET Shut Down", String.Format("_shutDownMessage=\n{0}\n\n_shutDownStack=\n{1}",
-                                         shutDownMessage.Replace("\n", "   \n"),
-                                         shutDownStack));
+            Log.LogVerbose("RGB(250,50,50)ASP.NET Shut Down",
+                $"_shutDownMessage=\n{shutDownMessage.Replace("\n", "   \n")}\n\n_shutDownStack=\n{shutDownStack}");
 
         }
     }

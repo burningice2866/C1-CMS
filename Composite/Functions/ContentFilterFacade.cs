@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,7 +8,7 @@ namespace Composite.Functions
 {
     public static class ContentFilterFacade
     {
-        private static List<IContentFilter> _contentFilters;
+        private static readonly List<IContentFilter> _contentFilters;
 
         static ContentFilterFacade()
         {

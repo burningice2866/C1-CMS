@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -53,8 +53,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>
-    </DefineConstants>
+    <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRules>
@@ -207,9 +206,13 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AspNet\CompositeC1SiteMapNode.cs" />
+    <Compile Include="AspNet\CmsPagesSiteMapPlugin.cs" />
     <Compile Include="AspNet\CmsPageSiteMapProvider.cs" />
     <Compile Include="AspNet\DisplayModeFacade.cs" />
+    <Compile Include="AspNet\ICmsSiteMapNode.cs" />
+    <Compile Include="AspNet\ICmsSiteMapProvider.cs" />
+    <Compile Include="AspNet\ISchemaOrgSiteMapNode.cs" />
+    <Compile Include="AspNet\ISiteMapPlugin.cs" />
     <Compile Include="AspNet\LegacyC1DisplayMode.cs" />
     <Compile Include="AspNet\Razor\RazorFunction.cs" />
     <Compile Include="AspNet\Razor\RazorHelper.cs" />
@@ -241,6 +244,9 @@
     <Compile Include="C1Console\RichContent\ContainerClasses\AntonymContainerClassManager.cs" />
     <Compile Include="C1Console\RichContent\ContainerClasses\ContainerClassManager.cs" />
     <Compile Include="C1Console\RichContent\ContainerClasses\EqualOrAntonymComparer.cs" />
+    <Compile Include="C1Console\Trees\ITreeActionProvider.cs" />
+    <Compile Include="C1Console\Trees\SortDataTreeActionProvider.cs" />
+    <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="Core\EmptyDisposable.cs" />
     <Compile Include="Core\Implementation\StatelessDataConnectionImplementation.cs" />
     <Compile Include="Core\Instrumentation\DisposableResourceTracer.cs" />
@@ -252,10 +258,12 @@
     <Compile Include="Core\WebClient\Services\WampRouter\WampRouteWrapper.cs" />
     <Compile Include="Data\Caching\CachedTable.cs" />
     <Compile Include="Data\Types\VersionedDataHelperContract.cs" />
+    <Compile Include="Functions\ContentFilterFacade.cs" />
+    <Compile Include="Functions\IContentFilter.cs" />
     <Compile Include="Plugins\Elements\UrlToEntityToken\WebsiteFileUrlToEntityTokenMapper.cs" />
     <Compile Include="Plugins\Elements\UrlToEntityToken\MediaUrlToEntityTokenMapper.cs" />
     <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\String\HierarchicalSelectorWidgetFunction.cs" />
-    <Compile Include="Properties\GitCommitInfo.cs" />
+    <Compile Include="Plugins\Logging\LogTraceListeners\SystemDiagnosticsTrace\SystemDiagnosticsTraceBridge.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\DateTimeDataFieldProcessor.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\FileNameDataFieldProcessor.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\MimeTypeDataFieldProcessor.cs" />
@@ -357,12 +365,9 @@
     <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordRuleFactory.cs" />
     <Compile Include="C1Console\Security\Plugins\PasswordPolicy\Runtime\PasswordPolicySettings.cs" />
     <Compile Include="C1Console\Security\UserLockoutReason.cs" />
-    <Compile Include="C1Console\Trees\ITreeActionProvider.cs" />
-    <Compile Include="C1Console\Trees\SortDataTreeActionProvider.cs" />
     <Compile Include="C1Console\Trees\SortDirection.cs" />
     <Compile Include="Core\ServiceLocator.cs" />
     <Compile Include="Core\Application\Job.cs" />
-    <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="Core\Caching\FileRelatedDataCache.cs" />
     <Compile Include="Core\Extensions\StackTraceExtensionMethods.cs" />
     <Compile Include="Core\Instrumentation\LogExecutionTime.cs" />
@@ -402,8 +407,6 @@
     <Compile Include="Data\RouteDateSegmentAttribute.cs" />
     <Compile Include="Data\RouteSegmentAttribute.cs" />
     <Compile Include="Functions\AttributeBasedRoutedDataUrlMapper.cs" />
-    <Compile Include="Functions\ContentFilterFacade.cs" />
-    <Compile Include="Functions\IContentFilter.cs" />
     <Compile Include="Functions\IRoutedDataUrlMapper.cs" />
     <Compile Include="Functions\PathInfoRoutedDataUrlMapper.cs" />
     <Compile Include="Functions\RoutedData.cs" />
@@ -2678,25 +2681,6 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <Target Name="BeforeBuild">
-    <PropertyGroup>
-      <GitBranchFile>$(ProjectDir)git_branch.txt</GitBranchFile>
-      <GitCommitHashFile>$(ProjectDir)git_commithash.txt</GitCommitHashFile>
-    </PropertyGroup>
-    <Exec Condition="Exists('$(SolutionDir)\.git')" Command="git -C $(ProjectDir) rev-parse --abbrev-ref HEAD&gt; &quot;$(GitBranchFile)&quot;" />
-    <Exec Condition="Exists('$(SolutionDir)\.git')" Command="git -C $(ProjectDir) rev-parse HEAD&gt; &quot;$(GitCommitHashFile)&quot;" />
-    <Exec Condition="!Exists('$(SolutionDir)\.git')" Command="@echo unknown branch > &quot;$(GitBranchFile)&quot;" />
-    <Exec Condition="!Exists('$(SolutionDir)\.git')" Command="@echo unknown commit > &quot;$(GitCommitHashFile)&quot;" />
-    <PropertyGroup>
-      <GitBranch>$([System.IO.File]::ReadAllText("$(GitBranchFile)").Trim())</GitBranch>
-      <GitCommitHash>$([System.IO.File]::ReadAllText("$(GitCommitHashFile)").Trim())</GitCommitHash>
-      <AssemblyInformationalVersionAttribute>[assembly: System.Reflection.AssemblyInformationalVersion("$(GitBranch). Commit Hash: $(GitCommitHash)")]</AssemblyInformationalVersionAttribute>
-    </PropertyGroup>
-    <WriteLinesToFile File="Properties\GitCommitInfo.cs" Lines="$(AssemblyInformationalVersionAttribute)" Overwrite="true">
-    </WriteLinesToFile>
-    <Exec Command="del &quot;$(GitBranchFile)&quot;" />
-    <Exec Command="del &quot;$(GitCommitHashFile)&quot;" />
-  </Target>
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetPath)" "$(ProjectDir)..\bin\"
 copy "$(TargetPath)" "$(ProjectDir)..\Website\bin\"</PostBuildEvent>

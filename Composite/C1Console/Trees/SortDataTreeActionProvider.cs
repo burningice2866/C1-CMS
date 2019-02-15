@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Xml.Linq;
 
@@ -10,15 +9,9 @@ namespace Composite.C1Console.Trees
     {
         private const string Icon = "customurlaction-defaulticon";
 
-        public XNamespace Namespace
-        {
-            get { return XNamespace.Get("https://bitbucket.org/burningice/compositec1contrib"); }
-        }
+        public XNamespace Namespace => XNamespace.Get("https://bitbucket.org/burningice/compositec1contrib");
 
-        public XName Name
-        {
-            get { return Namespace + "SortAction"; }
-        }
+        public XName Name => Namespace + "SortAction";
 
         public ActionNode BuildNode(XElement element, Tree tree)
         {
@@ -27,7 +20,7 @@ namespace Composite.C1Console.Trees
 
             var type = element.Attribute("Type");
 
-            var url = String.Format("~/Composite/InstalledPackages/CompositeC1Contrib.Sorting/Sort.aspx?type={0}", type.Value);
+            var url = $"~/Composite/InstalledPackages/CompositeC1Contrib.Sorting/Sort.aspx?type={type.Value}";
 
             if (element.HasElements)
             {
@@ -39,7 +32,7 @@ namespace Composite.C1Console.Trees
 
                     if (filterField != null && filterValue != null)
                     {
-                        url += String.Format("&amp;filter={0}%3D${1}", filterField.Value, filterValue.Value);
+                        url += $"&amp;filter={filterField.Value}%3D${filterValue.Value}";
                     }
                 }
             }
