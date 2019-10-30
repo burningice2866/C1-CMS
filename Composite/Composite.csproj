@@ -257,6 +257,7 @@
     <Compile Include="Core\WebClient\Renderings\INonCachebleRequestHostnameMapper.cs" />
     <Compile Include="Core\WebClient\Services\WampRouter\WampRouteWrapper.cs" />
     <Compile Include="Data\Caching\CachedTable.cs" />
+    <Compile Include="Data\Types\IUserGroupActiveLocale.cs" />
     <Compile Include="Data\Types\VersionedDataHelperContract.cs" />
     <Compile Include="Functions\ContentFilterFacade.cs" />
     <Compile Include="Functions\IContentFilter.cs" />
@@ -266,6 +267,7 @@
     <Compile Include="Plugins\Logging\LogTraceListeners\SystemDiagnosticsTrace\SystemDiagnosticsTraceBridge.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\DateTimeDataFieldProcessor.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\FileNameDataFieldProcessor.cs" />
+    <Compile Include="Search\Crawling\DataFieldProcessors\MediaTagsDataFieldProcessor.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\MimeTypeDataFieldProcessor.cs" />
     <Compile Include="Search\Crawling\DataFieldProcessors\PublicationStatusDataFieldProcessor.cs" />
     <Compile Include="Search\Crawling\DocumentFieldNames.cs" />
