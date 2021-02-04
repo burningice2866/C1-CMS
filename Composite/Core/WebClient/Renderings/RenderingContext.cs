@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Web;
 using System.Web.WebPages;
 using Composite.C1Console.Security;
@@ -20,10 +21,10 @@ namespace Composite.Core.WebClient.Renderings
     /// Rendering context
     /// </summary>
     /// <exclude />
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-    public sealed class RenderingContext : IDisposable
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)] 
+    public sealed class RenderingContext: IDisposable
     {
-        private static readonly string LogTitle = typeof(RenderingContext).Name;
+        private static readonly string LogTitle = typeof (RenderingContext).Name;
 
         /// <summary>
         /// Indicates whether performance profiling is enabled.
@@ -54,7 +55,7 @@ namespace Composite.Core.WebClient.Renderings
         private static readonly List<string> _prettifyErrorUrls = new List<string>();
         private static int _prettifyErrorCount;
 
-        private string _previewKey;
+        private Guid _previewKey;
         private IDisposable _pagePerfMeasuring;
         private string _cachedUrl;
         private IDisposable _dataScope;
@@ -115,7 +116,7 @@ namespace Composite.Core.WebClient.Renderings
         /// <exclude />
         public IEnumerable<IPagePlaceholderContent> GetPagePlaceholderContents()
         {
-            return PreviewMode ? (IEnumerable<IPagePlaceholderContent>)HttpRuntime.Cache.Get(_previewKey + "_SelectedContents")
+            return PreviewMode ? PagePreviewContext.GetPageContents(_previewKey)
                                : PageManager.GetPlaceholderContent(Page.Id, Page.VersionId);
         }
 
@@ -189,7 +190,7 @@ namespace Composite.Core.WebClient.Renderings
             var request = httpContext.Request;
             var response = httpContext.Response;
 
-            ProfilingEnabled = request.Url.OriginalString.Contains("c1mode=perf");
+           ProfilingEnabled = request.Url.OriginalString.Contains("c1mode=perf");
             if (ProfilingEnabled)
             {
                 if (!UserValidationFacade.IsLoggedIn())
@@ -204,25 +205,23 @@ namespace Composite.Core.WebClient.Renderings
                 _pagePerfMeasuring = Profiler.Measure("C1 Page");
             }
 
-            _previewKey = request.QueryString["previewKey"];
-            PreviewMode = !_previewKey.IsNullOrEmpty();
+            PreviewMode = PagePreviewContext.TryGetPreviewKey(request, out _previewKey);
 
             if (PreviewMode)
             {
-                Page = (IPage)HttpRuntime.Cache.Get(_previewKey + "_SelectedPage");
+                Page = PagePreviewContext.GetPage(_previewKey);
                 C1PageRoute.PageUrlData = new PageUrlData(Page);
-
-                PageRenderer.RenderingReason = (RenderingReason)HttpRuntime.Cache.Get(_previewKey + "_RenderingReason");
+                PageRenderer.RenderingReason = PagePreviewContext.GetRenderingReason(_previewKey);
             }
             else
             {
-                PageUrlData pageUrl = C1PageRoute.PageUrlData ?? PageUrls.UrlProvider.ParseInternalUrl(request.Url.OriginalString);
+                PageUrlData pageUrl = C1PageRoute.PageUrlData ??  PageUrls.UrlProvider.ParseInternalUrl(request.Url.OriginalString);
                 Page = pageUrl.GetPage();
 
                 _cachedUrl = request.Url.PathAndQuery;
 
-                PageRenderer.RenderingReason = new UrlSpace(httpContext).ForceRelativeUrls
-                    ? RenderingReason.C1ConsoleBrowserPageView
+                PageRenderer.RenderingReason = new UrlSpace(httpContext).ForceRelativeUrls 
+                    ? RenderingReason.C1ConsoleBrowserPageView 
                     : RenderingReason.PageView;
             }
 
@@ -241,7 +240,11 @@ namespace Composite.Core.WebClient.Renderings
 
             PageRenderer.CurrentPage = Page;
 
-            _dataScope = new DataScope(Page.DataSourceId.PublicationScope, Page.DataSourceId.LocaleScope);
+            var culture = Page.DataSourceId.LocaleScope;
+
+            _dataScope = new DataScope(Page.DataSourceId.PublicationScope, culture);
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
 
             var pagePlaceholderContents = GetPagePlaceholderContents();
             PageContentToRender = new PageContentToRender(Page, pagePlaceholderContents, PreviewMode);
@@ -272,6 +275,7 @@ namespace Composite.Core.WebClient.Renderings
                     context.SetOverriddenBrowser(BrowserOverride.Desktop);
                 }
             }
+
 
             var pageRenderer = PageTemplateFacade.BuildPageRenderer(Page.TemplateId);
             pageRenderer.AttachToPage(aspnetPage, PageContentToRender);
@@ -309,8 +313,7 @@ namespace Composite.Core.WebClient.Renderings
                     return true;
                 }
 
-                httpContext.Response.StatusCode = 404;
-                httpContext.Response.End();
+                throw new HttpException(404, $"Page not found");
             }
 
             // Setting 404 response code if it is a request to a custom "Page not found" page
@@ -321,7 +324,7 @@ namespace Composite.Core.WebClient.Renderings
 
             return false;
         }
-
+        
         private static string GetLoginRedirectUrl(string url)
         {
             return UrlUtils.PublicRootPath + "/Composite/Login.aspx?ReturnUrl=" +
@@ -337,10 +340,7 @@ namespace Composite.Core.WebClient.Renderings
 
             if (PreviewMode)
             {
-                var cache = HttpRuntime.Cache;
-
-                cache.Remove(_previewKey + "_SelectedPage");
-                cache.Remove(_previewKey + "_SelectedContents");
+                PagePreviewContext.Remove(_previewKey);
             }
         }
     }

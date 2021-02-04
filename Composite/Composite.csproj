@@ -246,15 +246,16 @@
     <Compile Include="C1Console\RichContent\ContainerClasses\AntonymContainerClassManager.cs" />
     <Compile Include="C1Console\RichContent\ContainerClasses\ContainerClassManager.cs" />
     <Compile Include="C1Console\RichContent\ContainerClasses\EqualOrAntonymComparer.cs" />
-    <Compile Include="C1Console\Trees\ITreeActionProvider.cs" />
-    <Compile Include="C1Console\Trees\SortDataTreeActionProvider.cs" />
-    <Compile Include="Core\Application\SpecialModesFileResolver.cs" />
     <Compile Include="Core\EmptyDisposable.cs" />
     <Compile Include="Core\Implementation\StatelessDataConnectionImplementation.cs" />
     <Compile Include="Core\Instrumentation\DisposableResourceTracer.cs" />
+    <Compile Include="AspNet\Caching\DonutCacheEntry.cs" />
+    <Compile Include="AspNet\Caching\OutputCacheHelper.cs" />
+    <Compile Include="AspNet\CmsPageHttpHandler.cs" />
     <Compile Include="Core\Serialization\CompositeJsonSerializer.cs" />
     <Compile Include="Core\Serialization\CompositeSerializationBinder.cs" />
     <Compile Include="Core\WebClient\PageStructureRpc.cs" />
+    <Compile Include="Core\WebClient\Renderings\Page\PagePreviewContext.cs" />
     <Compile Include="Core\WebClient\Renderings\Page\IPageContentFilter.cs" />
     <Compile Include="Core\WebClient\Renderings\INonCachebleRequestHostnameMapper.cs" />
     <Compile Include="Core\WebClient\Services\WampRouter\WampRouteWrapper.cs" />
@@ -263,11 +264,15 @@
     <Compile Include="Data\Types\VersionedDataHelperContract.cs" />
     <Compile Include="Functions\ContentFilterFacade.cs" />
     <Compile Include="Functions\IContentFilter.cs" />
+    <Compile Include="Functions\IDynamicFunction.cs" />
+    <Compile Include="Plugins\Elements\ElementProviders\PageElementProvider\PageSearchToken.cs" />
     <Compile Include="Plugins\Elements\UrlToEntityToken\WebsiteFileUrlToEntityTokenMapper.cs" />
     <Compile Include="Plugins\Elements\UrlToEntityToken\MediaUrlToEntityTokenMapper.cs" />
     <Compile Include="Plugins\Forms\WebChannel\UiControlFactories\TemplatedTreelSelectorUiControlFactory.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\DataReference\HomePageSelectorWidgetFunction.cs" />
+    <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\DataReference\PageReferenceSelectorWidgetFunctionBase.cs" />
     <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\String\TreeSelectorWidgetFunction.cs" />
     <Compile Include="Plugins\Functions\WidgetFunctionProviders\StandardWidgetFunctionProvider\String\HierarchicalSelectorWidgetFunction.cs" />
     <Compile Include="Plugins\Logging\LogTraceListeners\SystemDiagnosticsTrace\SystemDiagnosticsTraceBridge.cs" />
